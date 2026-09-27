@@ -31,46 +31,46 @@ logging needs a book to exist. US5 (offline/installable) follows them.
 **Purpose**: Create the pnpm monorepo and toolchain with the pinned versions from
 research.md R9.
 
-- [ ] T001 Create the workspace root.
+- [X] T001 Create the workspace root.
   - `package.json`: `"private": true`, `"packageManager": "pnpm@10.33.0"`, `engines.node >=22`.
   - Scripts: `typecheck` = `pnpm -r typecheck`; `lint` = `eslint . && depcruise packages apps --config .dependency-cruiser.cjs`; `test` = `vitest run`; `e2e` = `playwright test -c e2e/playwright.config.ts`.
   - `pnpm-workspace.yaml` listing `packages/*`, `apps/*`, `e2e`.
   - `.gitignore`: node_modules, dist, test-results, playwright-report, `.vite`.
   - `.npmrc` with `auto-install-peers=true`.
-- [ ] T002 Create `tsconfig.base.json`.
+- [X] T002 Create `tsconfig.base.json`.
   - Options: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `module`/`moduleResolution` `"Bundler"`, `target` `"ES2022"`.
   - Add root dev dependencies: `typescript@~5.9`, `vitest@^5.0.2`, `eslint@^10`, `typescript-eslint@^8.70`, `dependency-cruiser@^18.4`, `@playwright/test@1.56.1`.
-- [ ] T003 [P] Create `packages/core/package.json`.
+- [X] T003 [P] Create `packages/core/package.json`.
   - Name `@readerlog/core`, `"type": "module"`, exports `./src/index.ts`, **no dependencies**.
   - `packages/core/tsconfig.json` extends the base with `"lib": ["ES2023"]` (no DOM) and `"types": []`, as in research R8.
   - Script `typecheck` = `tsc --noEmit`.
-- [ ] T004 [P] Create `packages/db/package.json`.
+- [X] T004 [P] Create `packages/db/package.json`.
   - Name `@readerlog/db`.
   - Dependencies: `@readerlog/core: workspace:*`, `@sqlite.org/sqlite-wasm@3.53.4-build1`.
   - `packages/db/tsconfig.json` extends the base with `"lib": ["ES2023"]` and `"types": ["node"]` for tests only. Add `@types/node` as a dev dependency.
-- [ ] T005 [P] Create `apps/pwa/package.json`.
+- [X] T005 [P] Create `apps/pwa/package.json`.
   - Name `pwa`.
   - Dependencies: `@readerlog/core`, `@readerlog/db` (both `workspace:*`), `@sqlite.org/sqlite-wasm@3.53.4-build1`.
   - Dev dependencies: `svelte@^5.57`, `@sveltejs/vite-plugin-svelte@^7.3`, `vite@^8.3`, `vite-plugin-pwa@^1.3`, `svelte-check@^4.7`, `workbox-window@^7.4`.
   - Scripts: `dev`, `build`, `preview`, and `typecheck` = `svelte-check`.
   - `apps/pwa/tsconfig.json` with DOM and WebWorker libs.
-- [ ] T006 [P] Create `e2e/package.json` and `e2e/playwright.config.ts`.
+- [X] T006 [P] Create `e2e/package.json` and `e2e/playwright.config.ts`.
   - Chromium project with `launchOptions.executablePath` from `/opt/pw-browsers` when `PLAYWRIGHT_BROWSERS_PATH` is set.
   - `webServer` = `pnpm --filter pwa build && pnpm --filter pwa preview --port 4173`, with `baseURL` `http://localhost:4173`.
   - `use.serviceWorkers: 'allow'`.
   - `use.timezoneId: 'America/New_York'` and `use.locale: 'en-US'`, so local-date tests are deterministic and cross a UTC date boundary (research R6).
-- [ ] T007 [P] Create `vitest.config.ts` at the root: `projects: ['packages/core', 'packages/db']`, `environment: 'node'`.
-- [ ] T008 [P] Create `eslint.config.js` (flat config) with typescript-eslint recommended-type-checked.
+- [X] T007 [P] Create `vitest.config.ts` at the root: `projects: ['packages/core', 'packages/db']`, `environment: 'node'`.
+- [X] T008 [P] Create `eslint.config.js` (flat config) with typescript-eslint recommended-type-checked.
   - For `packages/core/**`, add `no-restricted-properties` for `Date.now`, `Math.random`, and `crypto.randomUUID`.
   - Also add `no-restricted-globals` for `window`, `document`, `self`, `fetch`, `navigator`, `localStorage`, `indexedDB`, `setTimeout`, and `setInterval`.
-- [ ] T009 [P] Create `.dependency-cruiser.cjs` with these rules:
+- [X] T009 [P] Create `.dependency-cruiser.cjs` with these rules:
   - `core-is-pure`: `packages/core` MUST NOT depend on any path outside `packages/core/src`, and MUST NOT depend on any npm module.
   - `db-no-ui`: `packages/db` MUST NOT import `apps/`.
   - `no-circular`.
-- [ ] T010 [P] Create the `.github/workflows/ci.yml` job on ubuntu-latest with Node 22 and pnpm 10.
+- [X] T010 [P] Create the `.github/workflows/ci.yml` job on ubuntu-latest with Node 22 and pnpm 10.
   - Steps: `pnpm install --frozen-lockfile`, then `typecheck`, `lint`, `test`.
   - Then `npx playwright install --with-deps chromium` and `e2e`.
-- [ ] T011 Run `pnpm install` to generate `pnpm-lock.yaml`. Verify `pnpm typecheck` and `pnpm lint` pass on the empty packages; add a placeholder `src/index.ts` to each.
+- [X] T011 Run `pnpm install` to generate `pnpm-lock.yaml`. Verify `pnpm typecheck` and `pnpm lint` pass on the empty packages; add a placeholder `src/index.ts` to each.
 
 **Checkpoint**: the toolchain is green, and the boundary check fails if you
 temporarily add `import 'node:fs'` to core.
@@ -86,7 +86,7 @@ and the app shell. Every story needs these.
 
 ### Tests first
 
-- [ ] T012 [P] Write parser tests in `packages/core/test/types.test.ts`. Accept and reject for every rule in the data-model.md table:
+- [X] T012 [P] Write parser tests in `packages/core/test/types.test.ts`. Accept and reject for every rule in the data-model.md table:
   - `NonEmptyTitle` "Trimmed, 1–500 characters"
   - `Author`/`Genre` "Trimmed, 1–200 characters; empty input → `null`"
   - `PageCount` "Integer, 1–100 000"
@@ -94,59 +94,59 @@ and the app shell. Every story needs these.
   - `LocalDate` "`YYYY-MM-DD`, a real calendar date". Reject `2026-02-30`.
   - `Instant` "UTC ISO-8601 with `Z`"
   - `Hlc` `^\d{13}-\d{4}-<uuid>$`
-- [ ] T013 [P] Write HLC tests in `packages/core/test/hlc.test.ts`:
+- [X] T013 [P] Write HLC tests in `packages/core/test/hlc.test.ts`:
   - output is monotonic when the wall clock goes backwards or repeats;
   - the counter increments;
   - lexicographic order equals causal order;
   - the format is `%013d-%04d-<deviceId>`.
-- [ ] T014 [P] Write derivation tests in `packages/core/test/book.test.ts`:
+- [X] T014 [P] Write derivation tests in `packages/core/test/book.test.ts`:
   - `eventOrder` sorts by `(local_date, occurred_at, id)` and ignores `deleted_at` events;
   - `deriveStatus` follows the table: none → queued; started/progress → reading; finished → finished; abandoned → abandoned;
   - `lastPage` ignores NULL pages;
   - `lastActivity`.
-- [ ] T015 [P] Write DB migration tests in `packages/db/test/migrations.test.ts`:
+- [X] T015 [P] Write DB migration tests in `packages/db/test/migrations.test.ts`:
   - a fresh DB reaches `user_version = 1` with every table and index in contracts/db-schema.md;
   - running `migrate` twice is a no-op;
   - the CHECK constraints reject a blank title, `total_pages = 0`, and a page on a non-progress event.
-- [ ] T016 [P] Write apply tests in `packages/db/test/apply.test.ts`, covering the four "Tested invariants" in contracts/db-schema.md:
+- [X] T016 [P] Write apply tests in `packages/db/test/apply.test.ts`, covering the four "Tested invariants" in contracts/db-schema.md:
   - the number of change_log rows added equals the number of changes;
   - `field_clock` matches each change's HLC;
   - HLCs strictly increase in `seq` order;
   - a failure injected after change k leaves an identical logical dump.
 
   Write a `dumpLogical(db)` test helper in `packages/db/test/helpers.ts`.
-- [ ] T017 [P] Write a replay test in `packages/db/test/replay.test.ts`: rebuild a fresh DB purely from `change_log` rows (LWW per field, in HLC order). Its logical dump must equal the source DB's dump (contracts/change-log.md, quickstart scenario 13).
+- [X] T017 [P] Write a replay test in `packages/db/test/replay.test.ts`: rebuild a fresh DB purely from `change_log` rows (LWW per field, in HLC order). Its logical dump must equal the source DB's dump (contracts/change-log.md, quickstart scenario 13).
 
 ### Implementation
 
-- [ ] T018 [P] Implement `packages/core/src/result.ts`: `Result<T,E>`, `ok()`, and `err()`.
-- [ ] T019 [P] Implement `packages/core/src/types.ts`: branded types and their parsers, each exactly as tested in T012.
-- [ ] T020 [P] Implement `packages/core/src/hlc.ts`: `hlcNext(prev: Hlc | null, wallMs: number, deviceId: DeviceId): Hlc` and `compareHlc`.
-- [ ] T021 Implement `packages/core/src/book.ts`: `eventOrder`, `deriveStatus`, `lastPage`, `lastActivity`, as in data-model.md "Derived values". Depends on T019.
-- [ ] T022 Define the types in `packages/core/src/commands.ts`, exactly as in contracts/commands.md:
+- [X] T018 [P] Implement `packages/core/src/result.ts`: `Result<T,E>`, `ok()`, and `err()`.
+- [X] T019 [P] Implement `packages/core/src/types.ts`: branded types and their parsers, each exactly as tested in T012.
+- [X] T020 [P] Implement `packages/core/src/hlc.ts`: `hlcNext(prev: Hlc | null, wallMs: number, deviceId: DeviceId): Hlc` and `compareHlc`.
+- [X] T021 Implement `packages/core/src/book.ts`: `eventOrder`, `deriveStatus`, `lastPage`, `lastActivity`, as in data-model.md "Derived values". Depends on T019.
+- [X] T022 Define the types in `packages/core/src/commands.ts`, exactly as in contracts/commands.md:
   - `Command` union: `AddBook | EditBook | RemoveBook | LogEvent | RemoveEvent`
   - `Rejection` union: `TitleRequired | InvalidPageCount | InvalidPage | PageBeyondEnd | PageNotAllowed | PagesBelowLogged | InvalidTransition | NotFound | AlreadyExists`
   - `Change`, `Decision`, `BookSnapshot`
 
   Create `packages/core/src/decide.ts` exporting `decide(snapshot, cmd, now)`. At this stage every command returns `err({kind:'NotImplemented'})`, and the stories fill them in.
-- [ ] T023 Export the public API from `packages/core/src/index.ts`.
-- [ ] T024 Implement the migrations in `packages/db/src/migrations.ts`: migration 1, with the DDL copied verbatim from contracts/db-schema.md. `migrate(db)` runs pending migrations inside `BEGIN IMMEDIATE`, keyed on `PRAGMA user_version`, and runs `PRAGMA foreign_keys = ON` on open.
-- [ ] T025 Implement `packages/db/src/apply.ts`, following contracts/db-schema.md "Apply contract".
+- [X] T023 Export the public API from `packages/core/src/index.ts`.
+- [X] T024 Implement the migrations in `packages/db/src/migrations.ts`: migration 1, with the DDL copied verbatim from contracts/db-schema.md. `migrate(db)` runs pending migrations inside `BEGIN IMMEDIATE`, keyed on `PRAGMA user_version`, and runs `PRAGMA foreign_keys = ON` on open.
+- [X] T025 Implement `packages/db/src/apply.ts`, following contracts/db-schema.md "Apply contract".
   - Signature: `applyChanges(db, changes, deviceId, wallMs: () => number, newOpId: () => string)`.
   - Clock and ID generators are injected so tests are deterministic.
   - Upsert only the given fields (`INSERT … ON CONFLICT(id) DO UPDATE SET` for exactly those fields).
   - Also write `field_clock`, `change_log`, and `meta.hlc`, all in one transaction.
-- [ ] T026 Implement `packages/db/src/snapshot.ts`: `loadBookSnapshot(db, itemId): BookSnapshot | null`, including tombstoned events.
-- [ ] T027 Implement `packages/db/src/index.ts`.
+- [X] T026 Implement `packages/db/src/snapshot.ts`: `loadBookSnapshot(db, itemId): BookSnapshot | null`, including tombstoned events.
+- [X] T027 Implement `packages/db/src/index.ts`.
   - `openDb(sqlite3, filename, vfs?)` → `Db` exposing `migrate`, `dispatch(cmd, env)`, and `query(q)`.
   - `dispatch` = `BEGIN IMMEDIATE` → load snapshot → `decide` → `applyChanges` → `COMMIT` (or `ROLLBACK`). It returns `Result<{offerFinish}, Rejection>`.
   - Device identity: `ensureDeviceId(db, newId)` creates `meta.device_id` on first open.
-- [ ] T028 Create `packages/db/test/helpers.ts`: an in-memory `openTestDb()` using `sqlite3InitModule()` plus `oo1.DB(':memory:')`, a fixed clock, and sequential UUIDs.
-- [ ] T029 Implement `apps/pwa/src/lib/clock.ts`:
+- [X] T028 Create `packages/db/test/helpers.ts`: an in-memory `openTestDb()` using `sqlite3InitModule()` plus `oo1.DB(':memory:')`, a fixed clock, and sequential UUIDs.
+- [X] T029 Implement `apps/pwa/src/lib/clock.ts`:
   - `nowInstant()`;
   - `todayLocal()` via `Intl.DateTimeFormat('en-CA', {timeZone})` → YYYY-MM-DD;
   - `yesterdayLocal()`, using calendar-day arithmetic rather than subtracting 24 h (research R6).
-- [ ] T030 Implement `apps/pwa/src/worker/db.worker.ts`, following contracts/worker-api.md and research R2.
+- [X] T030 Implement `apps/pwa/src/worker/db.worker.ts`, following contracts/worker-api.md and research R2.
   - Startup:
     1. Initialize `sqlite3InitModule()`.
     2. Acquire the Web Lock `readerlog-db`.
@@ -156,14 +156,14 @@ and the app shell. Every story needs these.
   - Post `{type:'changed'}` on `BroadcastChannel('readerlog')` after each commit.
   - Pause and resume on `{type:'visibility', visible}` messages, calling `pauseVfs()`/`unpauseVfs()`.
   - Return `{kind:'Busy'}` if the lock isn't acquired within 5 s, and `{kind:'Storage'}` on I/O or quota errors.
-- [ ] T031 Implement `apps/pwa/src/lib/dbClient.ts`: a typed promise RPC over `postMessage`, following the `Request`/`Response` types in contracts/worker-api.md.
+- [X] T031 Implement `apps/pwa/src/lib/dbClient.ts`: a typed promise RPC over `postMessage`, following the `Request`/`Response` types in contracts/worker-api.md.
   - It forwards `visibilitychange` to the worker.
   - It exposes `onChanged(cb)` from the BroadcastChannel and from its own dispatches.
-- [ ] T032 [P] Implement `apps/pwa/src/lib/router.ts`: a hash router with routes `#/` (Home), `#/add`, `#/library`, `#/book/:id`, and `#/settings`, exposed as a Svelte 5 `$state`.
-- [ ] T033 Create the app shell.
+- [X] T032 [P] Implement `apps/pwa/src/lib/router.ts`: a hash router with routes `#/` (Home), `#/add`, `#/library`, `#/book/:id`, and `#/settings`, exposed as a Svelte 5 `$state`.
+- [X] T033 Create the app shell.
   - `apps/pwa/index.html`, `apps/pwa/src/main.ts`, `apps/pwa/src/App.svelte`: header, bottom nav (Home · Library · Add · Settings), route outlet, and a toast region.
   - `apps/pwa/src/app.css`: CSS custom properties, light and dark themes, a 16px gutter, and 44px tap targets.
-- [ ] T034 Create `apps/pwa/vite.config.ts`.
+- [X] T034 Create `apps/pwa/vite.config.ts`.
   - Plugins: svelte and VitePWA (`registerType:'prompt'`, `generateSW`, `globPatterns` including `**/*.{js,css,html,wasm,svg,png}`).
   - Manifest: name "Readerlog", `display: standalone`, `start_url: './#/'`, icons 192/512.
   - Set `worker.format: 'es'` and `optimizeDeps.exclude: ['@sqlite.org/sqlite-wasm']`.
@@ -185,27 +185,27 @@ appears as the current book on Home, with status Reading.
 
 ### Tests for User Story 2
 
-- [ ] T035 [P] [US2] Write core tests in `packages/core/test/decide.addBook.test.ts`:
+- [X] T035 [P] [US2] Write core tests in `packages/core/test/decide.addBook.test.ts`:
   - `AddBook` with only a title emits 1 item change: all non-null fields, `type:'book'`, `created_at = now`.
   - `startNow` also emits a `started` event with `local_date = cmd.localDate` and `occurred_at = now`.
   - Rejects `TitleRequired` for a blank or whitespace title, and `InvalidPageCount` for 0, negative, or non-integer values.
   - `AlreadyExists` when the snapshot is non-null.
-- [ ] T036 [P] [US2] Write e2e tests in `e2e/add-book.spec.ts`, covering quickstart scenarios 1–3:
+- [X] T036 [P] [US2] Write e2e tests in `e2e/add-book.spec.ts`, covering quickstart scenarios 1–3:
   - a title only gives Queued;
   - "Start reading now" puts the book on the Home card;
   - a blank title and pages = 0 show inline errors, and nothing is stored.
 
 ### Implementation for User Story 2
 
-- [ ] T037 [US2] Implement `AddBook` in `packages/core/src/decide.ts`. Parse every field through the T019 parsers.
-- [ ] T038 [US2] Implement the `home` query in `packages/db/src/queries.ts`: `HomeView { current?: BookCard; otherReading: BookCard[] }`.
+- [X] T037 [US2] Implement `AddBook` in `packages/core/src/decide.ts`. Parse every field through the T019 parsers.
+- [X] T038 [US2] Implement the `home` query in `packages/db/src/queries.ts`: `HomeView { current?: BookCard; otherReading: BookCard[] }`.
   - `current` is the `reading` book with the greatest `lastActivity`.
   - Status is derived with core `deriveStatus` over the snapshot events, never stored.
-- [ ] T039 [US2] Create `apps/pwa/src/screens/AddBook.svelte`.
+- [X] T039 [US2] Create `apps/pwa/src/screens/AddBook.svelte`.
   - Fields: title (required), author, total pages (number input), genre, and a "Start reading now" toggle that defaults on.
   - Show inline error messages mapped from the `Rejection` kinds.
   - On success, navigate to `#/`.
-- [ ] T040 [US2] Create `apps/pwa/src/screens/Home.svelte`. It shows the current-book card (title, author, "p. N" / total), or an empty state with an "Add a book" button. It refreshes on `onChanged`.
+- [X] T040 [US2] Create `apps/pwa/src/screens/Home.svelte`. It shows the current-book card (title, author, "p. N" / total), or an empty state with an "Add a book" button. It refreshes on `onChanged`.
 
 **Checkpoint**: US2 works on its own, and T035 and T036 pass.
 

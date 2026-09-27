@@ -1,0 +1,73 @@
+import type { Command, Result } from '@readerlog/core';
+import type { DispatchOutcome } from '@readerlog/db';
+import { CHANNEL, type ClientError, type Control, type Query, type QueryResult, type Request, type Response } from './protocol.ts';
+
+type Pending = (res: Response) => void;
+
+const worker = new Worker(new URL('../worker/db.worker.ts', import.meta.url), { type: 'module' });
+const pending = new Map<number, Pending>();
+const listeners = new Set<() => void>();
+let seq = 0;
+
+// A tab that starts hidden must not grab the DB from the visible one.
+worker.postMessage({ kind: 'visibility', visible: document.visibilityState === 'visible' } satisfies Control);
+
+worker.onmessage = (ev: MessageEvent<Response>) => {
+  const cb = pending.get(ev.data.id);
+  pending.delete(ev.data.id);
+  cb?.(ev.data);
+};
+
+type WithoutId<T> = T extends unknown ? Omit<T, 'id'> : never;
+
+function send(req: WithoutId<Request>): Promise<Response> {
+  const id = ++seq;
+  return new Promise((resolve) => {
+    pending.set(id, resolve);
+    worker.postMessage({ ...req, id });
+  });
+}
+
+const notify = () => listeners.forEach((l) => l());
+
+// Other tabs' commits arrive over the channel; refresh when this tab is visible again.
+new BroadcastChannel(CHANNEL).onmessage = () => {
+  if (document.visibilityState === 'visible') notify();
+  else staleWhileHidden = true;
+};
+let staleWhileHidden = false;
+
+document.addEventListener('visibilitychange', () => {
+  const visible = document.visibilityState === 'visible';
+  worker.postMessage({ kind: 'visibility', visible } satisfies Control);
+  if (visible && staleWhileHidden) {
+    staleWhileHidden = false;
+    notify();
+  }
+});
+
+export async function dispatch(cmd: Command): Promise<Result<DispatchOutcome, ClientError>> {
+  const res = await send({ kind: 'dispatch', cmd });
+  if (res.ok) {
+    notify();
+    return { ok: true, value: res.result as DispatchOutcome };
+  }
+  return { ok: false, error: res.error };
+}
+
+export async function query<N extends Query['name']>(
+  q: Extract<Query, { name: N }>,
+): Promise<Result<QueryResult[N], ClientError>> {
+  const res = await send({ kind: 'query', q });
+  return res.ok ? { ok: true, value: res.result as QueryResult[N] } : { ok: false, error: res.error };
+}
+
+export async function setMeta(key: string, value: string): Promise<void> {
+  await send({ kind: 'setMeta', key, value });
+}
+
+/** Subscribe to "data changed" (own dispatches and other tabs). Returns an unsubscribe fn. */
+export function onChanged(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}

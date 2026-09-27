@@ -39,6 +39,10 @@ the shell (Today or Yesterday) at save time.
 | `LogEvent` | `itemId, eventId, type, page?, localDate` | insert an event with `occurred_at = now` | `NotFound`, `InvalidPage`, `PageBeyondEnd`, `PageNotAllowed` (a page on a non-progress event), `InvalidTransition` |
 | `RemoveEvent` | `itemId, eventId` | set `reading_events.deleted_at = now` | `NotFound` (already removed → no-op) |
 
+All commands can also return `InvalidInput { field, reason }` for malformed IDs, dates
+or over-long text. The UI can't normally produce this; it is there so `decide` never
+has to trust its input.
+
 ## Invariants (tested in `packages/core/test/decide.test.ts`)
 
 1. `decide` is deterministic: the same inputs always give deep-equal outputs.

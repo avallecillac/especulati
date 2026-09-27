@@ -1,0 +1,33 @@
+import { defineConfig, devices } from '@playwright/test';
+
+// Chromium is preinstalled in the dev container (research R9); CI installs its own.
+const localChromium = process.env['PLAYWRIGHT_BROWSERS_PATH'] ? '/opt/pw-browsers/chromium' : undefined;
+
+export default defineConfig({
+  testDir: '.',
+  fullyParallel: true,
+  retries: 0,
+  reporter: [['list']],
+  use: {
+    baseURL: 'http://localhost:4173',
+    serviceWorkers: 'allow',
+    // Deterministic local dates that cross a UTC day boundary (research R6).
+    timezoneId: 'America/New_York',
+    locale: 'en-US',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(localChromium ? { launchOptions: { executablePath: localChromium } } : {}),
+      },
+    },
+  ],
+  webServer: {
+    command: 'pnpm --filter pwa build && pnpm --filter pwa preview --port 4173 --strictPort',
+    url: 'http://localhost:4173',
+    reuseExistingServer: !process.env['CI'],
+    timeout: 180_000,
+  },
+});

@@ -23,7 +23,7 @@ type Response =
 
 ```ts
 interface BookCard { itemId; title; author?; totalPages?; status; lastPage?; lastActivity? }
-interface HomeView { current?: BookCard; otherReading: BookCard[] }
+interface HomeView { current: BookCard | null; otherReading: BookCard[]; queuedCount: number }
 interface LibraryView { reading: BookCard[]; queued: BookCard[]; finished: BookCard[]; abandoned: BookCard[] }
 interface BookView { card: BookCard; genre?; events: { id; type; page?; localDate; occurredAt }[] }
 ```
