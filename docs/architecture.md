@@ -1,0 +1,258 @@
+# Readerlog — Architecture (v2, local-first)
+
+> This version supersedes the original native-iOS spec (v1). It was revised
+> because the owner has no paid Apple Developer account, reads many articles
+> in Chrome on a Mac, and wants multi-device sync from the start. Feature-level
+> detail lives in `specs/NNN-*/`; project rules live in
+> `.specify/memory/constitution.md`.
+
+## 1. Product summary
+
+Readerlog is a **personal, single-user app** for logging books and web articles
+and viewing reading stats.
+
+- **It is not a reader.** Readerlog has no in-app reading and never stores article text.
+- **Books** are logged through progress updates. These drive the headline stat:
+  *reading days per year*.
+- **Articles** are logged once, when read. They feed counts and stats only and
+  **never** count toward reading days or streaks.
+- **Audience:** a single user who owns several devices, currently an iPhone and a Mac.
+  There are no accounts, no multi-tenancy, and no social features.
+
+## 2. Guiding principles
+
+1. **Local-first.** Each device holds a full SQLite database and treats it as its
+   source of truth. Every read and write is local and works offline. Using the
+   network is always optional.
+2. **The user owns the data.** Any device can do a lossless export and import.
+   The sync relay only ever sees ciphertext.
+3. **Minimal backend.** The only server is a tiny relay that stores encrypted
+   change batches. It has no knowledge of the domain and no always-on logic.
+4. **Book progress is stored as events, not state.** Book progress is an
+   append-only event log, which keeps historical stats computable.
+5. **Logging takes near-zero effort.** Every capture flow takes at most 2 taps or clicks.
+
+## 3. Platform decision
+
+A native iOS app, whether Swift or Expo, would need a paid Apple Developer
+account for App Groups (widgets and share extensions), iCloud containers, and
+builds that don't expire every 7 days. Readerlog is therefore:
+
+| Surface | Technology | Role |
+|---|---|---|
+| **PWA** (iPhone home screen, Mac Chrome) | TypeScript, Vite, Svelte 5, `vite-plugin-pwa` | The full app: library, logging, stats, sync, export |
+| **Local DB** | `@sqlite.org/sqlite-wasm`, OPFS SAH-pool VFS, in a dedicated Web Worker | The only persistent store on each device |
+| **Chrome extension** (Mac) | Manifest V3 | One-click "Log as read"; reads page metadata from the live DOM; a write-only sync peer |
+| **iOS Shortcut** | Shortcuts app, "Run JavaScript on Web Page" | Share-sheet capture from Safari; hands the payload to the PWA's `/capture` route |
+| **Relay** | Cloudflare Worker + D1 (free tier) | Stores and forwards encrypted op batches; nothing else |
+
+Accepted losses compared with the native spec:
+- There is no home or lock-screen widget. It is replaced by a "Current book" quick-log card on the app's start screen.
+- There are no local notification reminders in v1. They would need Web Push from a server cron and are deferred.
+
+## 4. System overview
+
+```
+ iPhone                                   Mac
+┌──────────────────────────┐     ┌──────────────────────────┐   ┌───────────────────┐
+│ PWA (installed)          │     │ PWA (Chrome)             │   │ Chrome extension  │
+│  UI ─ core ─ SQLite/OPFS │     │  UI ─ core ─ SQLite/OPFS │   │  popup + content  │
+│  change_log ─ sync       │     │  change_log ─ sync       │   │  script; push-only│
+└──────▲───────────┬───────┘     └──────▲───────────┬───────┘   └────────┬──────────┘
+       │ Shortcut  │ E2E-encrypted ops  │           │                    │
+  Safari share     ▼                    │           ▼                    ▼
+               ┌──────────────────────────────────────────────────────────┐
+               │ Relay (Cloudflare Worker + D1): append/pull ciphertext   │
+               └──────────────────────────────────────────────────────────┘
+  Book metadata: Open Library → Google Books (called directly from the PWA; both allow CORS)
+```
+
+## 5. Code architecture: functional core, imperative shell
+
+```
+packages/core   pure TS: branded types, decide(), HLC, merge rules, interchange v1, stat math
+packages/db     SQLite schema + migrations, repositories, stats SQL (browser worker + Node tests)
+packages/sync   HKDF keys, AES-GCM envelopes, relay client, push/pull loop
+apps/pwa        Svelte UI, DB worker, service worker, barcode scanner, /capture route
+apps/extension  Chrome MV3 extension
+apps/relay      Cloudflare Worker
+shortcuts/      iOS Shortcut + JS snippet + install guide
+e2e/            Playwright scenarios
+```
+
+- `packages/core` never touches the DOM, SQLite, `fetch`, the clock, or
+  randomness. The shell passes in `now` and new IDs. CI enforces this boundary.
+- Every mutation follows one path:
+  1. `decide(state, command, now, newId) → Result<Change[], Rejection>`
+  2. The shell applies all the `Change[]` in **one SQLite transaction**. That
+     transaction writes rows, advances `field_clock`, and appends to `change_log`.
+- Types follow "parse, don't validate": `ItemId`, `LocalDate`, `Page`,
+  `NonEmptyTitle`, and so on are branded and built only through smart constructors.
+
+## 6. Data model (migration v1)
+
+```sql
+CREATE TABLE items (
+  id              TEXT PRIMARY KEY,          -- UUID
+  type            TEXT NOT NULL CHECK (type IN ('book','article')),
+  title           TEXT NOT NULL,
+  author          TEXT,
+  isbn            TEXT, total_pages INTEGER, genre TEXT,
+  cover_url       TEXT, cover_blob_key TEXT, -- books
+  url             TEXT, domain TEXT, word_count INTEGER,
+  read_on         TEXT,                      -- articles: local YYYY-MM-DD
+  metadata_status TEXT NOT NULL DEFAULT 'ok' CHECK (metadata_status IN ('pending','ok','failed')),
+  rating          INTEGER CHECK (rating BETWEEN 1 AND 5),
+  created_at      TEXT NOT NULL,             -- UTC ISO-8601
+  deleted_at      TEXT                       -- tombstone
+);
+
+CREATE TABLE reading_events (              -- books only; insert-only except tombstone
+  id          TEXT PRIMARY KEY,
+  item_id     TEXT NOT NULL REFERENCES items(id),
+  event_type  TEXT NOT NULL CHECK (event_type IN ('started','progress','finished','abandoned')),
+  page        INTEGER,                     -- NULL = "read today" without a page
+  occurred_at TEXT NOT NULL,               -- UTC ISO-8601
+  local_date  TEXT NOT NULL,               -- YYYY-MM-DD as experienced by the user
+  deleted_at  TEXT
+);
+
+CREATE TABLE tags      (id TEXT PRIMARY KEY, name TEXT NOT NULL, deleted_at TEXT);
+CREATE TABLE item_tags (item_id TEXT NOT NULL, tag_id TEXT NOT NULL, deleted_at TEXT,
+                        PRIMARY KEY (item_id, tag_id));
+
+-- sync bookkeeping
+CREATE TABLE field_clock (tbl TEXT, row_id TEXT, field TEXT, hlc TEXT NOT NULL,
+                          PRIMARY KEY (tbl, row_id, field));
+CREATE TABLE change_log  (seq INTEGER PRIMARY KEY AUTOINCREMENT, op_id TEXT UNIQUE NOT NULL,
+                          hlc TEXT NOT NULL, device_id TEXT NOT NULL, tbl TEXT NOT NULL,
+                          row_id TEXT NOT NULL, fields_json TEXT NOT NULL,
+                          pushed INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE meta        (key TEXT PRIMARY KEY, value TEXT NOT NULL);  -- device_id, hlc, cursors
+```
+
+The spec's indexes are kept (`reading_events(item_id, local_date)`,
+`reading_events(local_date)`, `items(type, read_on)`), as partial indexes with
+`WHERE deleted_at IS NULL`.
+
+**Rules**
+- Book status is **derived** from the latest non-deleted event, never stored:
+  - no events → queued
+  - `started` or `progress` → reading
+  - `finished` → done
+  - `abandoned` → abandoned
+- `local_date` is **explicit**. It is captured from the device's timezone at
+  write time, or set by hand when backdating. It is never derived from UTC at
+  query time.
+- `page` is optional. A page-less event counts as a reading day but is ignored
+  by pace calculations. A book may have several events on the same day.
+- Articles have no events. For an article, `read_on` is the whole log.
+- A correction never rewrites an event. It tombstones the event and inserts a
+  replacement.
+
+## 7. Sync (v1)
+
+- **Merge semantics**
+  - **Fields** use last-writer-wins per `(table, row, field)`, comparing HLCs
+    (hybrid logical clocks).
+  - **Events** merge by union on `id`.
+  - **Tombstones** are ordinary fields, so they also follow LWW.
+- **HLC format:** `<unix-ms, 13 digits>-<counter, 4 digits>-<device_id>`. Plain
+  string comparison gives the correct total order.
+- **Space and keys**
+  - The first device generates a 256-bit secret `K`.
+  - HKDF derives `spaceId`, `authToken`, and `encKey` from `K`.
+  - Another device pairs by scanning a QR code of `K` or pasting it as a code.
+  - A "full reset" creates a **new** space. Peers never merge a replaced dataset back in.
+- **Push:** each device batches its unpushed `change_log` rows, encrypts them with
+  AES-GCM, and sends `POST /spaces/:spaceId/ops`. The relay assigns
+  `server_seq`, and a duplicate `op_id` is a no-op.
+- **Pull:** `GET /spaces/:spaceId/ops?after=<cursor>`. The device decrypts the
+  batch and applies it in a single transaction.
+- **When sync runs:** on app open, on `visibilitychange`, after writes (debounced),
+  and when `online` fires. A device that is offline keeps working fully.
+- **Chrome extension:** a push-only peer that creates article items.
+
+## 8. Capture flows
+
+### Add a book
+1. Scan the ISBN with the camera (`getUserMedia` + `zxing-wasm`). Searching by
+   title is the fallback.
+2. Look up the book in Open Library, then Google Books if needed. Save the cover
+   locally as a blob for offline use.
+3. Show a pre-filled confirmation, then save. The user can then tap
+   **"Start reading now"** to add a `started` event.
+4. If the lookup fails, save the book anyway. The user can retry metadata later.
+
+### Log book progress (the most frequent action)
+- The app opens on a **Current book** card with a one-tap log.
+- The page field is pre-filled with the last logged page.
+- **"Read today"** adds a `progress` event with `page = NULL`.
+- Today is selected by default, and **Yesterday** is one tap away for backdating.
+- Reaching `total_pages` asks **"Mark as finished?"**.
+
+### Log an article
+- **Mac (Chrome extension):** the user clicks the toolbar button, uses the
+  keyboard shortcut, or right-clicks and picks **Log as read**. A content script
+  collects the URL, title, author, and a readability-style word count from the
+  live DOM, so it also works on paywalled or logged-in pages. The article is
+  saved with `read_on = today` in the Mac's local timezone.
+- **iPhone (Safari share sheet → Readerlog Shortcut):** JavaScript runs on the
+  page to collect the same metadata. The Shortcut then opens
+  `https://<app>/capture#<base64url JSON>`, and the PWA saves it immediately.
+- Sharing an article counts as reading it; there is no queue.
+- A URL typed in by hand keeps only its domain, because a browser can't fetch
+  arbitrary pages due to CORS. Its status is `metadata_status = 'failed'`.
+
+## 9. Stats (on-device SQL)
+
+The headline stat is **reading days per year**. It counts books only.
+
+```sql
+SELECT substr(e.local_date, 1, 4) AS year, COUNT(DISTINCT e.local_date) AS reading_days
+FROM reading_events e JOIN items i ON i.id = e.item_id
+WHERE i.type = 'book' AND e.deleted_at IS NULL AND i.deleted_at IS NULL
+GROUP BY year;
+```
+
+| Stat | Source |
+|---|---|
+| Reading-day heatmap | distinct `local_date` from book events |
+| Current and longest streak | consecutive distinct `local_date`s |
+| Books finished per month and year | `finished` events |
+| Pages read per period | positive deltas between consecutive non-null `page`s per book |
+| Pages per reading day | pages read ÷ reading days |
+| Average days to finish | first `started` → `finished`, per book |
+| Abandon rate, overall and by genre | `abandoned` vs `finished` |
+| Articles per week and month | `items.read_on` where `type = 'article'` |
+| Estimated article reading time | `SUM(word_count) / 238` wpm |
+| Top authors, genres, and domains | grouped counts |
+
+Streaks and reading days count books only. Article stats have their own section.
+
+## 10. Backup and portability
+
+- The relay holds the complete encrypted change log, so pairing a new device restores everything.
+- **Export** produces `readerlog/v1` JSON (a hand-written, versioned data
+  transfer object that rejects unknown versions) and CSV. The raw SQLite file
+  can also be downloaded.
+- **Import** merges by `id`. It is idempotent and never returns a partial result.
+
+## 11. Out of scope (v1)
+
+- In-app reading and storing article text
+- Accounts and auth, beyond the pairing key
+- Social features
+- Home-screen widgets and push reminders, deferred
+- AI features
+
+## 12. Feature roadmap (spec-kit)
+
+| # | Feature | Summary |
+|---|---|---|
+| 001 | local-book-log | Monorepo, core + db, PWA shell (offline/installable), manual book add, progress logging, current-book card |
+| 002 | isbn-scan-metadata | Barcode scan, Open Library → Google Books, title search, offline covers |
+| 003 | reading-stats | Book stats + heatmap/streaks; separate article stats |
+| 004 | encrypted-sync | Relay, pairing (QR/code), push/pull, LWW merge, convergence tests |
+| 005 | article-capture | iOS Shortcut + `/capture`, Chrome extension |
+| 006 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space |
