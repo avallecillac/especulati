@@ -21,6 +21,10 @@ returns `Result<T, ValidationError>`.
 
 ## Entities
 
+Spec terms map to model terms as follows: *Reading Entry* = `ReadingEvent`,
+*Change Record* = a `change_log` row, *Device Identity* = `meta.device_id`.
+
+
 ### Item (`items`), book subset for 001
 
 | Field | Type | Notes |

@@ -58,6 +58,7 @@ research.md R9.
   - Chromium project with `launchOptions.executablePath` from `/opt/pw-browsers` when `PLAYWRIGHT_BROWSERS_PATH` is set.
   - `webServer` = `pnpm --filter pwa build && pnpm --filter pwa preview --port 4173`, with `baseURL` `http://localhost:4173`.
   - `use.serviceWorkers: 'allow'`.
+  - `use.timezoneId: 'America/New_York'` and `use.locale: 'en-US'`, so local-date tests are deterministic and cross a UTC date boundary (research R6).
 - [ ] T007 [P] Create `vitest.config.ts` at the root: `projects: ['packages/core', 'packages/db']`, `environment: 'node'`.
 - [ ] T008 [P] Create `eslint.config.js` (flat config) with typescript-eslint recommended-type-checked.
   - For `packages/core/**`, add `no-restricted-properties` for `Date.now`, `Math.random`, and `crypto.randomUUID`.
@@ -236,9 +237,11 @@ Read today, Today/Yesterday, and a finish prompt.
 - [ ] T043 [P] [US1] Write e2e tests in `e2e/log-progress.spec.ts`, covering quickstart scenarios 4–7:
   - the log sheet is pre-filled with 120, and saving 145 updates the card;
   - Read today;
-  - Yesterday, with `page.clock` set to 00:05 local time, gives the previous calendar date;
+  - Yesterday, with `page.clock` set to 2026-03-09T00:05 America/New_York (the day after the DST change), gives `2026-03-08`, and Today gives `2026-03-09`;
   - saving at `total_pages` prompts "Mark as finished?". Confirming marks the book Finished; declining leaves it Reading.
   - Assert that a save → visible card update takes under 100 ms (SC-002).
+  - SC-001: from a cold `page.goto('/')`, reach a saved entry using exactly 2 clicks (Log, Save) plus one `fill` of the page input. Assert the elapsed time is < 5 s, and count the clicks with a helper that wraps `page.click`.
+  - A book with unknown total pages can be finished from the log sheet's **Finish** action.
 
 ### Implementation for User Story 1
 
@@ -248,6 +251,7 @@ Read today, Today/Yesterday, and a finish prompt.
   - A date chip toggle: **Today** (default) / **Yesterday**. The date is computed at save time through `clock.ts`.
   - A primary **Save** button and a secondary **Read today** button (dispatches `progress` with no page).
   - Inline rejection messages.
+  - A tertiary **Finish** action (dispatches `LogEvent finished`), so books with unknown total pages can be finished before US3 exists.
   - When `offerFinish` is returned, show a "Mark as finished?" confirm that dispatches `LogEvent finished`.
 - [ ] T046 [US1] Wire the Home card's **Log** button to open LogSheet. This makes Home → Log → Save and Home → Log → Read today 2 taps each (FR-008). Show a "Saved" toast with an Undo button (the handler is completed in US4).
 
@@ -277,7 +281,7 @@ data.
   - Show "Storage: persistent" or a non-blocking notice when it isn't granted.
   - Show the device ID and schema version.
   - Show an "Update available → Reload" banner from `virtual:pwa-register` `onNeedRefresh`.
-- [ ] T051 [US5] Verify the production build precaches the sqlite `.wasm` file: check `dist/sw.js` for `sqlite3.wasm`. Add iOS meta tags to `apps/pwa/index.html`: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `theme-color`.
+- [ ] T051 [US5] Verify the production build precaches the sqlite `.wasm` file: check `dist/sw.js` for `sqlite3.wasm`. Add iOS meta tags to `apps/pwa/index.html`: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `theme-color`. In `e2e/offline.spec.ts`, assert that `/manifest.webmanifest` parses and has `display: "standalone"` and 192/512 icons (FR-012).
 
 **Checkpoint**: all P1 stories are complete. T047 and T048 pass.
 
@@ -351,7 +355,13 @@ and the reading day disappears if that was the only entry that day.
 
 - [ ] T064 [P] Write two-tab e2e tests in `e2e/two-tabs.spec.ts`, covering quickstart scenario 12: write in tab A, focus tab B, and B shows the write. Also, the worker hands the Web Lock over when a tab is hidden.
 - [ ] T065 [P] Write a storage-failure test in `packages/db/test/apply.test.ts`: simulate an SQLITE_FULL error. `dispatch` must return an error and leave the logical dump unchanged. Map the error to `{kind:'Storage'}` in `apps/pwa/src/worker/db.worker.ts`, and show it as a toast.
-- [ ] T066 [P] Write a performance check in `e2e/perf.spec.ts`: seed 100 books and 5,000 events through dispatch. The Home query and a save → visible update must each take under 100 ms in Chromium (SC-002).
+- [ ] T065a [P] Write e2e tests in `e2e/timezone.spec.ts` for the spec edge case "Time zone change while travelling".
+  - In a context with `timezoneId: 'America/New_York'` and the clock at 2026-06-01T22:00 local, log progress. It is stored with `local_date = 2026-06-01`.
+  - Reopen the same storage in a context with `timezoneId: 'Asia/Tokyo'` (clock unchanged, now 2026-06-02 11:00 local).
+  - The first entry still shows 2026-06-01, and a new entry is stored as 2026-06-02.
+- [ ] T066 [P] Write a performance check in `e2e/perf.spec.ts`: seed 100 books and 5,000 events through dispatch.
+  - The Home query and a save → visible update must each take under 100 ms in Chromium (SC-002).
+  - Cold start: from `navigationStart` to the Home card becoming visible (marked with `performance.mark('home-visible')` in `Home.svelte`) must take < 1.5 s on the production build (plan.md Performance Goals). Record the iPhone number manually in quickstart.md.
 - [ ] T067 [P] Add a `CLAUDE.md` at the repo root. It should describe the commands (`pnpm test|lint|typecheck|e2e`), the core/shell rules, the spec-kit workflow, and the pinned versions (TypeScript 5.9, Playwright 1.56.1).
 - [ ] T068 Run every quickstart.md validation command. Confirm that CI is green. Tick the completed scenarios in `specs/001-local-book-log/quickstart.md`.
 
@@ -382,7 +392,7 @@ Tests first, and confirm they fail. Then core `decide` → db queries → Svelte
 - US1: T041, T042, and T043 in parallel.
 - US3: T052, T053, and T054 in parallel. T057 runs in parallel with T055 and T056.
 - US4: T060 and T061 in parallel.
-- Polish: T064–T067 in parallel.
+- Polish: T064–T067 (including T065a) in parallel.
 
 ## Parallel Example: User Story 1
 

@@ -151,7 +151,11 @@ starts, and all previously entered data is present.
   and it contributes zero pages read. It is not rejected.
 - **Page greater than total pages:** rejected inline, unless total pages is unknown.
 - **Total pages unknown:** the finish prompt never appears. The user finishes the book
-  manually with **Finish**.
+  manually with **Finish**, which is available in the log sheet.
+- **Finishing a book that was never started** (for example, one read in the past): not
+  supported in this feature. Finish and Abandon require the book to be Reading.
+  Recording past reading with backdated dates is deferred to a later feature, because
+  every event counts as a reading day.
 - **Several entries for the same book on the same day:** all are kept. They count as
   one reading day.
 - **Removing a book's only start entry:** the book goes back to Queued.
@@ -200,7 +204,8 @@ starts, and all previously entered data is present.
   whether it was granted.
 - **FR-014**: Invalid input MUST be rejected with an inline, specific message and MUST
   NOT change stored data. Invalid input means a blank title, a non-positive or
-  non-integer page or page count, or a page above the known total.
+  non-integer page or page count, a page above the known total, or a total page count
+  below a page already logged for that book.
 - **FR-015**: The Library MUST list every non-removed book exactly once, grouped by
   derived status. Within Reading, books MUST be ordered by most recent entry.
 - **FR-016**: Users MUST be able to edit a book's title, author, total pages, and

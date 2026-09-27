@@ -83,7 +83,8 @@ e2e/            Playwright scenarios
 - `packages/core` never touches the DOM, SQLite, `fetch`, the clock, or
   randomness. The shell passes in `now` and new IDs. CI enforces this boundary.
 - Every mutation follows one path:
-  1. `decide(state, command, now, newId) → Result<Change[], Rejection>`
+  1. `decide(state, command, now) → Result<Change[], Rejection>`. New IDs are generated
+     by the shell and carried inside the command.
   2. The shell applies all the `Change[]` in **one SQLite transaction**. That
      transaction writes rows, advances `field_clock`, and appends to `change_log`.
 - Types follow "parse, don't validate": `ItemId`, `LocalDate`, `Page`,

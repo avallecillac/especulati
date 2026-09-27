@@ -71,15 +71,18 @@ CREATE INDEX idx_changelog_unpushed ON change_log(seq) WHERE pushed = 0;
 - `CHECK` constraints are a second line of defense. The core rejects invalid input
   before it ever reaches SQL.
 
-## Apply contract (`applyChanges(db, changes, deviceId)`)
+## Apply contract (`applyChanges(db, changes, deviceId, wallMs, newOpId)`)
+
+`wallMs: () => number` and `newOpId: () => string` are injected: `Date.now` and
+`crypto.randomUUID` in the app, and deterministic fakes in tests.
 
 It runs inside one `BEGIN IMMEDIATE … COMMIT`. For each change, in order:
 
-1. Compute `hlc = hlcNext(meta.hlc, Date.now(), deviceId)`.
+1. Compute `hlc = hlcNext(meta.hlc, wallMs(), deviceId)`.
 2. Upsert the row:
    `INSERT … ON CONFLICT(id) DO UPDATE SET <only fields in change>`.
 3. For each field, upsert `field_clock(tbl,row_id,field,hlc)`.
-4. Insert `change_log(op_id = randomUUID(), hlc, device_id, tbl, row_id, fields_json)`.
+4. Insert `change_log(op_id = newOpId(), hlc, device_id, tbl, row_id, fields_json)`.
 5. After the loop, write `meta.hlc`.
 
 Any error rolls back the whole transaction, leaving the rows, `field_clock`,

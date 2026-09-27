@@ -65,12 +65,12 @@ decade.
 | Principle | Gate | Status |
 |---|---|---|
 | I. Local-first | Every read and write happens in the worker's local DB. The feature makes no network calls. An offline e2e test is included (scenario 8). | PASS |
-| II. User owns data | No data leaves the device. `change_log` is complete enough to export and replay (scenario 13). No analytics. | PASS |
+| II. User owns data | No data leaves the device. `change_log` is complete enough to export and replay (scenario 13). No analytics. The lossless `readerlog/v1` export is delivered by 006. Until then, the T017 replay test guarantees data can be reconstructed. | PASS |
 | III. Events over state | Status and last page are derived. Events are insert-only except `deleted_at`, enforced by the commands contract (invariant 5). `local_date` is explicit and computed in the shell at save time. | PASS |
 | IV. Functional core / imperative shell | `decide`, `deriveStatus`, `lastPage`, and `hlcNext` are pure. Time and IDs are injected. Core `tsconfig` has no DOM lib, lint bans `Date.now`/`Math.random`, and dependency-cruiser enforces the import rule. | PASS |
 | V. Near-zero friction | Home card → Log → Save is 2 taps. Home card → Log → Read today is 2 taps. The page is pre-filled, Today is the default, and Yesterday is 1 tap. | PASS |
 | VI. Simplicity | 3 workspace packages: core, db, and pwa. The db package has two real consumers today, the PWA worker and the Node test harness, and sync is its third. A hand-written hash router, no state or UI libraries, and each dependency is justified in research. | PASS |
-| VII. Verified correctness | Unit tests, property tests (a reference model for status and last page), db invariant tests, and e2e tests for every user story. | PASS |
+| VII. Verified correctness | Unit tests, property tests (a reference model for status and last page), db invariant tests, and e2e tests for every user story. The convergence-test CI gate is N/A until 004 (no sync yet). The T017 change-log replay test is its precursor and runs in `pnpm test`. | PASS |
 | Tech constraints | No paid Apple account required. Migration 1 is a forward-only `user_version` migration. The performance budget is measured in e2e (timing on save → visible). | PASS |
 
 **Post-design re-check (after Phase 1):** PASS. The contracts add no new

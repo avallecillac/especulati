@@ -51,7 +51,9 @@ after edits, after backdating, and when events sync in from other devices.
   `Date.now()`, or randomness, and MUST NOT import from any shell package.
 - The shell passes in the current time and freshly generated IDs.
 - Every mutation MUST flow through
-  `decide(state, command, now, newId) → Result<Change[], Rejection>`. The resulting
+  `decide(state, command, now) → Result<Change[], Rejection>`. The shell generates
+  any new IDs and puts them inside the command, so a command can be replayed
+  idempotently. The resulting
   changes MUST be applied in a single SQLite transaction that also writes
   `field_clock` and `change_log`. Partial application is a bug.
 - Inputs MUST be parsed into branded types (`ItemId`, `LocalDate`, `Page`, and so on)
@@ -153,4 +155,4 @@ Rationale: stats that are silently wrong are worse than no stats.
 - **Runtime guidance.** `docs/architecture.md` is the runtime architecture reference.
   When the two disagree, this document wins, and the architecture doc MUST be updated.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-09-27
+**Version**: 1.0.1 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-09-27
