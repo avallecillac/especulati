@@ -1,6 +1,6 @@
 <script lang="ts">
   import { router } from './lib/router.svelte.ts';
-  import { query } from './lib/dbClient.ts';
+  import { query, refreshAll } from './lib/dbClient.ts';
   import { applyUpdate, pwa } from './lib/pwa.svelte.ts';
   import { dismissToast, toasts } from './lib/toast.svelte.ts';
   import Home from './screens/Home.svelte';
@@ -18,12 +18,33 @@
 
   // Signals (to users of assistive tech and to tests) that the on-device DB is open.
   let dbReady = $state(false);
-  void query({ name: 'storage' }).then((r) => (dbReady = r.ok));
+  let busy = $state(false);
+
+  async function connect() {
+    const wasBusy = busy;
+    const r = await query({ name: 'storage' });
+    dbReady = r.ok;
+    busy = !r.ok && r.error.kind === 'Busy';
+    if (wasBusy && r.ok) refreshAll();
+  }
+  void connect();
+
+  // Another window had the DB: try again when this one is brought to the front.
+  const retry = () => {
+    if (busy && document.visibilityState === 'visible') void connect();
+  };
 </script>
+
+<svelte:window onfocus={retry} />
+<svelte:document onvisibilitychange={retry} />
 
 <div class="app">
   {#if dbReady}<div data-testid="ready" hidden></div>{/if}
   <header class="bar"><a class="brand" href="#/">Readerlog</a></header>
+
+  {#if busy}
+    <div class="update" role="alert">Readerlog is open in another window. Close it or switch to it.</div>
+  {/if}
 
   {#if pwa.needRefresh}
     <div class="update row" role="status">

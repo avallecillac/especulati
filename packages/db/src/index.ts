@@ -1,6 +1,6 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import { decide, err, ok, type Command, type DeviceId, type Instant, type Rejection, type Result } from '@readerlog/core';
-import { applyChanges, readMeta, writeMeta } from './apply.ts';
+import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot } from './snapshot.ts';
 import { bookView, homeView, libraryView, type BookView, type HomeView, type LibraryView } from './queries.ts';
@@ -76,7 +76,7 @@ export class ReaderlogDb {
       this.raw.exec('COMMIT');
       return ok({ offerFinish: decision.value.offerFinish });
     } catch (e) {
-      this.raw.exec('ROLLBACK');
+      rollbackQuietly(this.raw, 'ROLLBACK');
       throw e;
     }
   }

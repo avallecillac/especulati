@@ -10,6 +10,19 @@ const WRITABLE: Readonly<Record<string, ReadonlySet<string>>> = {
   reading_events: new Set(['item_id', 'event_type', 'page', 'occurred_at', 'local_date', 'deleted_at']),
 };
 
+/**
+ * Run cleanup after a failed write without masking the original error. On SQLITE_FULL/IOERR/
+ * NOMEM SQLite may already have rolled the transaction back itself, so an explicit ROLLBACK can
+ * fail with "no transaction is active" — that is expected and ignored here.
+ */
+export function rollbackQuietly(db: Database, sql: string): void {
+  try {
+    db.exec(sql);
+  } catch {
+    // Already rolled back by SQLite; the caller rethrows the original error.
+  }
+}
+
 export function readMeta(db: Database, key: string): string | null {
   const v = db.selectValue('SELECT value FROM meta WHERE key = ?', [key]);
   return typeof v === 'string' ? v : null;
@@ -69,8 +82,8 @@ export function applyChanges(
     if (hlc !== null) writeMeta(db, 'hlc', hlc);
     db.exec('RELEASE apply_changes');
   } catch (e) {
-    db.exec('ROLLBACK TO apply_changes');
-    db.exec('RELEASE apply_changes');
+    rollbackQuietly(db, 'ROLLBACK TO apply_changes');
+    rollbackQuietly(db, 'RELEASE apply_changes');
     throw e;
   }
 }

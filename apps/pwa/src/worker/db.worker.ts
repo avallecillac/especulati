@@ -25,20 +25,32 @@ let queue: Promise<unknown> = Promise.resolve();
 
 class BusyError extends Error {}
 
+/**
+ * Wait up to LOCK_TIMEOUT_MS for the DB (a tab being hidden hands it over quickly). Once that
+ * timed out, later requests fail fast until visibility changes, so queued work doesn't stack
+ * 5-second waits.
+ */
+let lastAttemptBusy = false;
+
 function acquireLock(): Promise<void> {
+  const waitForIt = !lastAttemptBusy;
+  const options: LockOptions = waitForIt ? { signal: AbortSignal.timeout(LOCK_TIMEOUT_MS) } : { ifAvailable: true };
   return new Promise<void>((acquired, rejected) => {
     navigator.locks
-      .request(LOCK, { signal: AbortSignal.timeout(LOCK_TIMEOUT_MS) }, () => {
+      .request(LOCK, options, (lock) => {
+        if (!lock) {
+          rejected(new BusyError());
+          return;
+        }
+        lastAttemptBusy = false;
         acquired();
         return new Promise<void>((release) => (releaseLock = release));
       })
-      .catch((e: unknown) =>
-        rejected(
-          e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError') ? new BusyError()
-          : e instanceof Error ? e
-          : new Error(String(e)),
-        ),
-      );
+      .catch((e: unknown) => {
+        const timedOut = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
+        if (timedOut) lastAttemptBusy = true;
+        rejected(timedOut ? new BusyError() : e instanceof Error ? e : new Error(String(e)));
+      });
   });
 }
 
@@ -137,6 +149,7 @@ self.onmessage = (ev: MessageEvent<Request | Control>) => {
   const msg = ev.data;
   if (msg.kind === 'visibility') {
     wantOpen = msg.visible;
+    lastAttemptBusy = false;
     // Resume immediately (a queued request may be waiting for it); close in queue order.
     if (msg.visible) resumeWaiters.splice(0).forEach((r) => r());
     else queue = queue.then(close);

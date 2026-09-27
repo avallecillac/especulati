@@ -353,17 +353,18 @@ and the reading day disappears if that was the only entry that day.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T064 [P] Write two-tab e2e tests in `e2e/two-tabs.spec.ts`, covering quickstart scenario 12: write in tab A, focus tab B, and B shows the write. Also, the worker hands the Web Lock over when a tab is hidden.
-- [ ] T065 [P] Write a storage-failure test in `packages/db/test/apply.test.ts`: simulate an SQLITE_FULL error. `dispatch` must return an error and leave the logical dump unchanged. Map the error to `{kind:'Storage'}` in `apps/pwa/src/worker/db.worker.ts`, and show it as a toast.
-- [ ] T065a [P] Write e2e tests in `e2e/timezone.spec.ts` for the spec edge case "Time zone change while travelling".
+- [X] T064 [P] Write two-tab e2e tests in `e2e/two-tabs.spec.ts`, covering quickstart scenario 12: write in tab A, focus tab B, and B shows the write. Also, the worker hands the Web Lock over when a tab is hidden.
+- [X] T065 [P] Write a storage-failure test in `packages/db/test/apply.test.ts`: simulate an SQLITE_FULL error. `dispatch` must return an error and leave the logical dump unchanged. Map the error to `{kind:'Storage'}` in `apps/pwa/src/worker/db.worker.ts`, and show it as a toast.
+- [X] T065a [P] Write e2e tests in `e2e/timezone.spec.ts` for the spec edge case "Time zone change while travelling".
   - In a context with `timezoneId: 'America/New_York'` and the clock at 2026-06-01T22:00 local, log progress. It is stored with `local_date = 2026-06-01`.
   - Reopen the same storage in a context with `timezoneId: 'Asia/Tokyo'` (clock unchanged, now 2026-06-02 11:00 local).
   - The first entry still shows 2026-06-01, and a new entry is stored as 2026-06-02.
-- [ ] T066 [P] Write a performance check in `e2e/perf.spec.ts`: seed 100 books and 5,000 events through dispatch.
+- [X] T066 [P] Write a performance check in `e2e/perf.spec.ts`: seed 100 books and 5,000 events through dispatch.
+  - *As built:* every OPFS dispatch is a durable write (25–40 ms), so seeding 5,000 events in e2e would take minutes and would need a test-only hook in the product. The full-scale check therefore runs at the DB level in `packages/db/test/perf.test.ts`, on the same SQLite engine: home ≈ 42–54 ms, library ≈ 42 ms, book ≈ 1 ms, dispatch ≈ 1–3 ms. The e2e test measures cold start on the production build (≈ 130 ms), and save → visible is measured in `e2e/log-progress.spec.ts`.
   - The Home query and a save → visible update must each take under 100 ms in Chromium (SC-002).
   - Cold start: from `navigationStart` to the Home card becoming visible (marked with `performance.mark('home-visible')` in `Home.svelte`) must take < 1.5 s on the production build (plan.md Performance Goals). Record the iPhone number manually in quickstart.md.
-- [ ] T067 [P] Add a `CLAUDE.md` at the repo root. It should describe the commands (`pnpm test|lint|typecheck|e2e`), the core/shell rules, the spec-kit workflow, and the pinned versions (TypeScript 5.9, Playwright 1.56.1).
-- [ ] T068 Run every quickstart.md validation command. Confirm that CI is green. Tick the completed scenarios in `specs/001-local-book-log/quickstart.md`.
+- [X] T067 [P] Add a `CLAUDE.md` at the repo root. It should describe the commands (`pnpm test|lint|typecheck|e2e`), the core/shell rules, the spec-kit workflow, and the pinned versions (TypeScript 5.9, Playwright 1.56.1).
+- [X] T068 Run every quickstart.md validation command. Confirm that CI is green. Tick the completed scenarios in `specs/001-local-book-log/quickstart.md`.
 
 ---
 

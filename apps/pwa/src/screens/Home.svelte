@@ -2,8 +2,7 @@
   import type { BookCard, HomeView } from '@readerlog/db';
   import { onChanged, query } from '../lib/dbClient.ts';
   import { STATUS_LABEL, plural, progressLabel } from '../lib/format.ts';
-  import { errorMessage } from '../lib/errors.ts';
-  import { showToast } from '../lib/toast.svelte.ts';
+  import { reportError } from '../lib/errors.ts';
   import LogSheet from './LogSheet.svelte';
 
   let view = $state<HomeView | null>(null);
@@ -20,7 +19,7 @@
   async function load() {
     const r = await query({ name: 'home' });
     if (r.ok) view = r.value;
-    else showToast(errorMessage(r.error), { kind: 'error' });
+    else reportError(r.error);
   }
 
   $effect(() => {

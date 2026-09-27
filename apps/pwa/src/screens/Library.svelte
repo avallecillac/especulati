@@ -2,15 +2,14 @@
   import type { LibraryView } from '@readerlog/db';
   import { onChanged, query } from '../lib/dbClient.ts';
   import { progressLabel } from '../lib/format.ts';
-  import { errorMessage } from '../lib/errors.ts';
-  import { showToast } from '../lib/toast.svelte.ts';
+  import { reportError } from '../lib/errors.ts';
 
   let view = $state<LibraryView | null>(null);
 
   async function load() {
     const r = await query({ name: 'library' });
     if (r.ok) view = r.value;
-    else showToast(errorMessage(r.error), { kind: 'error' });
+    else reportError(r.error);
   }
 
   $effect(() => {

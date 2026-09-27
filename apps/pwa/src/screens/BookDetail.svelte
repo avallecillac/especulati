@@ -4,7 +4,7 @@
   import type { BookEventView, BookView } from '@readerlog/db';
   import { dispatch, onChanged, query } from '../lib/dbClient.ts';
   import { todayLocal } from '../lib/clock.ts';
-  import { errorMessage } from '../lib/errors.ts';
+  import { reportError } from '../lib/errors.ts';
   import { STATUS_LABEL, progressLabel } from '../lib/format.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
@@ -24,7 +24,7 @@
   async function load() {
     const r = await query({ name: 'book', itemId: id });
     if (r.ok) view = r.value;
-    else showToast(errorMessage(r.error), { kind: 'error' });
+    else reportError(r.error);
   }
 
   $effect(() => {
@@ -36,13 +36,13 @@
     const eventId = crypto.randomUUID();
     const r = await dispatch({ kind: 'LogEvent', itemId: id, eventId, type, localDate: todayLocal() });
     if (r.ok) toastSaved(type === 'started' ? 'Started' : type === 'finished' ? 'Marked finished' : 'Abandoned', id, eventId);
-    else showToast(errorMessage(r.error), { kind: 'error' });
+    else reportError(r.error);
   }
 
   async function removeBook() {
     confirming = null;
     const r = await dispatch({ kind: 'RemoveBook', itemId: id });
-    if (!r.ok) return showToast(errorMessage(r.error), { kind: 'error' });
+    if (!r.ok) return reportError(r.error);
     showToast('Book removed');
     navigate('/library');
   }

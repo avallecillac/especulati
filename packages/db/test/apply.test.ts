@@ -68,3 +68,25 @@ describe('applyChanges (contracts/db-schema.md "Tested invariants")', () => {
     expect(dumpLogical(t.raw)).toEqual(before);
   });
 });
+
+describe('storage failure (spec edge case, T065)', () => {
+  it('SQLITE_FULL during dispatch rolls back everything and surfaces the error', () => {
+    const t = openTestDb();
+    // Cap the database at its current size, then write until a dispatch needs a new page.
+    t.raw.exec(`PRAGMA max_page_count = ${Number(t.raw.selectValue('PRAGMA page_count'))}`);
+    const long = 'x'.repeat(200);
+    let before = dumpLogical(t.raw);
+    let failure: unknown = null;
+    for (let i = 0; i < 1000 && failure === null; i++) {
+      before = dumpLogical(t.raw);
+      t.tick();
+      try {
+        t.db.dispatch({ kind: 'AddBook', itemId: uuid(100 + i), title: long, author: long, genre: long, startNow: true, startEventId: uuid(5000 + i), localDate: '2026-09-27' }, t.env);
+      } catch (e) {
+        failure = e;
+      }
+    }
+    expect(String(failure)).toMatch(/SQLITE_FULL/);
+    expect(dumpLogical(t.raw)).toEqual(before);
+  });
+});

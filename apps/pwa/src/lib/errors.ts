@@ -1,4 +1,5 @@
 import type { ClientError } from './protocol.ts';
+import { showToast } from './toast.svelte.ts';
 
 /** Inline, specific messages for rejections (FR-014). */
 export function errorMessage(e: ClientError): string {
@@ -28,4 +29,9 @@ export function errorMessage(e: ClientError): string {
     case 'Busy':
       return 'Readerlog is open in another window. Close it or switch to it.';
   }
+}
+
+/** Toast an error. Busy is shown once, as the app-level banner, not per screen. */
+export function reportError(e: ClientError): void {
+  if (e.kind !== 'Busy') showToast(errorMessage(e), { kind: 'error' });
 }

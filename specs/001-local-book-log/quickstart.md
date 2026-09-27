@@ -55,3 +55,15 @@ worker API, see [contracts/worker-api.md](contracts/worker-api.md).
 6. Open Settings. It should show "Storage: persistent" (or the notice that it isn't).
 
 The feature is complete when all of the above pass.
+
+## Validation results (2026-09-27, dev container, Chromium 141 headless)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` (boundary rules) | ✅ 0 errors, 0 dependency violations |
+| `pnpm test` | ✅ 98 tests in 15 files, including 1,000 randomized sequences and the change-log replay |
+| `pnpm e2e` (scenarios 1–12, time zone change, perf) | ✅ 23/23; 46/46 when repeated twice in parallel |
+| SC-002 save → visible | ✅ about 30–50 ms in the e2e test (WAL, research R12) |
+| Cold start → Home card (production build) | ✅ about 130 ms (budget 1.5 s) |
+| Queries at 100 books / 5,000 events (Node, same engine) | ✅ home ≈ 42–54 ms, library ≈ 42 ms, book ≈ 1 ms |
+| Manual iPhone check (above) | ⏳ Pending: needs a device and an HTTPS host |

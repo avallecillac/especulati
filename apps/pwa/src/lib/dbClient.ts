@@ -66,6 +66,9 @@ export async function setMeta(key: string, value: string): Promise<void> {
   await send({ kind: 'setMeta', key, value });
 }
 
+/** Ask every screen to reload, e.g. after regaining the DB from another window. */
+export const refreshAll = (): void => notify();
+
 /** Subscribe to "data changed" (own dispatches and other tabs). Returns an unsubscribe fn. */
 export function onChanged(cb: () => void): () => void {
   listeners.add(cb);

@@ -1,7 +1,7 @@
 import type { BookStatus, EventType } from '@readerlog/core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { deriveStatus, eventOrder, lastActivity, lastPage, type ReadingEvent } from '@readerlog/core';
-import { rowToEvent, rowToItem } from './snapshot.ts';
+import { deriveStatus, eventOrder, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
+import { loadBookSnapshot, rowToEvent, rowToItem } from './snapshot.ts';
 
 /** Read models returned to the UI (contracts/worker-api.md). Plain JSON: nulls, no brands. */
 export interface BookCard {
@@ -43,6 +43,19 @@ export interface BookView {
 }
 
 
+function toCard(item: Item, events: readonly ReadingEvent[]): BookCard {
+  return {
+    itemId: item.id,
+    title: item.title,
+    author: item.author,
+    totalPages: item.totalPages,
+    genre: item.genre,
+    status: deriveStatus(events),
+    lastPage: lastPage(events),
+    lastActivity: lastActivity(events),
+  };
+}
+
 /** All non-deleted books with their events: two queries, grouped in memory (≈100 books/decade). */
 function loadBooks(db: Database): { card: BookCard; events: ReadingEvent[] }[] {
   const items = db.selectObjects(`SELECT * FROM items WHERE type = 'book' AND deleted_at IS NULL`).map(rowToItem);
@@ -56,19 +69,7 @@ function loadBooks(db: Database): { card: BookCard; events: ReadingEvent[] }[] {
   }
   return items.map((item) => {
     const events = byItem.get(item.id) ?? [];
-    return {
-      events,
-      card: {
-        itemId: item.id,
-        title: item.title,
-        author: item.author,
-        totalPages: item.totalPages,
-        genre: item.genre,
-        status: deriveStatus(events),
-        lastPage: lastPage(events),
-        lastActivity: lastActivity(events),
-      },
-    };
+    return { events, card: toCard(item, events) };
   });
 }
 
@@ -96,10 +97,11 @@ export function libraryView(db: Database): LibraryView {
 }
 
 export function bookView(db: Database, itemId: string): BookView | null {
-  const found = loadBooks(db).find((b) => b.card.itemId === itemId);
-  if (!found) return null;
-  const events = eventOrder(found.events)
+  const snapshot = loadBookSnapshot(db, itemId);
+  if (!snapshot || snapshot.item.deletedAt !== null || snapshot.item.type !== 'book') return null;
+  const live = eventOrder(snapshot.events);
+  const events = [...live]
     .reverse()
     .map((e) => ({ id: e.id, type: e.type, page: e.page, localDate: e.localDate, occurredAt: e.occurredAt }));
-  return { card: found.card, events };
+  return { card: toCard(snapshot.item, live), events };
 }
