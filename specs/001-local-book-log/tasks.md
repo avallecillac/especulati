@@ -332,20 +332,20 @@ and the reading day disappears if that was the only entry that day.
 
 ### Tests for User Story 4
 
-- [ ] T060 [P] [US4] Write core tests in `packages/core/test/decide.removeEvent.test.ts`:
+- [X] T060 [P] [US4] Write core tests in `packages/core/test/decide.removeEvent.test.ts`:
   - `RemoveEvent` emits exactly one change, `{deleted_at: now}`, on `reading_events`;
   - removing an already-removed event emits zero changes;
   - removing the only `started` event returns the book to queued;
   - an unknown event ID gives `NotFound`.
-- [ ] T061 [P] [US4] Write e2e tests in `e2e/undo.spec.ts`, covering quickstart scenario 10:
+- [X] T061 [P] [US4] Write e2e tests in `e2e/undo.spec.ts`, covering quickstart scenario 10:
   - toast Undo;
   - removing an older entry from history recomputes the status and last page;
-  - the removed row still exists in the DB with `deleted_at` set (check through the `book` query including tombstones, as a test-only query).
+  - the removed row still exists in the DB with `deleted_at` set. This is checked at the DB level in `packages/db/test/tombstone.test.ts` rather than through a test-only worker query, which keeps the worker API to what the contract lists.
 
 ### Implementation for User Story 4
 
-- [ ] T062 [US4] Implement `RemoveEvent` in `packages/core/src/decide.ts`.
-- [ ] T063 [US4] Wire the toast Undo button (from T046) to dispatch `RemoveEvent` for the event just created. Add a swipe or "Remove" action with a confirmation to each history row in `apps/pwa/src/screens/BookDetail.svelte`.
+- [X] T062 [US4] Implement `RemoveEvent` in `packages/core/src/decide.ts`.
+- [X] T063 [US4] Wire the toast Undo button (from T046) to dispatch `RemoveEvent` for the event just created. Add a swipe or "Remove" action with a confirmation to each history row in `apps/pwa/src/screens/BookDetail.svelte`.
 
 **Checkpoint**: all user stories are complete.
 

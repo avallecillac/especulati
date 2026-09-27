@@ -8,7 +8,7 @@
   import { STATUS_LABEL, progressLabel } from '../lib/format.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
-  import { toastSaved } from '../lib/actions.ts';
+  import { toastSaved, undoEvent } from '../lib/actions.ts';
   import LogSheet from './LogSheet.svelte';
   import Confirm from './Confirm.svelte';
 
@@ -19,6 +19,7 @@
   let view = $state<BookView | null | undefined>(undefined);
   let logging = $state(false);
   let confirming = $state<'abandon' | 'remove' | null>(null);
+  let removingEvent = $state<BookEventView | null>(null);
 
   async function load() {
     const r = await query({ name: 'book', itemId: id });
@@ -87,6 +88,7 @@
           <span>{describe(e)}</span>
           <span class="spacer"></span>
           <time class="muted" datetime={e.localDate}>{dateLabel(e.localDate)}</time>
+          <button class="link danger" aria-label="Remove" onclick={() => (removingEvent = e)}>✕</button>
         </li>
       {/each}
     </ul>
@@ -98,6 +100,11 @@
 
   {#if logging}
     <LogSheet card={c} onclose={() => (logging = false)} />
+  {/if}
+  {#if removingEvent}
+    {@const target = removingEvent}
+    <Confirm title="Remove this entry?" body={`${describe(target)} on ${dateLabel(target.localDate)}.`} confirmLabel="Remove" danger
+      onconfirm={() => { const eventId = target.id; removingEvent = null; void undoEvent(id, eventId); }} oncancel={() => (removingEvent = null)} />
   {/if}
   {#if confirming === 'abandon'}
     <Confirm title="Abandon this book?" body="You can start it again later." confirmLabel="Abandon"

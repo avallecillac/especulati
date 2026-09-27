@@ -143,6 +143,16 @@ function removeBook(snapshot: BookSnapshot | null, now: Instant): Decided {
   return decided([{ tbl: 'items', rowId: snapshot.item.id, fields: { deleted_at: now } }]);
 }
 
+/** Removal tombstones the event; it is never erased (FR-009, constitution III). */
+function removeEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'RemoveEvent' }>, now: Instant): Decided {
+  const book = liveBook(snapshot);
+  if (!book.ok) return book;
+  const target = book.value.events.find((e) => e.id === cmd.eventId);
+  if (!target) return err({ kind: 'NotFound' });
+  if (target.deletedAt !== null) return decided([]);
+  return decided([{ tbl: 'reading_events', rowId: target.id, fields: { deleted_at: now } }]);
+}
+
 /** The single write path (constitution IV): pure, deterministic, no I/O. */
 export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant): Decided {
   switch (cmd.kind) {
@@ -154,7 +164,7 @@ export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant
       return editBook(snapshot, cmd);
     case 'RemoveBook':
       return removeBook(snapshot, now);
-    default:
-      return err({ kind: 'InvalidInput', field: 'command', reason: `${cmd.kind} not implemented` });
+    case 'RemoveEvent':
+      return removeEvent(snapshot, cmd, now);
   }
 }
