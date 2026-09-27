@@ -269,19 +269,19 @@ data.
 
 ### Tests for User Story 5
 
-- [ ] T047 [P] [US5] Write e2e tests in `e2e/offline.spec.ts`, covering quickstart scenarios 8–9:
+- [X] T047 [P] [US5] Write e2e tests in `e2e/offline.spec.ts`, covering quickstart scenarios 8–9:
   - load, wait for `navigator.serviceWorker.ready`, `context.setOffline(true)`, reload, then run the add + log + Read today flow;
   - close the page, open a new one in the same persistent context, and the data is still there.
-- [ ] T048 [P] [US5] Write e2e tests in `e2e/settings.spec.ts`: Settings shows the storage persistence state and the device ID.
+- [X] T048 [P] [US5] Write e2e tests in `e2e/settings.spec.ts`: Settings shows the storage persistence state and the device ID.
 
 ### Implementation for User Story 5
 
-- [ ] T049 [US5] Call `navigator.storage.persist()` on first start from `apps/pwa/src/main.ts`, and store the result in the worker's `meta.storage_persisted`. Implement the `storage` query in `apps/pwa/src/worker/db.worker.ts`: `{ persisted, deviceId, schemaVersion }`.
-- [ ] T050 [US5] Create `apps/pwa/src/screens/Settings.svelte`.
+- [X] T049 [US5] Call `navigator.storage.persist()` on first start from `apps/pwa/src/main.ts`, and store the result in the worker's `meta.storage_persisted`. Implement the `storage` query in `apps/pwa/src/worker/db.worker.ts`: `{ persisted, deviceId, schemaVersion }`.
+- [X] T050 [US5] Create `apps/pwa/src/screens/Settings.svelte`.
   - Show "Storage: persistent" or a non-blocking notice when it isn't granted.
   - Show the device ID and schema version.
   - Show an "Update available → Reload" banner from `virtual:pwa-register` `onNeedRefresh`.
-- [ ] T051 [US5] Verify the production build precaches the sqlite `.wasm` file: check `dist/sw.js` for `sqlite3.wasm`. Add iOS meta tags to `apps/pwa/index.html`: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `theme-color`. In `e2e/offline.spec.ts`, assert that `/manifest.webmanifest` parses and has `display: "standalone"` and 192/512 icons (FR-012).
+- [X] T051 [US5] Verify the production build precaches the sqlite `.wasm` file: check `dist/sw.js` for `sqlite3.wasm`. Add iOS meta tags to `apps/pwa/index.html`: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `theme-color`. In `e2e/offline.spec.ts`, assert that `/manifest.webmanifest` parses and has `display: "standalone"` and 192/512 icons (FR-012).
 
 **Checkpoint**: all P1 stories are complete. T047 and T048 pass.
 

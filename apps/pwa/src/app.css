@@ -95,3 +95,5 @@ input[type='text'], input[type='number'] {
 
 ul.plain { list-style: none; padding: 0; margin: 0; }
 ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+
+.update { padding: 8px var(--gutter); background: var(--surface); border-bottom: 1px solid var(--line); }

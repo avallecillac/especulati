@@ -1,6 +1,7 @@
 <script lang="ts">
   import { router } from './lib/router.svelte.ts';
   import { query } from './lib/dbClient.ts';
+  import { applyUpdate, pwa } from './lib/pwa.svelte.ts';
   import { dismissToast, toasts } from './lib/toast.svelte.ts';
   import Home from './screens/Home.svelte';
   import AddBook from './screens/AddBook.svelte';
@@ -23,6 +24,14 @@
 <div class="app">
   {#if dbReady}<div data-testid="ready" hidden></div>{/if}
   <header class="bar"><a class="brand" href="#/">Readerlog</a></header>
+
+  {#if pwa.needRefresh}
+    <div class="update row" role="status">
+      <span>Update available.</span>
+      <span class="spacer"></span>
+      <button class="link" onclick={applyUpdate}>Reload</button>
+    </div>
+  {/if}
 
   <main>
     {#if router.route.name === 'home'}
