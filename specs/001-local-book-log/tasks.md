@@ -297,26 +297,26 @@ book's history is listed newest first.
 
 ### Tests for User Story 3
 
-- [ ] T052 [P] [US3] Write core tests in `packages/core/test/decide.editRemoveBook.test.ts`:
+- [X] T052 [P] [US3] Write core tests in `packages/core/test/decide.editRemoveBook.test.ts`:
   - `EditBook` emits only the fields that changed (an unchanged value emits nothing);
   - it rejects `PagesBelowLogged` when `totalPages` < the max logged page;
   - `RemoveBook` sets `deleted_at`, and removing an already-removed book emits zero changes.
-- [ ] T053 [P] [US3] Write DB tests in `packages/db/test/queries.test.ts`:
+- [X] T053 [P] [US3] Write DB tests in `packages/db/test/queries.test.ts`:
   - `library` lists each non-removed book exactly once, in the group for its derived status, with Reading ordered by `lastActivity` descending (FR-015);
   - `book` returns non-deleted events newest first;
   - removed books are absent from all views (FR-016).
-- [ ] T054 [P] [US3] Write e2e tests in `e2e/library.spec.ts`, covering quickstart scenario 11: Start moves a book to Reading; Abandon (with confirmation) moves it to Abandoned; logging on a Finished book moves it back to Reading; with two reading books, Home shows the most recent.
+- [X] T054 [P] [US3] Write e2e tests in `e2e/library.spec.ts`, covering quickstart scenario 11: Start moves a book to Reading; Abandon (with confirmation) moves it to Abandoned; logging on a Finished book moves it back to Reading; with two reading books, Home shows the most recent.
 
 ### Implementation for User Story 3
 
-- [ ] T055 [US3] Implement `EditBook` and `RemoveBook` in `packages/core/src/decide.ts`.
-- [ ] T056 [US3] Implement the `library` and `book` queries in `packages/db/src/queries.ts`, following the `LibraryView` and `BookView` read models in contracts/worker-api.md.
-- [ ] T057 [P] [US3] Create `apps/pwa/src/screens/Library.svelte`: four sections (Reading, Queued, Finished, Abandoned), with counts; tapping a book goes to `#/book/:id`.
-- [ ] T058 [US3] Create `apps/pwa/src/screens/BookDetail.svelte`:
+- [X] T055 [US3] Implement `EditBook` and `RemoveBook` in `packages/core/src/decide.ts`.
+- [X] T056 [US3] Implement the `library` and `book` queries in `packages/db/src/queries.ts`, following the `LibraryView` and `BookView` read models in contracts/worker-api.md.
+- [X] T057 [P] [US3] Create `apps/pwa/src/screens/Library.svelte`: four sections (Reading, Queued, Finished, Abandoned), with counts; tapping a book goes to `#/book/:id`.
+- [X] T058 [US3] Create `apps/pwa/src/screens/BookDetail.svelte`:
   - the book card and its history list (date, type, page);
   - actions that depend on status: Start, Log (opens LogSheet), Finish, Abandon (with a confirmation), and Edit (reuses the AddBook form in edit mode);
   - Remove book (with a confirmation).
-- [ ] T059 [US3] Show "other reading books" on Home as one-tap chips that switch which book the log card targets.
+- [X] T059 [US3] Show "other reading books" on Home as one-tap chips that switch which book the log card targets.
 
 **Checkpoint**: US3 works on its own. T052–T054 pass.
 

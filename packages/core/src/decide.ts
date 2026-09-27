@@ -1,6 +1,6 @@
 import { err, ok, type Result } from './result.ts';
 import type { BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
-import { deriveStatus, type BookStatus, type EventType } from './book.ts';
+import { deriveStatus, maxLoggedPage, type BookStatus, type EventType } from './book.ts';
 import {
   parseAuthor, parseEventId, parseGenre, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
   type Instant, type ParseError,
@@ -102,6 +102,47 @@ function logEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: '
   return decided([eventInsert(eventId.value, item.id, cmd.type, page, now, localDate.value)], offerFinish);
 }
 
+function editBook(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'EditBook' }>): Decided {
+  const book = liveBook(snapshot);
+  if (!book.ok) return book;
+  const { item, events } = book.value;
+  const fields: Record<string, FieldValue> = {};
+
+  if (cmd.title !== undefined) {
+    const title = need(parseTitle(cmd.title), titleRejection);
+    if (!title.ok) return title;
+    if (title.value !== item.title) fields['title'] = title.value;
+  }
+  if (cmd.author !== undefined) {
+    const author = need(parseAuthor(cmd.author));
+    if (!author.ok) return author;
+    if (author.value !== item.author) fields['author'] = author.value;
+  }
+  if (cmd.genre !== undefined) {
+    const genre = need(parseGenre(cmd.genre));
+    if (!genre.ok) return genre;
+    if (genre.value !== item.genre) fields['genre'] = genre.value;
+  }
+  if (cmd.totalPages !== undefined) {
+    let totalPages: number | null = null;
+    if (cmd.totalPages !== null) {
+      const p = need(parsePageCount(cmd.totalPages), pageCountRejection);
+      if (!p.ok) return p;
+      const maxLogged = maxLoggedPage(events);
+      if (maxLogged !== null && p.value < maxLogged) return err({ kind: 'PagesBelowLogged', maxLogged });
+      totalPages = p.value;
+    }
+    if (totalPages !== item.totalPages) fields['total_pages'] = totalPages;
+  }
+  return decided(Object.keys(fields).length > 0 ? [{ tbl: 'items', rowId: item.id, fields }] : []);
+}
+
+function removeBook(snapshot: BookSnapshot | null, now: Instant): Decided {
+  if (!snapshot) return err({ kind: 'NotFound' });
+  if (snapshot.item.deletedAt !== null) return decided([]);
+  return decided([{ tbl: 'items', rowId: snapshot.item.id, fields: { deleted_at: now } }]);
+}
+
 /** The single write path (constitution IV): pure, deterministic, no I/O. */
 export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant): Decided {
   switch (cmd.kind) {
@@ -109,6 +150,10 @@ export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant
       return addBook(snapshot, cmd, now);
     case 'LogEvent':
       return logEvent(snapshot, cmd, now);
+    case 'EditBook':
+      return editBook(snapshot, cmd);
+    case 'RemoveBook':
+      return removeBook(snapshot, now);
     default:
       return err({ kind: 'InvalidInput', field: 'command', reason: `${cmd.kind} not implemented` });
   }
