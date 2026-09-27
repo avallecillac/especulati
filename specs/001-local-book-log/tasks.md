@@ -221,7 +221,7 @@ Read today, Today/Yesterday, and a finish prompt.
 
 ### Tests for User Story 1
 
-- [ ] T041 [P] [US1] Write core tests in `packages/core/test/decide.logEvent.test.ts`. `LogEvent` progress with a page:
+- [X] T041 [P] [US1] Write core tests in `packages/core/test/decide.logEvent.test.ts`. `LogEvent` progress with a page:
   - emits one event insert with all fields;
   - rejects a page that is not an integer or ≤ 0 with `InvalidPage`, and a page > `total_pages` with `PageBeyondEnd`;
   - accepts a page lower than `lastPage`;
@@ -233,8 +233,8 @@ Read today, Today/Yesterday, and a finish prompt.
   - progress on queued is allowed and results in reading;
   - finished or abandoned when the book isn't reading gives `InvalidTransition`;
   - `NotFound` for a null or removed item.
-- [ ] T042 [P] [US1] Write property tests in `packages/core/test/decide.property.test.ts`. Run 1,000 random sequences of AddBook, LogEvent, and RemoveEvent with a seeded PRNG in the test. Apply the changes to an in-memory snapshot, then compare `deriveStatus` and `lastPage` with a naive reference model (SC-005). Also check commands.md invariants 1, 2, and 5.
-- [ ] T043 [P] [US1] Write e2e tests in `e2e/log-progress.spec.ts`, covering quickstart scenarios 4–7:
+- [X] T042 [P] [US1] Write property tests in `packages/core/test/decide.property.test.ts`. Run 1,000 random sequences of AddBook, LogEvent, and RemoveEvent with a seeded PRNG in the test. Apply the changes to an in-memory snapshot, then compare `deriveStatus` and `lastPage` with a naive reference model (SC-005). Also check commands.md invariants 1, 2, and 5.
+- [X] T043 [P] [US1] Write e2e tests in `e2e/log-progress.spec.ts`, covering quickstart scenarios 4–7:
   - the log sheet is pre-filled with 120, and saving 145 updates the card;
   - Read today;
   - Yesterday, with `page.clock` set to 2026-03-09T00:05 America/New_York (the day after the DST change), gives `2026-03-08`, and Today gives `2026-03-09`;
@@ -245,15 +245,15 @@ Read today, Today/Yesterday, and a finish prompt.
 
 ### Implementation for User Story 1
 
-- [ ] T044 [US1] Implement `LogEvent` in `packages/core/src/decide.ts`, following the contracts/commands.md table and the data-model.md state transitions.
-- [ ] T045 [US1] Create `apps/pwa/src/screens/LogSheet.svelte`, a bottom sheet.
+- [X] T044 [US1] Implement `LogEvent` in `packages/core/src/decide.ts`, following the contracts/commands.md table and the data-model.md state transitions.
+- [X] T045 [US1] Create `apps/pwa/src/screens/LogSheet.svelte`, a bottom sheet.
   - The page input is pre-filled from `lastPage`, with ± steppers.
   - A date chip toggle: **Today** (default) / **Yesterday**. The date is computed at save time through `clock.ts`.
   - A primary **Save** button and a secondary **Read today** button (dispatches `progress` with no page).
   - Inline rejection messages.
   - A tertiary **Finish** action (dispatches `LogEvent finished`), so books with unknown total pages can be finished before US3 exists.
   - When `offerFinish` is returned, show a "Mark as finished?" confirm that dispatches `LogEvent finished`.
-- [ ] T046 [US1] Wire the Home card's **Log** button to open LogSheet. This makes Home → Log → Save and Home → Log → Read today 2 taps each (FR-008). Show a "Saved" toast with an Undo button (the handler is completed in US4).
+- [X] T046 [US1] Wire the Home card's **Log** button to open LogSheet. This makes Home → Log → Save and Home → Log → Read today 2 taps each (FR-008). Show a "Saved" toast with an Undo button (the handler is completed in US4).
 
 **Checkpoint**: MVP. You can add a book and log progress. T041–T043 pass.
 

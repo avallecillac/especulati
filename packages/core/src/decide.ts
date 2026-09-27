@@ -1,7 +1,8 @@
 import { err, ok, type Result } from './result.ts';
 import type { BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
+import { deriveStatus, type BookStatus, type EventType } from './book.ts';
 import {
-  parseAuthor, parseEventId, parseGenre, parseItemId, parseLocalDate, parsePageCount, parseTitle,
+  parseAuthor, parseEventId, parseGenre, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
   type Instant, type ParseError,
 } from './types.ts';
 
@@ -62,11 +63,52 @@ function eventInsert(eventId: string, itemId: string, type: string, page: number
   };
 }
 
+/** Which statuses each event may follow (data-model.md "State transitions"). */
+const ALLOWED_FROM: Record<EventType, readonly BookStatus[]> = {
+  started: ['queued', 'finished', 'abandoned'],
+  progress: ['queued', 'reading', 'finished', 'abandoned'],
+  finished: ['reading'],
+  abandoned: ['reading'],
+};
+
+/** A live (non-removed) book of the snapshot, or NotFound. */
+function liveBook(snapshot: BookSnapshot | null): Result<BookSnapshot, Rejection> {
+  return snapshot && snapshot.item.deletedAt === null && snapshot.item.type === 'book' ? ok(snapshot) : err({ kind: 'NotFound' });
+}
+
+function logEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'LogEvent' }>, now: Instant): Decided {
+  const book = liveBook(snapshot);
+  if (!book.ok) return book;
+  const { item, events } = book.value;
+  const eventId = need(parseEventId(cmd.eventId));
+  if (!eventId.ok) return eventId;
+  if (events.some((e) => e.id === eventId.value)) return err({ kind: 'AlreadyExists' });
+  const localDate = need(parseLocalDate(cmd.localDate));
+  if (!localDate.ok) return localDate;
+
+  let page: number | null = null;
+  if (cmd.page !== undefined && cmd.page !== null) {
+    if (cmd.type !== 'progress') return err({ kind: 'PageNotAllowed' });
+    const p = need(parsePage(cmd.page), () => ({ kind: 'InvalidPage' }));
+    if (!p.ok) return p;
+    if (item.totalPages !== null && p.value > item.totalPages) return err({ kind: 'PageBeyondEnd', totalPages: item.totalPages });
+    page = p.value;
+  }
+
+  const from = deriveStatus(events);
+  if (!ALLOWED_FROM[cmd.type].includes(from)) return err({ kind: 'InvalidTransition', from, type: cmd.type });
+
+  const offerFinish = page !== null && page === item.totalPages;
+  return decided([eventInsert(eventId.value, item.id, cmd.type, page, now, localDate.value)], offerFinish);
+}
+
 /** The single write path (constitution IV): pure, deterministic, no I/O. */
 export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant): Decided {
   switch (cmd.kind) {
     case 'AddBook':
       return addBook(snapshot, cmd, now);
+    case 'LogEvent':
+      return logEvent(snapshot, cmd, now);
     default:
       return err({ kind: 'InvalidInput', field: 'command', reason: `${cmd.kind} not implemented` });
   }

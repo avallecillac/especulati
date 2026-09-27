@@ -174,4 +174,27 @@ checked against the npm registry on 2026-09-27.
 - **Alternatives considered**: running `decide` in the UI thread, which risks
   deciding on stale state.
 
+## R12. Journal mode (found during implementation)
+
+- **Decision**: open the OPFS database with `locking_mode=EXCLUSIVE`, then
+  `journal_mode=WAL`, with `synchronous=FULL`.
+- **Rationale**: US1's save-to-visible check (SC-002) measured 70–135 ms in
+  headless Chromium.
+  - Timing in the worker showed `dispatch` took 86–106 ms, but only about 2 ms of
+    that was compute. With an in-memory database the same flow took 1.5–3.7 ms, so
+    the cost was OPFS writes from the default rollback journal.
+  - WAL needs shared memory, which `opfs-sahpool` doesn't provide, except in
+    EXCLUSIVE locking mode. The worker already holds the database exclusively
+    through the Web Lock (R2), so that mode costs nothing.
+  - Measured result: `dispatch` 25–43 ms, and the home query dropped from ~5 ms to
+    under 1 ms.
+  - `synchronous=FULL` keeps an fsync of the WAL on every commit, so durability is
+    unchanged.
+  - Closing the database, which happens when the tab is hidden, checkpoints the WAL.
+- **Alternatives considered**:
+  - `journal_mode=TRUNCATE` or `PERSIST`: measured no meaningful gain.
+  - `synchronous=OFF` or `NORMAL`: faster, but gives up durability
+    (Constitution I and II).
+  - Optimistic UI: would show data that isn't stored yet.
+
 All Technical Context unknowns are resolved. None remain as NEEDS CLARIFICATION.

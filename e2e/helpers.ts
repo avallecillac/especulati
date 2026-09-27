@@ -22,3 +22,13 @@ export async function addBook(
 }
 
 export const currentCard = (page: Page) => page.getByRole('region', { name: 'Current book' });
+
+export async function openLogSheet(page: Page) {
+  await currentCard(page).getByRole('button', { name: 'Log' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Log progress' });
+  await expect(sheet).toBeVisible();
+  return sheet;
+}
+
+/** The local date of the current book's latest entry, from its <time datetime>. */
+export const lastReadDate = (page: Page) => currentCard(page).locator('time').getAttribute('datetime');

@@ -39,7 +39,7 @@ export function event(p: Partial<ReadingEvent> & Pick<ReadingEvent, 'type'>): Re
   };
 }
 
-export const snap = (item: Item, events: ReadingEvent[] = []): BookSnapshot => ({ item, events });
+export const snap = (item: Item, events: readonly ReadingEvent[] = []): BookSnapshot => ({ item, events });
 
 /** Apply decided changes to a snapshot in memory (mirrors the DB apply for tests). */
 export function applyToSnapshot(s: BookSnapshot | null, changes: readonly Change[]): BookSnapshot | null {

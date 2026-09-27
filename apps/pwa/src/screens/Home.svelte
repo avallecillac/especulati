@@ -1,11 +1,21 @@
 <script lang="ts">
-  import type { HomeView } from '@readerlog/db';
+  import type { BookCard, HomeView } from '@readerlog/db';
   import { onChanged, query } from '../lib/dbClient.ts';
   import { STATUS_LABEL, plural, progressLabel } from '../lib/format.ts';
   import { errorMessage } from '../lib/errors.ts';
   import { showToast } from '../lib/toast.svelte.ts';
+  import LogSheet from './LogSheet.svelte';
 
   let view = $state<HomeView | null>(null);
+  let logging = $state<BookCard | null>(null);
+  /** Which reading book the card targets; defaults to the most recent (FR-008). */
+  let selectedId = $state<string | null>(null);
+
+  const current = $derived(
+    view === null ? null
+    : [view.current, ...view.otherReading].find((c) => c?.itemId === selectedId) ?? view.current,
+  );
+  const others = $derived(view ? [view.current, ...view.otherReading].filter((c): c is BookCard => c !== null && c !== current) : []);
 
   async function load() {
     const r = await query({ name: 'home' });
@@ -17,16 +27,27 @@
     void load();
     return onChanged(() => void load());
   });
+
+  // Runs after the DOM reflects a new view: lets tests measure save → visible (SC-002).
+  $effect(() => {
+    if (view) performance.mark('home-rendered');
+  });
+
+  const dateLabel = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 </script>
 
 {#if view}
-  {#if view.current}
-    {@const c = view.current}
+  {#if current}
     <section class="card" aria-label="Current book">
-      <p class="muted">{STATUS_LABEL[c.status]}</p>
-      <h1><a href={`#/book/${c.itemId}`}>{c.title}</a></h1>
-      {#if c.author}<p class="muted">{c.author}</p>{/if}
-      <p>{progressLabel(c)}</p>
+      <p class="muted">{STATUS_LABEL[current.status]}</p>
+      <h1><a href={`#/book/${current.itemId}`}>{current.title}</a></h1>
+      {#if current.author}<p class="muted">{current.author}</p>{/if}
+      <p>{progressLabel(current)}</p>
+      {#if current.lastActivity}
+        <p class="muted">Last read <time datetime={current.lastActivity.localDate}>{dateLabel(current.lastActivity.localDate)}</time></p>
+      {/if}
+      <div class="actions"><button class="primary" onclick={() => (logging = current)}>Log</button></div>
     </section>
   {:else}
     <section class="card">
@@ -35,7 +56,21 @@
       <a class="button primary" href="#/add">Add a book</a>
     </section>
   {/if}
+
+  {#if others.length > 0}
+    <h2>Also reading</h2>
+    <div class="row">
+      {#each others as other (other.itemId)}
+        <button class="chip" onclick={() => (selectedId = other.itemId)}>{other.title}</button>
+      {/each}
+    </div>
+  {/if}
+
   {#if view.queuedCount > 0}
     <p class="muted"><a href="#/library">{plural(view.queuedCount, 'book')} queued</a></p>
   {/if}
+{/if}
+
+{#if logging}
+  <LogSheet card={logging} onclose={() => (logging = null)} />
 {/if}

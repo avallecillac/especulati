@@ -49,7 +49,14 @@ async function open(): Promise<ReaderlogDb> {
   try {
     if (pool) await pool.unpauseVfs();
     else pool = await sqlite3.installOpfsSAHPoolVfs({ name: 'readerlog-sahpool' });
-    const opened = new ReaderlogDb(new pool.OpfsSAHPoolDb(DB_FILE));
+    const raw = new pool.OpfsSAHPoolDb(DB_FILE);
+    // WAL without shared memory needs EXCLUSIVE locking, set before the first read; we hold the
+    // DB exclusively anyway (Web Lock). WAL + synchronous=FULL keeps every commit durable while
+    // writing far less than the rollback journal (research R12, measured 2–3× faster saves).
+    raw.exec('PRAGMA locking_mode = EXCLUSIVE');
+    raw.exec('PRAGMA journal_mode = WAL');
+    raw.exec('PRAGMA synchronous = FULL');
+    const opened = new ReaderlogDb(raw);
     opened.migrate();
     opened.ensureDeviceId(crypto.randomUUID());
     db = opened;
