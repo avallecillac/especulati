@@ -172,9 +172,11 @@ details**. The fetched values are offered for review before anything changes.
 
 - **FR-001**: The Add screen MUST offer **Scan barcode** as its primary action,
   alongside **Search by title**, **Enter ISBN**, and **Add manually** (the 001 form).
-- **FR-002**: Scanning MUST recognize EAN-13 book barcodes (prefixes 978 and 979) and
-  ISBN-10 barcodes. It MUST work without pressing a capture button, and MUST ignore
-  barcodes that aren't ISBNs.
+- **FR-002**: Scanning MUST recognize EAN-13 book barcodes with prefix 978 or 979,
+  excluding 979-0 (music). Books print their ISBN only as EAN-13, including books whose
+  ISBN-10 appears above the barcode. Typed ISBN-10s are handled by Enter ISBN (FR-003).
+  Scanning MUST work without pressing a capture button, and MUST ignore barcodes that
+  aren't ISBNs.
 - **FR-003**: Every ISBN MUST be validated with its check digit and stored in
   normalized 13-digit form. A 10-digit ISBN MUST be converted to its 13-digit
   equivalent.
