@@ -174,6 +174,46 @@ function editBook(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: '
   return decided(Object.keys(fields).length > 0 ? [{ tbl: 'items', rowId: item.id, fields }] : []);
 }
 
+/**
+ * Retry path (FR-009): fills only still-empty fields, so it can never overwrite what the user set.
+ * Invalid catalog values are skipped, never rejected, so the pending status always clears.
+ */
+function fillDetails(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'FillDetails' }>): Decided {
+  const id = need(parseItemId(cmd.itemId));
+  if (!id.ok) return id;
+  if (cmd.outcome !== 'found' && cmd.outcome !== 'notFound') return err({ kind: 'InvalidInput', field: 'outcome', reason: 'must be found or notFound' });
+  const book = liveBook(snapshot);
+  if (!book.ok) return book;
+  const { item, events } = book.value;
+  if (item.detailsStatus !== 'pending') return decided([]);
+  if (cmd.outcome === 'notFound') return decided([{ tbl: 'items', rowId: item.id, fields: { metadata_status: 'failed' } }]);
+
+  const d = cmd.details ?? {};
+  const fields: Record<string, FieldValue> = { metadata_status: 'ok' };
+  if (d.title !== undefined && item.isbn !== null && item.title === `ISBN ${item.isbn}`) {
+    const t = parseTitle(d.title);
+    if (t.ok) fields['title'] = t.value;
+  }
+  if (d.author != null && item.author === null) {
+    const a = parseAuthor(d.author);
+    if (a.ok && a.value !== null) fields['author'] = a.value;
+  }
+  if (d.genre != null && item.genre === null) {
+    const g = parseGenre(d.genre);
+    if (g.ok && g.value !== null) fields['genre'] = g.value;
+  }
+  if (d.coverUrl != null && item.coverUrl === null) {
+    const c = parseCoverUrl(d.coverUrl);
+    if (c.ok) fields['cover_url'] = c.value;
+  }
+  if (d.totalPages != null && item.totalPages === null) {
+    const p = parsePageCount(d.totalPages);
+    const maxLogged = maxLoggedPage(events);
+    if (p.ok && (maxLogged === null || p.value >= maxLogged)) fields['total_pages'] = p.value;
+  }
+  return decided([{ tbl: 'items', rowId: item.id, fields }]);
+}
+
 function removeBook(snapshot: BookSnapshot | null, now: Instant): Decided {
   if (!snapshot) return err({ kind: 'NotFound' });
   if (snapshot.item.deletedAt !== null) return decided([]);
@@ -200,7 +240,7 @@ export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant
     case 'EditBook':
       return editBook(snapshot, cmd);
     case 'FillDetails':
-      return err({ kind: 'InvalidInput', field: 'command', reason: 'FillDetails not implemented' });
+      return fillDetails(snapshot, cmd);
     case 'RemoveBook':
       return removeBook(snapshot, now);
     case 'RemoveEvent':

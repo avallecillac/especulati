@@ -342,7 +342,7 @@ in the meantime is kept.
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Write `packages/core/test/decide.fillDetails.test.ts` for every row
+- [X] T026 [P] [US2] Write `packages/core/test/decide.fillDetails.test.ts` for every row
   of the contracts/commands-002.md `FillDetails` table:
   - NotFound for a missing or removed book;
   - a non-pending book gives zero changes (invariant 7);
@@ -353,7 +353,7 @@ in the meantime is kept.
     skipped without error;
   - an invalid detail value (blank title, 0 pages, an `http:` cover) is skipped, and
     the status still becomes `ok`.
-- [ ] T027 [P] [US2] Add a property test, `packages/core/test/decide.fillDetails.property.test.ts`,
+- [X] T027 [P] [US2] Add a property test, `packages/core/test/decide.fillDetails.property.test.ts`,
   for invariant 6. Run 500 seeded sequences mixing `EditBook` (random fields),
   `FillDetails(found, random details)` and `FillDetails(notFound)` on a pending
   ISBN-placeholder book. Assert that a field set by `EditBook` to a non-empty value is
@@ -385,7 +385,7 @@ in the meantime is kept.
 
 ### Implementation for User Story 2
 
-- [ ] T029 [US2] Implement `FillDetails` in `packages/core/src/decide.ts` exactly as in
+- [X] T029 [US2] Implement `FillDetails` in `packages/core/src/decide.ts` exactly as in
   contracts/commands-002.md. Make T026 and T027 pass.
 - [ ] T030 [US2] Handle every lookup outcome in the add flow, in
   `apps/pwa/src/screens/AddBook.svelte` and `apps/pwa/src/lib/isbnFlow.ts`:
