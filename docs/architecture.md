@@ -90,7 +90,7 @@ e2e/            Playwright scenarios
 - Types follow "parse, don't validate": `ItemId`, `LocalDate`, `Page`,
   `NonEmptyTitle`, and so on are branded and built only through smart constructors.
 
-## 6. Data model (migration v1)
+## 6. Data model (schema v2)
 
 ```sql
 CREATE TABLE items (
@@ -151,6 +151,13 @@ The spec's indexes are kept (`reading_events(item_id, local_date)`,
 - A correction never rewrites an event. It tombstones the event and inserts a
   replacement.
 
+**Migration 2 (feature 002)** adds
+`idx_items_isbn ON items(isbn) WHERE deleted_at IS NULL AND isbn IS NOT NULL`, plus a
+**local-only** cache table
+`covers(item_id PK, mime, bytes, width, height, fetched_at)`.
+`items.metadata_status` holds the details status: `ok` (complete), `pending`, or
+`failed` (not found). `cover_blob_key` is unused; it was superseded by `covers`.
+
 ## 7. Sync (v1)
 
 - **Merge semantics**
@@ -176,14 +183,38 @@ The spec's indexes are kept (`reading_events(item_id, local_date)`,
 
 ## 8. Capture flows
 
-### Add a book
-1. Scan the ISBN with the camera (`getUserMedia` + `zxing-wasm`). Searching by
-   title is the fallback.
-2. Look up the book in Open Library, then Google Books if needed. Save the cover
-   locally as a blob for offline use.
-3. Show a pre-filled confirmation, then save. The user can then tap
-   **"Start reading now"** to add a `started` event.
-4. If the lookup fails, save the book anyway. The user can retry metadata later.
+### Add a book (feature 002)
+Details: `specs/002-isbn-scan-metadata/`.
+
+1. **Getting an ISBN.** There are three entry points, and each ends on the same
+   filled-in Add screen:
+   - **Scan barcode** (`#/scan`): the camera feeds a scanner worker that runs
+     `zxing-wasm` (reader build). The WASM is self-hosted and precached, and it is
+     loaded only when the scanner opens. Only EAN-13 with prefix 978, or 979 but not
+     9790, is accepted.
+   - **Enter ISBN** (`#/isbn`).
+   - **Search by title** (`#/search`).
+2. **Duplicates.** A book already in the library, matched by its normalized ISBN,
+   offers **Open existing** or **Add another copy** before any lookup runs.
+3. **Lookup.** Open Library search-by-ISBN and the edition record are queried in
+   parallel. Google Books is a fallback only; its anonymous quota is unreliable.
+   - One 8 s deadline covers the whole lookup.
+   - Outcomes: `found`, `notFound` (every catalog answered "no"), `unavailable`,
+     or `timeout`.
+   - Requests carry only the ISBN or the query text, with no cookies or referrer.
+4. **Saving never waits.** Unknown details save as **pending**, and a blank title
+   becomes `ISBN <isbn13>`.
+   - `detailsRetry` retries once per launch, and again when the device comes back
+     online if the earlier attempt never reached the network.
+   - It uses `FillDetails`, which only fills fields that are still empty, and only
+     while the book is pending. Any user save marks the book complete, so a user
+     edit is never overwritten.
+5. **Refreshing an existing book.** On the edit screen, add an ISBN, choose **Look
+   up details**, and pick which fetched fields to apply.
+6. **Covers.** The DB worker downscales each cover to at most 480 px tall (JPEG
+   q0.75) and stores it in the local `covers` table. That table is **not** in
+   `change_log` and is not synced; it can always be rebuilt from `cover_url`. Books
+   without a cover show generated initials.
 
 ### Log book progress (the most frequent action)
 - The app opens on a **Current book** card with a one-tap log.

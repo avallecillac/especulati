@@ -531,7 +531,7 @@ only the page count; nothing else changes and the history is untouched.
 - [ ] T042 [P] Update the performance check in `e2e/perf.spec.ts`: assert that the
   initial load of `/` does **not** request `zxing_reader.wasm`, checked through the
   page's `requestfinished` URLs. Cold start stays under 1.5 s.
-- [ ] T043 **(main session)** Update `docs/architecture.md`: §8 "Add a book" (scan,
+- [X] T043 **(main session)** Update `docs/architecture.md`: §8 "Add a book" (scan,
   search and ISBN flows, pending and retry, covers cache) and §6 (schema v2, `covers`).
   Record the results in the quickstart "Validation results" section, including the
   manual `catalog:coverage` output.
