@@ -8,7 +8,7 @@ export const deviceId = (n = 1) => uuid(9000 + n) as DeviceId;
 export const instant = (s: string) => s as Instant;
 export const day = (s: string) => s as LocalDate;
 
-import type { BookSnapshot, Item, ReadingEvent, Change } from '../src/index.ts';
+import { detailsStatusFromDb, type BookSnapshot, type Item, type ReadingEvent, type Change } from '../src/index.ts';
 
 export const NOW = instant('2026-09-27T12:00:00.000Z');
 
@@ -20,6 +20,9 @@ export function book(p: Partial<Item> = {}): Item {
     author: null,
     totalPages: 300 as Item['totalPages'],
     genre: null,
+    isbn: null,
+    coverUrl: null,
+    detailsStatus: 'complete',
     createdAt: instant('2026-09-01T10:00:00.000Z'),
     deletedAt: null,
     ...p,
@@ -55,6 +58,9 @@ export function applyToSnapshot(s: BookSnapshot | null, changes: readonly Change
         ...('author' in f ? { author: f['author'] as Item['author'] } : {}),
         ...('total_pages' in f ? { totalPages: f['total_pages'] as Item['totalPages'] } : {}),
         ...('genre' in f ? { genre: f['genre'] as Item['genre'] } : {}),
+        ...('isbn' in f ? { isbn: f['isbn'] as Item['isbn'] } : {}),
+        ...('cover_url' in f ? { coverUrl: f['cover_url'] as Item['coverUrl'] } : {}),
+        ...('metadata_status' in f ? { detailsStatus: detailsStatusFromDb(f['metadata_status'] as string) } : {}),
         ...('created_at' in f ? { createdAt: f['created_at'] as Item['createdAt'] } : {}),
         ...('deleted_at' in f ? { deletedAt: f['deleted_at'] as Item['deletedAt'] } : {}),
       };

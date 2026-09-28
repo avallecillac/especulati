@@ -1,9 +1,9 @@
 import { err, ok, type Result } from './result.ts';
 import type { BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
-import { deriveStatus, maxLoggedPage, type BookStatus, type EventType } from './book.ts';
+import { deriveStatus, detailsStatusToDb, maxLoggedPage, type BookStatus, type EventType } from './book.ts';
 import {
-  parseAuthor, parseEventId, parseGenre, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
-  type Instant, type ParseError,
+  parseAuthor, parseCoverUrl, parseEventId, parseGenre, parseIsbn, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
+  type CoverUrl, type Instant, type Isbn13, type ParseError,
 } from './types.ts';
 
 type Decided = Result<Decision, Rejection>;
@@ -17,14 +17,28 @@ function need<T>(r: Result<T, ParseError>, onError: (e: ParseError) => Rejection
 }
 
 const titleRejection = (e: ParseError): Rejection => (e.reason === 'required' ? { kind: 'TitleRequired' } : invalid(e));
+const isbnRejection = (): Rejection => ({ kind: 'InvalidIsbn' });
 const pageCountRejection = (): Rejection => ({ kind: 'InvalidPageCount' });
 
 function addBook(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'AddBook' }>, now: Instant): Decided {
   const id = need(parseItemId(cmd.itemId));
   if (!id.ok) return id;
   if (snapshot) return err({ kind: 'AlreadyExists' });
-  const title = need(parseTitle(cmd.title), titleRejection);
+  let isbn: Isbn13 | null = null;
+  if (cmd.isbn !== undefined && cmd.isbn !== null) {
+    const i = need(parseIsbn(cmd.isbn), isbnRejection);
+    if (!i.ok) return i;
+    isbn = i.value;
+  }
+  // FR-007: a blank title with an ISBN becomes the placeholder `ISBN <isbn13>`.
+  const title = need(parseTitle(cmd.title.trim() === '' && isbn !== null ? `ISBN ${isbn}` : cmd.title), titleRejection);
   if (!title.ok) return title;
+  let coverUrl: CoverUrl | null = null;
+  if (cmd.coverUrl !== undefined && cmd.coverUrl !== null) {
+    const c = need(parseCoverUrl(cmd.coverUrl));
+    if (!c.ok) return c;
+    coverUrl = c.value;
+  }
   const author = need(parseAuthor(cmd.author));
   if (!author.ok) return author;
   const genre = need(parseGenre(cmd.genre));
@@ -42,6 +56,9 @@ function addBook(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'A
   if (author.value !== null) fields['author'] = author.value;
   if (totalPages !== null) fields['total_pages'] = totalPages;
   if (genre.value !== null) fields['genre'] = genre.value;
+  if (isbn !== null) fields['isbn'] = isbn;
+  if (coverUrl !== null) fields['cover_url'] = coverUrl;
+  fields['metadata_status'] = detailsStatusToDb(cmd.detailsStatus ?? 'complete');
   fields['created_at'] = now;
   const changes: Change[] = [{ tbl: 'items', rowId: id.value, fields }];
 
@@ -123,6 +140,26 @@ function editBook(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: '
     if (!genre.ok) return genre;
     if (genre.value !== item.genre) fields['genre'] = genre.value;
   }
+  if (cmd.isbn !== undefined) {
+    let isbn: Isbn13 | null = null;
+    if (cmd.isbn !== null) {
+      const i = need(parseIsbn(cmd.isbn), isbnRejection);
+      if (!i.ok) return i;
+      isbn = i.value;
+    }
+    if (isbn !== item.isbn) fields['isbn'] = isbn;
+  }
+  if (cmd.coverUrl !== undefined) {
+    let coverUrl: CoverUrl | null = null;
+    if (cmd.coverUrl !== null) {
+      const c = need(parseCoverUrl(cmd.coverUrl));
+      if (!c.ok) return c;
+      coverUrl = c.value;
+    }
+    if (coverUrl !== item.coverUrl) fields['cover_url'] = coverUrl;
+  }
+  if (cmd.detailsStatus !== undefined && cmd.detailsStatus !== item.detailsStatus)
+    fields['metadata_status'] = detailsStatusToDb(cmd.detailsStatus);
   if (cmd.totalPages !== undefined) {
     let totalPages: number | null = null;
     if (cmd.totalPages !== null) {
@@ -162,6 +199,8 @@ export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant
       return logEvent(snapshot, cmd, now);
     case 'EditBook':
       return editBook(snapshot, cmd);
+    case 'FillDetails':
+      return err({ kind: 'InvalidInput', field: 'command', reason: 'FillDetails not implemented' });
     case 'RemoveBook':
       return removeBook(snapshot, now);
     case 'RemoveEvent':

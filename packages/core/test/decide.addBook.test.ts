@@ -18,7 +18,7 @@ describe('decide AddBook', () => {
       ok: true,
       value: {
         offerFinish: false,
-        changes: [{ tbl: 'items', rowId: itemId(1), fields: { type: 'book', title: 'Dune', created_at: NOW } }],
+        changes: [{ tbl: 'items', rowId: itemId(1), fields: { type: 'book', title: 'Dune', metadata_status: 'ok', created_at: NOW } }],
       },
     });
     expect(deriveStatus(applyToSnapshot(null, r.ok ? r.value.changes : [])!.events)).toBe('queued');
@@ -26,7 +26,7 @@ describe('decide AddBook', () => {
 
   it('includes optional author, total_pages and genre when given', () => {
     const r = decide(null, add({ author: 'Herbert', totalPages: 600, genre: 'SF' }), NOW);
-    expect(r.ok && r.value.changes[0]!.fields).toEqual({ type: 'book', title: 'Dune', author: 'Herbert', total_pages: 600, genre: 'SF', created_at: NOW });
+    expect(r.ok && r.value.changes[0]!.fields).toEqual({ type: 'book', title: 'Dune', author: 'Herbert', total_pages: 600, genre: 'SF', metadata_status: 'ok', created_at: NOW });
   });
 
   it('startNow also inserts a started event dated cmd.localDate at now', () => {

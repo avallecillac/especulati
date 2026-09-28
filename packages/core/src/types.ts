@@ -9,6 +9,8 @@ export type EventId = Brand<string, 'EventId'>;
 export type DeviceId = Brand<string, 'DeviceId'>;
 export type NonEmptyTitle = Brand<string, 'NonEmptyTitle'>;
 export type Author = Brand<string, 'Author'>;
+export type Isbn13 = Brand<string, 'Isbn13'>;
+export type CoverUrl = Brand<string, 'CoverUrl'>;
 export type Genre = Brand<string, 'Genre'>;
 export type PageCount = Brand<number, 'PageCount'>;
 export type Page = Brand<number, 'Page'>;
@@ -101,4 +103,37 @@ export function previousLocalDate(d: LocalDate): LocalDate {
     day = m === 2 && isLeap(y) ? 29 : DAYS_IN_MONTH[m - 1]!;
   }
   return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}` as LocalDate;
+}
+
+const ISBN10_RE = /^\d{9}[\dX]$/;
+const ISBN13_RE = /^97[89]\d{10}$/;
+
+/** Mod-10 (EAN-13) check digit for the first 12 digits. */
+function isbn13CheckDigit(first12: string): number {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(first12[i]) * (i % 2 === 0 ? 1 : 3);
+  return (10 - (sum % 10)) % 10;
+}
+
+/** ISBN-10 or ISBN-13 (hyphens/spaces, lowercase x allowed) → normalized ISBN-13 (research R6). */
+export function parseIsbn(input: string): Result<Isbn13, ParseError> {
+  const s = input.replace(/[\s-]/g, '').toUpperCase();
+  if (s.length === 10 && ISBN10_RE.test(s)) {
+    let sum = 0;
+    for (let i = 0; i < 10; i++) sum += (s[i] === 'X' ? 10 : Number(s[i])) * (10 - i);
+    if (sum % 11 !== 0) return fail('isbn', 'bad check digit');
+    const first12 = `978${s.slice(0, 9)}`;
+    return ok(`${first12}${isbn13CheckDigit(first12)}` as Isbn13);
+  }
+  if (s.length === 13 && ISBN13_RE.test(s)) {
+    return isbn13CheckDigit(s.slice(0, 12)) === Number(s[12]) ? ok(s as Isbn13) : fail('isbn', 'bad check digit');
+  }
+  return fail('isbn', 'not an ISBN-10 or ISBN-13');
+}
+
+/** "https://…, at most 500 characters" */
+export function parseCoverUrl(input: string): Result<CoverUrl, ParseError> {
+  if (!input.startsWith('https://')) return fail('coverUrl', 'must start with https://');
+  if (input.length > 500) return fail('coverUrl', 'longer than 500 characters');
+  return ok(input as CoverUrl);
 }

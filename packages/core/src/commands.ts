@@ -1,4 +1,4 @@
-import type { BookStatus, EventType, Item, ReadingEvent } from './book.ts';
+import type { BookStatus, DetailsStatus, EventType, Item, ReadingEvent } from './book.ts';
 
 /**
  * Commands carry raw user input plus shell-generated ids (constitution IV, v1.0.1):
@@ -12,6 +12,9 @@ export type Command =
       readonly author?: string | null;
       readonly totalPages?: number | null;
       readonly genre?: string | null;
+      readonly isbn?: string | null;
+      readonly coverUrl?: string | null;
+      readonly detailsStatus?: DetailsStatus;
       readonly startNow: boolean;
       readonly startEventId?: string;
       readonly localDate: string;
@@ -23,8 +26,23 @@ export type Command =
       readonly author?: string | null;
       readonly totalPages?: number | null;
       readonly genre?: string | null;
+      readonly isbn?: string | null;
+      readonly coverUrl?: string | null;
+      readonly detailsStatus?: DetailsStatus;
     }
   | { readonly kind: 'RemoveBook'; readonly itemId: string }
+  | {
+      readonly kind: 'FillDetails';
+      readonly itemId: string;
+      readonly outcome: 'found' | 'notFound';
+      readonly details?: {
+        readonly title?: string;
+        readonly author?: string | null;
+        readonly totalPages?: number | null;
+        readonly genre?: string | null;
+        readonly coverUrl?: string | null;
+      };
+    }
   | {
       readonly kind: 'LogEvent';
       readonly itemId: string;
@@ -37,6 +55,7 @@ export type Command =
 
 export type Rejection =
   | { readonly kind: 'TitleRequired' }
+  | { readonly kind: 'InvalidIsbn' }
   | { readonly kind: 'InvalidPageCount' }
   | { readonly kind: 'InvalidPage' }
   | { readonly kind: 'PageBeyondEnd'; readonly totalPages: number }

@@ -1,8 +1,24 @@
-import type { Author, EventId, Genre, Instant, ItemId, LocalDate, NonEmptyTitle, Page, PageCount } from './types.ts';
+import type { Author, CoverUrl, EventId, Genre, Isbn13, Instant, ItemId, LocalDate, NonEmptyTitle, Page, PageCount } from './types.ts';
 
 export type ItemType = 'book' | 'article';
 export type EventType = 'started' | 'progress' | 'finished' | 'abandoned';
 export type BookStatus = 'queued' | 'reading' | 'finished' | 'abandoned';
+
+export type DetailsStatus = 'complete' | 'pending' | 'notFound';
+export type DetailsStatusDb = 'ok' | 'pending' | 'failed';
+
+const TO_DB: Record<DetailsStatus, DetailsStatusDb> = { complete: 'ok', pending: 'pending', notFound: 'failed' };
+
+export const detailsStatusToDb = (s: DetailsStatus): DetailsStatusDb => TO_DB[s];
+
+export function detailsStatusFromDb(s: string): DetailsStatus {
+  switch (s) {
+    case 'ok': return 'complete';
+    case 'pending': return 'pending';
+    case 'failed': return 'notFound';
+    default: throw new Error(`unknown metadata_status: ${s}`);
+  }
+}
 
 export interface Item {
   readonly id: ItemId;
@@ -11,6 +27,9 @@ export interface Item {
   readonly author: Author | null;
   readonly totalPages: PageCount | null;
   readonly genre: Genre | null;
+  readonly isbn: Isbn13 | null;
+  readonly coverUrl: CoverUrl | null;
+  readonly detailsStatus: DetailsStatus;
   readonly createdAt: Instant;
   readonly deletedAt: Instant | null;
 }
