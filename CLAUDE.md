@@ -31,6 +31,10 @@ pnpm --filter pwa dev # local dev server
 - Book status and the last page are **derived** from events, never stored. Removing
   anything sets `deleted_at` (a tombstone); rows are never deleted.
 - `local_date` is always explicit and computed in the shell (`apps/pwa/src/lib/clock.ts`).
+- **Svelte 5 gotcha (hit three times):** `{@const x = someState}` is a *derived* value.
+  Inside an event handler, read everything you need from `x` **before** clearing
+  `someState`; after `someState = null`, `x` is null too. Example:
+  `onconfirm={() => { const id = x.id; someState = null; doIt(id); }}`.
 - The DB runs in WAL mode with EXCLUSIVE locking (research R12). Tabs take turns on the DB
   through the Web Lock `readerlog-db`.
 

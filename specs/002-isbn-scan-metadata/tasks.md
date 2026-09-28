@@ -429,7 +429,7 @@ in the meantime is kept.
 **Independent Test**: searching "left hand of darkness" lists Le Guin's novel; picking
 it gives the filled-in confirmation.
 
-- [ ] T033 [P] [US3] Test and implement `apps/pwa/src/catalog/titleSearch.ts`
+- [X] T033 [P] [US3] Test and implement `apps/pwa/src/catalog/titleSearch.ts`
   (`searchTitle`), with tests in `titleSearch.test.ts`, following
   contracts/catalog-lookup.md, requests #4 and #5:
   - the `ol-search-q-left-hand.json` fixture gives at most 20 hits with title,
@@ -440,14 +440,14 @@ it gives the filled-in confirmation.
   - offline → `unavailable` with no fetch;
   - timeout;
   - a query shorter than 3 characters is never sent.
-- [ ] T034 [P] [US3] Write `e2e/search.spec.ts`, covering quickstart scenario 9 and
+- [X] T034 [P] [US3] Write `e2e/search.spec.ts`, covering quickstart scenario 9 and
   US3 · 3:
   - search → the list shows "The Left Hand of Darkness · Ursula K. Le Guin · 1969";
     picking it gives the filled-in confirmation, and Save stores the ISBN;
   - no results → "No matches" and an **Add manually** button, which carries the query
     into the title field;
   - offline → the message plus **Add manually**.
-- [ ] T035 [US3] Create `apps/pwa/src/screens/Search.svelte` with route `#/search`:
+- [X] T035 [US3] Create `apps/pwa/src/screens/Search.svelte` with route `#/search`:
   - a search field (at least 3 characters) submitted with Enter or a Search button;
   - a results list with `Cover.svelte` thumbnails, title, authors and year;
   - picking a hit sets the draft to `{ source: 'search', isbn, lookup: 'found', details }`.
@@ -466,14 +466,14 @@ it gives the filled-in confirmation.
 **Independent Test**: with the camera denied, entering `0-441-47812-3` stores
 `9780441478125` and looks it up.
 
-- [ ] T036 [P] [US4] Write `e2e/isbn-entry.spec.ts`, covering quickstart scenarios 3
+- [X] T036 [P] [US4] Write `e2e/isbn-entry.spec.ts`, covering quickstart scenarios 3
   and 4:
   - `fakeCamera.deny()` → Scan shows "Camera permission was denied" plus **Enter
     ISBN**; the field accepts `0-441-47812-3`, the lookup runs for `9780441478125`
     (check `catalog.requests()`), and Save stores the normalized ISBN;
   - an invalid ISBN `9780441172718` shows "That isn't a valid ISBN — check the digits."
     and sends no request.
-- [ ] T037 [US4] Add an **Enter ISBN** mode to `apps/pwa/src/screens/AddBook.svelte`
+- [X] T037 [US4] *(As built: a separate `#/isbn` screen, `EnterIsbn.svelte`, instead of a mode inside AddBook.)* Add an **Enter ISBN** mode to `apps/pwa/src/screens/AddBook.svelte`
   (route `#/add?isbn`, or a local toggle):
   - a text input with `inputmode="text"` and `autocomplete="off"`;
   - `parseIsbn` validation runs in the UI for an instant inline error (the same

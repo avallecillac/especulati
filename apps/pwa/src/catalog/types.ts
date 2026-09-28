@@ -27,6 +27,16 @@ export interface LookupDeps {
   timeoutMs?: number;
 }
 
+export interface SearchHit extends BookDetails {
+  key: string;
+  isbn: Isbn13 | null;
+}
+
+export type SearchOutcome =
+  | { kind: 'results'; hits: SearchHit[] }
+  | { kind: 'unavailable' }
+  | { kind: 'timeout' };
+
 export type { Isbn13 };
 
 /** Research R11: a catalog page count is used only if it is an integer 1..10000. */

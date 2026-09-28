@@ -4,7 +4,7 @@
   import { createScannerWorker, scanFrames, startCamera, stopCamera } from '../scanner/camera.ts';
   import { startIsbnFlow } from '../lib/isbnFlow.ts';
   import { navigate } from '../lib/router.svelte.ts';
-  import Confirm from './Confirm.svelte';
+  import DuplicatePrompt from './DuplicatePrompt.svelte';
 
   const HINT_AFTER_MS = 10_000;
 
@@ -62,7 +62,7 @@
     if (r.kind === 'duplicate' && !destroyed) duplicate = { isbn, existing: r.existing };
   }
 
-  const enterIsbn = () => navigate('/add'); // US4 points this at the ISBN field.
+  const enterIsbn = () => navigate('/isbn');
 
   const onHidden = () => {
     if (document.visibilityState === 'hidden') stop();
@@ -100,13 +100,9 @@
 
 {#if duplicate}
   {@const dup = duplicate}
-  <Confirm
-    title="Already in your library"
-    body={`“${dup.existing.title}” is already in your library.`}
-    confirmLabel="Open existing"
-    secondaryLabel="Add another copy"
-    onconfirm={() => navigate(`/book/${dup.existing.itemId}`)}
-    onsecondary={() => { duplicate = null; void startIsbnFlow(dup.isbn, { skipDuplicateCheck: true }); }}
+  <DuplicatePrompt
+    existing={dup.existing}
+    onaddcopy={() => { const isbn = dup.isbn; duplicate = null; void startIsbnFlow(isbn, { skipDuplicateCheck: true }); }}
     oncancel={() => { duplicate = null; void start(); }}
   />
 {/if}

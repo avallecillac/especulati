@@ -7,6 +7,8 @@
   import Home from './screens/Home.svelte';
   import AddBook from './screens/AddBook.svelte';
   import Scan from './screens/Scan.svelte';
+  import Search from './screens/Search.svelte';
+  import EnterIsbn from './screens/EnterIsbn.svelte';
   import Library from './screens/Library.svelte';
   import BookDetail from './screens/BookDetail.svelte';
   import Settings from './screens/Settings.svelte';
@@ -71,6 +73,10 @@
       <AddBook />
     {:else if router.route.name === 'scan'}
       <Scan />
+    {:else if router.route.name === 'search'}
+      <Search />
+    {:else if router.route.name === 'isbn'}
+      <EnterIsbn />
     {:else if router.route.name === 'edit'}
       {#key router.route.id}<AddBook editId={router.route.id} />{/key}
     {:else if router.route.name === 'library'}

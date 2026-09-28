@@ -1,37 +1,16 @@
 import type { Isbn13 } from '@readerlog/core';
 import { parseGbVolume } from './googleBooks.ts';
 import { mergeDetails } from './merge.ts';
+import { createGetter } from './request.ts';
 import { parseOlEdition, parseOlSearchDoc } from './openLibrary.ts';
 import type { LookupDeps, LookupOutcome } from './types.ts';
-
-type Fetched =
-  | { kind: 'ok'; json: unknown }
-  | { kind: 'fail'; reason: 'network' | 'http'; status?: number }
-  | { kind: 'timeout' };
 
 const OL_SEARCH_FIELDS = 'key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject';
 
 export async function lookupIsbn(isbn: Isbn13, deps: LookupDeps): Promise<LookupOutcome> {
   if (!deps.online()) return { kind: 'unavailable', reason: 'offline' };
 
-  // One deadline covers every request. Racing it too means a fetch that ignores the signal still times out.
-  const signal = AbortSignal.timeout(deps.timeoutMs ?? 8000);
-  const deadline = new Promise<Fetched>((resolve) => {
-    signal.addEventListener('abort', () => resolve({ kind: 'timeout' }), { once: true });
-  });
-
-  const get = (url: string): Promise<Fetched> => {
-    const request = (async (): Promise<Fetched> => {
-      try {
-        const res = await deps.fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', signal });
-        if (!res.ok) return { kind: 'fail', reason: 'http', status: res.status };
-        return { kind: 'ok', json: await res.json() };
-      } catch {
-        return signal.aborted ? { kind: 'timeout' } : { kind: 'fail', reason: 'network' };
-      }
-    })();
-    return Promise.race([request, deadline]);
-  };
+  const get = createGetter(deps);
 
   const [searchRes, editionRes] = await Promise.all([
     get(`https://openlibrary.org/search.json?isbn=${isbn}&fields=${OL_SEARCH_FIELDS}&limit=1`),

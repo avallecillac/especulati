@@ -33,6 +33,10 @@ export const olSearchUrl = (isbn: string) =>
 export const olEditionUrl = (isbn: string) => `${OL}/isbn/${isbn}.json`;
 export const gbUrl = (isbn: string) => `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`;
 
+export const olTitleUrl = (q: string) =>
+  `${OL}/search.json?q=${encodeURIComponent(q)}&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,isbn&limit=20`;
+export const gbTitleUrl = (q: string) => `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=20`;
+
 /** Routes URL → fixture-backed response. Unrouted URLs return 404. `routes` overrides per URL. */
 export function fakeFetch(routes: Record<string, Route> = {}): FakeFetch {
   const calls: FakeFetch['calls'] = [];

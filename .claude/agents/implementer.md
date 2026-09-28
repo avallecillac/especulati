@@ -34,6 +34,8 @@ and report back.
   - Book status and last page are derived from events, never stored.
 - **The UI never touches SQLite.** It talks to the DB worker through
   `apps/pwa/src/lib/dbClient.ts`.
+- **Svelte 5 `{@const}` is derived.** In handlers, copy the values you need before
+  clearing the state it derives from (see CLAUDE.md).
 - **Stay in scope.** Only change the files your task needs. Don't refactor unrelated
   code, add dependencies, or change contracts or the schema unless the task says so.
 - **Pinned versions:** TypeScript 5.9, Playwright 1.56.1 (use the preinstalled Chromium;

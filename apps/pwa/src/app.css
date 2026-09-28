@@ -115,3 +115,5 @@ ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--line); display: fl
 .add-sources .row { display: flex; gap: 16px; }
 .disabled { color: var(--muted); cursor: not-allowed; }
 .badge { font-size: 0.8rem; }
+
+button.hit { width: 100%; min-height: var(--tap); border-radius: 12px; justify-content: flex-start; gap: 12px; padding: 6px 10px; text-align: left; }

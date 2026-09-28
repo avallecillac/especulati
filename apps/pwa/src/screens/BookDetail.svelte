@@ -72,6 +72,7 @@
       <h1>{c.title}</h1>
       <DetailsBadge status={c.detailsStatus} />
       {#if c.author}<p class="muted">{c.author}</p>{/if}
+      {#if c.isbn}<p class="muted">ISBN {c.isbn}</p>{/if}
       <p>{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
     </div>
   </div>

@@ -120,8 +120,8 @@
   <div class="actions add-sources">
     <button type="button" class="primary" onclick={() => navigate('/scan')}>Scan barcode</button>
     <div class="row">
-      <span class="link disabled" role="link" aria-disabled="true">Search by title</span>
-      <span class="link disabled" role="link" aria-disabled="true">Enter ISBN</span>
+      <a href="#/search">Search by title</a>
+      <a href="#/isbn">Enter ISBN</a>
     </div>
   </div>
 {/if}
