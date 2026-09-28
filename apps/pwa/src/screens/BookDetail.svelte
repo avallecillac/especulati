@@ -10,6 +10,7 @@
   import { showToast } from '../lib/toast.svelte.ts';
   import { toastSaved, undoEvent } from '../lib/actions.ts';
   import Cover from './Cover.svelte';
+  import DetailsBadge from './DetailsBadge.svelte';
   import LogSheet from './LogSheet.svelte';
   import Confirm from './Confirm.svelte';
 
@@ -69,6 +70,7 @@
     <div>
       <p class="muted">{STATUS_LABEL[c.status]}</p>
       <h1>{c.title}</h1>
+      <DetailsBadge status={c.detailsStatus} />
       {#if c.author}<p class="muted">{c.author}</p>{/if}
       <p>{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
     </div>

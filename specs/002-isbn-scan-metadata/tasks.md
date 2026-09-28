@@ -358,7 +358,7 @@ in the meantime is kept.
   `FillDetails(found, random details)` and `FillDetails(notFound)` on a pending
   ISBN-placeholder book. Assert that a field set by `EditBook` to a non-empty value is
   never changed by any later `FillDetails`.
-- [ ] T028 [P] [US2] Write `e2e/offline-scan.spec.ts`, using the T016 fixtures, for
+- [X] T028 [P] [US2] Write `e2e/offline-scan.spec.ts`, using the T016 fixtures, for
   quickstart scenarios 5, 6 and 7:
   - **(5)** Set `context.setOffline(true)`, then scan and save two books with empty
     titles:
@@ -387,7 +387,7 @@ in the meantime is kept.
 
 - [X] T029 [US2] Implement `FillDetails` in `packages/core/src/decide.ts` exactly as in
   contracts/commands-002.md. Make T026 and T027 pass.
-- [ ] T030 [US2] Handle every lookup outcome in the add flow, in
+- [X] T030 [US2] Handle every lookup outcome in the add flow, in
   `apps/pwa/src/screens/AddBook.svelte` and `apps/pwa/src/lib/isbnFlow.ts`:
 
   | Outcome | Status line | Saved as |
@@ -401,7 +401,7 @@ in the meantime is kept.
     comes from `decide()`.
   - Don't disable **Save** while the lookup is running. Saving before the lookup
     resolves counts as pending.
-- [ ] T031 [US2] Create `apps/pwa/src/lib/detailsRetry.ts`, following research R8:
+- [X] T031 [US2] Create `apps/pwa/src/lib/detailsRetry.ts`, following research R8:
   - `runDetailsRetry()`:
     1. Query `pendingDetails`.
     2. Look up at most 2 at a time, skipping ids in a module-level `attempted` Set.
@@ -411,7 +411,7 @@ in the meantime is kept.
     5. `unavailable` or `timeout` → nothing.
   - Call it from `apps/pwa/src/App.svelte` once `dbReady` becomes true, and on
     `window` `online`.
-- [ ] T032 [US2] Show the details status on `Home.svelte`, `Library.svelte` and
+- [X] T032 [US2] Show the details status on `Home.svelte`, `Library.svelte` and
   `BookDetail.svelte`: a small badge "Details pending" or "Details not found", driven
   by `BookCard.detailsStatus`. The edit form's Save
   (`apps/pwa/src/screens/AddBook.svelte`, edit mode) sends

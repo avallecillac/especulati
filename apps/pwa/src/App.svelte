@@ -1,6 +1,7 @@
 <script lang="ts">
   import { router } from './lib/router.svelte.ts';
   import { query, refreshAll } from './lib/dbClient.ts';
+  import { runDetailsRetry } from './lib/detailsRetry.ts';
   import { applyUpdate, pwa } from './lib/pwa.svelte.ts';
   import { dismissToast, toasts } from './lib/toast.svelte.ts';
   import Home from './screens/Home.svelte';
@@ -30,13 +31,21 @@
   }
   void connect();
 
+  let retried = false;
+  $effect(() => {
+    if (dbReady && !retried) {
+      retried = true;
+      void runDetailsRetry();
+    }
+  });
+
   // Another window had the DB: try again when this one is brought to the front.
   const retry = () => {
     if (busy && document.visibilityState === 'visible') void connect();
   };
 </script>
 
-<svelte:window onfocus={retry} />
+<svelte:window onfocus={retry} ononline={() => void runDetailsRetry()} />
 <svelte:document onvisibilitychange={retry} />
 
 <div class="app">

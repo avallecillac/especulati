@@ -4,6 +4,7 @@
   import { STATUS_LABEL, plural, progressLabel } from '../lib/format.ts';
   import { reportError } from '../lib/errors.ts';
   import Cover from './Cover.svelte';
+  import DetailsBadge from './DetailsBadge.svelte';
   import LogSheet from './LogSheet.svelte';
 
   let view = $state<HomeView | null>(null);
@@ -45,6 +46,7 @@
         <div>
           <p class="muted">{STATUS_LABEL[current.status]}</p>
           <h1><a href={`#/book/${current.itemId}`}>{current.title}</a></h1>
+          <DetailsBadge status={current.detailsStatus} />
           {#if current.author}<p class="muted">{current.author}</p>{/if}
           <p>{progressLabel(current)}</p>
           {#if current.lastActivity}

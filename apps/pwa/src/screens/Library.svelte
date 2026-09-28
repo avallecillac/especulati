@@ -4,6 +4,7 @@
   import { progressLabel } from '../lib/format.ts';
   import { reportError } from '../lib/errors.ts';
   import Cover from './Cover.svelte';
+  import DetailsBadge from './DetailsBadge.svelte';
 
   let view = $state<LibraryView | null>(null);
 
@@ -42,6 +43,7 @@
             <li>
               <Cover itemId={card.itemId} hasCover={card.hasCover} title={card.title} size="sm" />
               <a href={`#/book/${card.itemId}`}>{card.title}</a>
+              <DetailsBadge status={card.detailsStatus} />
               <span class="spacer"></span>
               <span class="muted">{progressLabel(card)}</span>
             </li>

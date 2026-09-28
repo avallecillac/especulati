@@ -3,7 +3,8 @@
   import { dispatch, query, storeCover } from '../lib/dbClient.ts';
   import { authorsLabel } from '../catalog/merge.ts';
   import { fetchCover } from '../catalog/cover.ts';
-  import { clearDraft, draft } from '../lib/draft.svelte.ts';
+  import type { DetailsStatus } from '@readerlog/core';
+  import { clearDraft, draft, type Draft } from '../lib/draft.svelte.ts';
   import Cover from './Cover.svelte';
   import { todayLocal } from '../lib/clock.ts';
   import { errorMessage } from '../lib/errors.ts';
@@ -67,8 +68,14 @@
     if (d.lookup === 'running') return 'Looking up…';
     if (d.lookup === 'found') return d.details?.source === 'googlebooks' ? 'Found in Google Books' : 'Found in Open Library';
     if (d.lookup === 'idle') return null;
-    return "Couldn't fetch details.";
+    if (d.lookup === 'notFound') return 'Not found in book catalogs — add the details yourself.';
+    if (d.lookup === 'timeout') return 'Taking too long — continue without details.';
+    return "Details will be looked up when you're online.";
   });
+
+  /** Saving before the lookup resolves, or after it couldn't help, leaves the details pending. */
+  const statusToSave = (lookup: Draft['lookup']): DetailsStatus =>
+    lookup === 'found' ? 'complete' : lookup === 'notFound' ? 'notFound' : 'pending';
 
   /** '' → null (not given); anything else → a number, which decide() validates. */
   const pagesValue = () => (totalPages.trim() === '' ? null : Number(totalPages));
@@ -87,12 +94,12 @@
           author,
           totalPages: pagesValue(),
           genre,
-          ...(d?.isbn ? { isbn: d.isbn, coverUrl, detailsStatus: 'complete' as const } : {}),
+          ...(d?.isbn ? { isbn: d.isbn, coverUrl, detailsStatus: statusToSave(d.lookup) } : {}),
           startNow,
           startEventId: crypto.randomUUID(),
           localDate: todayLocal(),
         })
-      : await dispatch({ kind: 'EditBook', itemId: editId, title, author, totalPages: pagesValue(), genre });
+      : await dispatch({ kind: 'EditBook', itemId: editId, title, author, totalPages: pagesValue(), genre, detailsStatus: 'complete' });
     saving = false;
     if (!r.ok) {
       error = r.error;

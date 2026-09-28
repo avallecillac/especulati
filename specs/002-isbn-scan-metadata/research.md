@@ -177,6 +177,10 @@ from the dev container on 2026-09-28 with `Origin: https://readerlog.pages.dev`.
      `found`.
   5. `unavailable` or `timeout`: leave the book pending, and don't try again until the
      next launch.
+- **Refinement (during implementation)**: a lookup that returns `unavailable/offline`
+  never reached the network, so it **doesn't count** as an attempt. The book is taken
+  out of `attempted`, and the `online` event retries it. Books whose request really
+  went out and failed (for example with a 429) wait until the next launch.
 - **Rationale**: this is FR-009's "at most once per app launch per book". It needs no
   background sync, which the iOS web platform doesn't offer.
 
