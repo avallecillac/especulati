@@ -12,7 +12,8 @@
   "dependencies": {
     "@readerlog/core": "workspace:*",
     "@readerlog/db": "workspace:*",
-    "@sqlite.org/sqlite-wasm": "3.53.4-build1"
+    "@sqlite.org/sqlite-wasm": "3.53.4-build1",
+    "zxing-wasm": "3.1.4"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",

@@ -1,0 +1,55 @@
+{
+  "numFound": 1,
+  "docs": [
+    {
+      "key": "/works/OL59800W",
+      "title": "The Left Hand of Darkness",
+      "author_name": [
+        "Ursula K. Le Guin"
+      ],
+      "first_publish_year": 1969,
+      "cover_i": 10618463,
+      "number_of_pages_median": 304,
+      "subject": [
+        "Ciencia-ficción",
+        "Hugo Award Winner",
+        "award:hugo_award=1970",
+        "award:hugo_award=novel",
+        "human nature",
+        "gender",
+        "space travel",
+        "ice age",
+        "Science fiction",
+        "American literature",
+        "Fiction, science fiction, general",
+        "LGBTQ gender identity",
+        "LGBTQ science fiction & fantasy",
+        "award:nebula_award=novel",
+        "Life on other planets",
+        "Fiction",
+        "American Science fiction",
+        "Extraterrestrial anthropology",
+        "Sex role",
+        "Long Now Manual for Civilization",
+        "Human-alien encounters",
+        "Gender identity",
+        "Ethnologists",
+        "Loyalty",
+        "Betrayal",
+        "Vie extraterrestre",
+        "Romans, nouvelles",
+        "Rencontres avec les extraterrestres",
+        "Identité de genre",
+        "Ethnologues",
+        "Loyauté",
+        "Trahison (Morale)",
+        "LGBTQ fiction before Stonewall",
+        "General",
+        "Classics",
+        "Literary",
+        "collection:otherwise_tiptree_award=retroaward",
+        "Fantasy"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "numFound": 1,
+  "docs": [
+    {
+      "key": "/works/OL21745884W",
+      "title": "Project Hail Mary",
+      "author_name": [
+        "Andy Weir"
+      ],
+      "first_publish_year": 2021,
+      "cover_i": 11200092,
+      "number_of_pages_median": 496,
+      "subject": [
+        "hard science-fiction",
+        "science-fiction",
+        "sci-fi",
+        "hard sci-fi",
+        "nyt:hardcover-fiction=2021-05-23",
+        "New York Times bestseller",
+        "New York Times reviewed",
+        "Fiction, science fiction, action & adventure",
+        "Fiction, science fiction, hard science fiction",
+        "End of the world",
+        "Fiction",
+        "Astronauts",
+        "Space flight",
+        "Memory disorders",
+        "Survival",
+        "Fin du monde",
+        "Romans, nouvelles",
+        "Astronautes",
+        "Vol spatial",
+        "Habiletés de survie",
+        "FICTION / Science Fiction / Action & Adventure",
+        "FICTION / Science Fiction / Hard Science Fiction",
+        "FICTION / Thrillers / Suspense",
+        "Survival after airplane accidents, shipwrecks",
+        "nyt:trade-fiction-paperback=2022-11-13"
+      ]
+    }
+  ]
+}

@@ -33,7 +33,7 @@ that the Opus session does itself.
 
 ## Phase 1: Setup
 
-- [ ] T001 Add dependencies and test wiring:
+- [X] T001 Add dependencies and test wiring:
   - `apps/pwa/package.json`: dependency `"zxing-wasm": "3.1.4"`.
   - `e2e/package.json`: devDependency `"zxing-wasm": "3.1.4"`.
   - `vitest.config.ts`: add a third project
@@ -42,15 +42,15 @@ that the Opus session does itself.
     `"vitest/globals"` only if needed; tests import from `vitest` explicitly).
   - Run `pnpm install`. Verify `pnpm test` still passes all 98 existing tests and
     reports 0 tests for project `pwa`.
-- [ ] T002 [P] Record catalog fixtures into `apps/pwa/src/catalog/fixtures/`. This is
+- [X] T002 [P] Record catalog fixtures into `apps/pwa/src/catalog/fixtures/`. This is
   the **only** task allowed to call the live APIs, and it runs once, with curl.
   - For each ISBN in `9780441478125 9780441172719 9780307387899 9788437604947 9780593135204 9781250301697`:
     - save `ol-search-isbn-<isbn>.json` from
       `https://openlibrary.org/search.json?isbn=<isbn>&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject&limit=1`;
     - save `ol-edition-<isbn>.json` from `https://openlibrary.org/isbn/<isbn>.json`
       (follow the redirect, `curl -L`).
-  - Save `ol-search-isbn-miss.json` from the same search URL with `isbn=9780000000002`
-    (expect `docs: []`).
+  - Save `ol-search-isbn-miss.json` from the same search URL with `isbn=9791299999991`
+    (expect `docs: []`). *As built:* `9780000000002` turned out to be a real ISBN in Open Library, so the miss ISBN is `9791299999991`: a valid check digit with `numFound: 0`, verified live on 2026-09-28.
   - Save `ol-search-q-left-hand.json` from
     `https://openlibrary.org/search.json?q=left+hand+of+darkness&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,isbn&limit=20`.
   - Write `gb-isbn-9780441172719.json` by hand, following the Google Books `volumes`
@@ -377,7 +377,7 @@ in the meantime is kept.
       shows no lookup for B's ISBN.
 
     Together these show that the retry never overwrites user edits (FR-009).
-  - **(6)** `catalog.miss('9780000000002')` plus a GB `totalItems: 0`: "Not found in
+  - **(6)** `catalog.miss('9791299999991')` plus a GB `totalItems: 0`: "Not found in
     book catalogs". Save with a typed title, and the badge reads "Details not found".
     Reload: `catalog.requests()` shows **no** new lookup for that ISBN.
   - **(7)** `catalog.delay(9000)`: after 8 s the status reads "Taking too long —

@@ -1,0 +1,20 @@
+{
+  "totalItems": 1,
+  "items": [
+    {
+      "volumeInfo": {
+        "title": "Dune",
+        "authors": [
+          "Frank Herbert"
+        ],
+        "pageCount": 612,
+        "categories": [
+          "Fiction"
+        ],
+        "imageLinks": {
+          "thumbnail": "http://books.google.com/books/content?id=B1hSG45JCX4C&zoom=1"
+        }
+      }
+    }
+  ]
+}
