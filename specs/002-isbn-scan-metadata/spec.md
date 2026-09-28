@@ -230,7 +230,7 @@ details**. The fetched values are offered for review before anything changes.
 
 - **SC-001**: From opening the Add screen to a saved book is **at most 3 taps** plus
   the scan (Scan barcode → *scan* → Save), and takes under **15 seconds** for a book
-  the catalogs know, on a normal mobile connection.
+  the catalogs know, on a connection of at least 5 Mbit/s with under 150 ms latency.
 - **SC-002**: For a reference set of 20 popular ISBNs (recent fiction and non-fiction,
   in English and Spanish), at least **18 of 20** return a title and author, and at
   least **15 of 20** also return a page count.
