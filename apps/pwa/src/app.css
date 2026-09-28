@@ -106,3 +106,11 @@ ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--line); display: fl
 .cover.md.generated { font-size: 1.75rem; }
 .with-cover { display: flex; gap: 12px; align-items: flex-start; }
 .with-cover > :last-child { min-width: 0; flex: 1; }
+
+.scan-view { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4 / 3; }
+.scan-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-guide { position: absolute; inset: 25% 10%; border: 2px solid rgb(255 255 255 / 0.8); border-radius: 8px; pointer-events: none; }
+.scan-view.flash::after { content: ''; position: absolute; inset: 0; background: #fff; opacity: 0.7; }
+
+.add-sources .row { display: flex; gap: 16px; }
+.disabled { color: var(--muted); cursor: not-allowed; }

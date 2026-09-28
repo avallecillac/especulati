@@ -1,9 +1,11 @@
 <script lang="ts">
-  let { title, body = '', confirmLabel, danger = false, onconfirm, oncancel }: {
+  let { title, body = '', confirmLabel, danger = false, secondaryLabel, onsecondary, onconfirm, oncancel }: {
     title: string;
     body?: string;
     confirmLabel: string;
     danger?: boolean;
+    secondaryLabel?: string;
+    onsecondary?: () => void;
     onconfirm: () => void;
     oncancel: () => void;
   } = $props();
@@ -17,6 +19,7 @@
     {#if body}<p class="muted">{body}</p>{/if}
     <div class="actions">
       <button class={danger ? 'danger' : 'primary'} onclick={onconfirm}>{confirmLabel}</button>
+      {#if secondaryLabel && onsecondary}<button onclick={onsecondary}>{secondaryLabel}</button>{/if}
       <button onclick={oncancel}>Cancel</button>
     </div>
   </div>

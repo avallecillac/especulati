@@ -235,12 +235,12 @@ current book, with its cover.
 
 ### Tests for User Story 1
 
-- [ ] T017 [P] [US1] Write `apps/pwa/src/scanner/isbnFilter.test.ts` for
+- [X] T017 [P] [US1] Write `apps/pwa/src/scanner/isbnFilter.test.ts` for
   `isbnFromBarcode(text)`:
   - it accepts `978…` and `979` (except `9790…`) EAN-13 values that pass `parseIsbn`;
   - it rejects UPC-A (12 digits), `9790001234566`, bad check digits, and
     non-numerics.
-- [ ] T018 [P] [US1] Write `e2e/scan.spec.ts` using the T016 fixtures:
+- [X] T018 [P] [US1] Write `e2e/scan.spec.ts` using the T016 fixtures:
   - **(a)** Add → **Scan barcode** with `fakeCamera.show('9780441172719')`. The
     confirmation shows the title "Dune", author "Frank Herbert", and the fixture page
     count, and a cover preview. **Save** with Start reading on: the Home card shows
@@ -256,8 +256,8 @@ current book, with its cover.
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Create `apps/pwa/src/scanner/isbnFilter.ts`, satisfying T017.
-- [ ] T020 [US1] Create `apps/pwa/src/scanner/scanner.worker.ts`, following
+- [X] T019 [P] [US1] Create `apps/pwa/src/scanner/isbnFilter.ts`, satisfying T017.
+- [X] T020 [US1] Create `apps/pwa/src/scanner/scanner.worker.ts`, following
   contracts/db-and-worker-002.md "Scanner worker":
   - Lazily run
     `prepareZXingModule({ overrides: { locateFile: (p, prefix) => p.endsWith('.wasm') ? wasmUrl : prefix + p } })`,
@@ -267,7 +267,7 @@ current book, with its cover.
     getting the `ImageData` from an `OffscreenCanvas` drawing of the transferred
     `ImageBitmap`.
   - Filter with `isbnFromBarcode`, then reply `ready` / `isbn` / `none` / `error`.
-- [ ] T021 [US1] Create `apps/pwa/src/scanner/camera.ts` with
+- [X] T021 [US1] Create `apps/pwa/src/scanner/camera.ts` with
   `startCamera(video: HTMLVideoElement): Promise<Result<MediaStream, 'denied' | 'unavailable'>>`
   and `stopCamera(stream)`, which stops every track.
   - Use the constraints from research R4.
@@ -276,7 +276,7 @@ current book, with its cover.
   - Add a frame loop helper `scanFrames(video, worker, onIsbn)`: grab the center crop
     with `createImageBitmap(video, sx, sy, sw, sh)`, keep one frame in flight, and
     target about 6 fps. It returns a stop function.
-- [ ] T022 [US1] Create `apps/pwa/src/lib/draft.svelte.ts`: a `$state` holding the
+- [X] T022 [US1] Create `apps/pwa/src/lib/draft.svelte.ts`: a `$state` holding the
   confirmation draft.
   - Fields: `{ source: 'scan' | 'isbn' | 'search' | 'manual'; isbn: string | null;`
     `lookup: 'idle' | 'running' | 'found' | 'notFound' | 'unavailable' | 'timeout';`
@@ -288,7 +288,7 @@ current book, with its cover.
     2. Otherwise set the draft to `lookup: 'running'`, navigate to `#/add`, and start
        `lookupIsbn(isbn, { fetch, online: () => navigator.onLine })`, updating the
        draft as it resolves.
-- [ ] T023 [US1] Create `apps/pwa/src/screens/Scan.svelte`, with route `#/scan` added in
+- [X] T023 [US1] Create `apps/pwa/src/screens/Scan.svelte`, with route `#/scan` added in
   `apps/pwa/src/lib/router.svelte.ts` and `App.svelte`.
   - It shows a full-width `<video playsinline muted>` with a framing guide.
   - It starts the camera on mount and stops it on destroy and on
@@ -301,7 +301,7 @@ current book, with its cover.
   - After 10 s without an ISBN, show a hint link: "Having trouble? **Enter ISBN**".
   - On `denied` or `unavailable`, show the reason and an **Enter ISBN** button (US4
     wires the destination).
-- [ ] T024 [US1] Rework `apps/pwa/src/screens/AddBook.svelte` (add mode only; edit mode
+- [X] T024 [US1] Rework `apps/pwa/src/screens/AddBook.svelte` (add mode only; edit mode
   stays as in 001, and US5 extends it):
   - At the top, a primary **Scan barcode** button (→ `#/scan`) and secondary links
     **Search by title** and **Enter ISBN**. Wire them later in US3 and US4; until
@@ -314,7 +314,7 @@ current book, with its cover.
     `detailsStatus: 'complete'` when the lookup was `found`. It then runs
     `fetchCover` followed by `storeCover` without awaiting in the UI (fire and
     forget), clears the draft, and navigates to `#/`.
-- [ ] T025 [P] [US1] Create `apps/pwa/src/screens/Cover.svelte` and
+- [X] T025 [P] [US1] Create `apps/pwa/src/screens/Cover.svelte` and
   `apps/pwa/src/lib/covers.ts`.
   - `covers.ts` has `coverObjectUrl(itemId)`, which calls
     `query({ name: 'cover', itemId })`, keeps a `Map` of object URLs, and revokes
