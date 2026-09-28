@@ -46,7 +46,11 @@ Playwright.
 ## Model roles
 
 The main session runs on **Opus** and acts as architect and reviewer. Implementation goes
-to **Sonnet** subagents: the Agent tool with `model: "sonnet"`, which is currently Sonnet 5.
+to **Sonnet** subagents through the project agent `.claude/agents/implementer.md`: the Agent
+tool with `subagent_type: "implementer"`. That agent's frontmatter pins `model: sonnet`
+(currently Sonnet 5) and leaves out the Agent tool, so it can't delegate further. Its
+rules (test-first, no commits, no spec edits, escalate design questions) are built in, so
+prompts only need to carry the task-specific context listed below.
 
 **Opus (main session) owns:**
 
