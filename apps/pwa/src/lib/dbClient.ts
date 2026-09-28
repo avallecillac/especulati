@@ -62,6 +62,17 @@ export async function query<N extends Query['name']>(
   return res.ok ? { ok: true, value: res.result as QueryResult[N] } : { ok: false, error: res.error };
 }
 
+/** Downscale and cache a cover in the worker. `stored: false` means it was unusable; never an error. */
+export async function storeCover(itemId: string, image: Blob): Promise<{ stored: boolean }> {
+  const res = await send({ kind: 'storeCover', itemId, image });
+  if (res.ok) {
+    const out = res.result as { stored: boolean };
+    if (out.stored) notify();
+    return out;
+  }
+  return { stored: false };
+}
+
 export async function setMeta(key: string, value: string): Promise<void> {
   await send({ kind: 'setMeta', key, value });
 }

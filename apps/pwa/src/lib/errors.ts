@@ -18,6 +18,8 @@ export function errorMessage(e: ClientError): string {
       return `You've already logged page ${e.maxLogged}; total pages can't be lower.`;
     case 'InvalidTransition':
       return `Can't mark a ${e.from} book as ${e.type}.`;
+    case 'InvalidIsbn':
+      return "That isn't a valid ISBN — check the digits.";
     case 'NotFound':
       return 'That book or entry no longer exists.';
     case 'AlreadyExists':

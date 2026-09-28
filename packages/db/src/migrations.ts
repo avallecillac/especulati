@@ -60,14 +60,28 @@ const MIGRATIONS: readonly string[] = [
   CREATE INDEX idx_items_type_read    ON items(type, read_on)                WHERE deleted_at IS NULL;
   CREATE INDEX idx_changelog_unpushed ON change_log(seq)                     WHERE pushed = 0;
   `,
+  /* 2 */ `
+  CREATE INDEX idx_items_isbn ON items(isbn) WHERE deleted_at IS NULL AND isbn IS NOT NULL;
+
+  -- Local cache of downscaled cover images (research R5). NOT in change_log, NOT synced.
+  CREATE TABLE covers (
+    item_id    TEXT PRIMARY KEY REFERENCES items(id),
+    mime       TEXT NOT NULL CHECK (mime IN ('image/jpeg')),
+    bytes      BLOB NOT NULL,
+    width      INTEGER NOT NULL CHECK (width  BETWEEN 40 AND 2000),
+    height     INTEGER NOT NULL CHECK (height BETWEEN 60 AND 480),
+    fetched_at TEXT NOT NULL
+  ) WITHOUT ROWID;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
 
-export function migrate(db: Database): void {
+/** `to` stops early (test hook for building an older-version fixture). */
+export function migrate(db: Database, opts: { to?: number } = {}): void {
   db.exec('PRAGMA foreign_keys = ON');
   const current = Number(db.selectValue('PRAGMA user_version') ?? 0);
-  for (let v = current; v < MIGRATIONS.length; v++) {
+  for (let v = current; v < (opts.to ?? MIGRATIONS.length); v++) {
     db.exec('BEGIN IMMEDIATE');
     try {
       db.exec(MIGRATIONS[v]!);

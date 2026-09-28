@@ -105,6 +105,14 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.library();
     case 'book':
       return d.book(q.itemId);
+    case 'findByIsbn':
+      return d.findByIsbn(q.isbn);
+    case 'pendingDetails':
+      return d.pendingDetails();
+    case 'cover': {
+      const c = d.getCover(q.itemId);
+      return c ? new Blob([c.bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }) : null;
+    }
     case 'storage': {
       const persisted = d.getMeta('storage_persisted');
       const info: StorageInfo = {
@@ -114,6 +122,35 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       };
       return info;
     }
+  }
+}
+
+const MIN_W = 40;
+const MIN_H = 60;
+const MAX_H = 480;
+
+/** Decode, downscale to ≤480 px tall, re-encode as JPEG and cache. A cover is optional: any failure is `false`. */
+async function storeCover(d: ReaderlogDb, itemId: string, image: Blob): Promise<boolean> {
+  try {
+    const bitmap = await createImageBitmap(image);
+    try {
+      if (bitmap.width < MIN_W || bitmap.height < MIN_H) return false;
+      const scale = Math.min(1, MAX_H / bitmap.height);
+      const width = Math.max(MIN_W, Math.round(bitmap.width * scale));
+      const height = Math.min(MAX_H, Math.round(bitmap.height * scale));
+      const canvas = new OffscreenCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      const jpeg = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.75 });
+      d.putCover(itemId, new Uint8Array(await jpeg.arrayBuffer()), width, height, new Date().toISOString());
+      channel.postMessage({ type: 'changed' });
+      return true;
+    } finally {
+      bitmap.close();
+    }
+  } catch {
+    return false;
   }
 }
 
@@ -131,11 +168,14 @@ async function handle(req: Request): Promise<Response> {
       case 'dispatch': {
         const r = d.dispatch(req.cmd, env());
         if (!r.ok) return { id: req.id, ok: false, error: r.error };
+        if (req.cmd.kind === 'RemoveBook') d.deleteCover(req.cmd.itemId); // cache maintenance (R5)
         channel.postMessage({ type: 'changed' });
         return { id: req.id, ok: true, result: r.value };
       }
       case 'query':
         return { id: req.id, ok: true, result: runQuery(d, req.q) };
+      case 'storeCover':
+        return { id: req.id, ok: true, result: { stored: await storeCover(d, req.itemId, req.image) } };
       case 'setMeta':
         d.setMeta(req.key, req.value);
         return { id: req.id, ok: true, result: null };

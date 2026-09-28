@@ -1,6 +1,7 @@
 import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
+import { detailsStatusFromDb } from '@readerlog/core';
 import type {
-  Author, BookSnapshot, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
+  Author, BookSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
   NonEmptyTitle, Page, PageCount, ReadingEvent,
 } from '@readerlog/core';
 
@@ -26,6 +27,9 @@ export function rowToItem(r: Record<string, SqlValue>): Item {
     author: textOrNull(r['author'], 'author') as Author | null,
     totalPages: intOrNull(r['total_pages'], 'total_pages') as PageCount | null,
     genre: textOrNull(r['genre'], 'genre') as Genre | null,
+    isbn: textOrNull(r['isbn'], 'isbn') as Isbn13 | null,
+    coverUrl: textOrNull(r['cover_url'], 'cover_url') as CoverUrl | null,
+    detailsStatus: detailsStatusFromDb(text(r['metadata_status'], 'metadata_status')),
     createdAt: text(r['created_at'], 'created_at') as Instant,
     deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
   };

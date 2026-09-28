@@ -69,7 +69,7 @@ and the e2e harness.
 
 ### Tests first
 
-- [ ] T003 [P] Write `packages/core/test/isbn.test.ts` for `parseIsbn`, following
+- [X] T003 [P] Write `packages/core/test/isbn.test.ts` for `parseIsbn`, following
   contracts/commands-002.md:
   - every row of the test-vector table: `0-441-47812-3` → `9780441478125`;
     `978-0-441-17271-9` → `9780441172719`; `080442957X` → `9780804429573`;
@@ -80,7 +80,7 @@ and the e2e harness.
 
   Also test `parseCoverUrl`: `https://…` accepted; `http://…`, over 500 characters, and
   `javascript:` rejected.
-- [ ] T004 [P] Write `packages/core/test/decide.addBook.isbn.test.ts` for the
+- [X] T004 [P] Write `packages/core/test/decide.addBook.isbn.test.ts` for the
   commands-002 "Changed commands" table:
   - `AddBook` with `isbn: '0-441-47812-3'` stores `isbn: '9780441478125'`;
   - a blank title plus an ISBN gives the title `ISBN 9780441478125`;
@@ -93,7 +93,7 @@ and the e2e harness.
   - `EditBook`: setting, changing and clearing (`null`) the ISBN emits only changed
     fields; `detailsStatus: 'complete'` on a pending book emits
     `metadata_status: 'ok'`.
-- [ ] T005 [P] Write `packages/db/test/migration2.test.ts`:
+- [X] T005 [P] Write `packages/db/test/migration2.test.ts`:
   1. Build a **v1 fixture database**: run only migration 1, by exposing
      `migrate(db, { to: 1 })` or an equivalent test hook in
      `packages/db/src/migrations.ts`, then add 2 books with events through `dispatch`.
@@ -104,7 +104,7 @@ and the e2e harness.
   4. Running `migrate` again is a no-op.
 
   Also check that `applyChanges` rejects `{ tbl: 'covers', … }` with `/table/`.
-- [ ] T006 [P] Write `packages/db/test/covers-and-queries.test.ts`:
+- [X] T006 [P] Write `packages/db/test/covers-and-queries.test.ts`:
   - `putCover` and then `getCover` round-trip the bytes; `putCover` upserts; the
     `covers` CHECK rejects height 481 and width 39; `deleteCover` removes the row;
   - `BookCard` has `isbn`, `detailsStatus` (`ok` → `complete`, `failed` →
@@ -115,14 +115,14 @@ and the e2e harness.
 
 ### Implementation
 
-- [ ] T007 [P] In `packages/core/src/types.ts`, add:
+- [X] T007 [P] In `packages/core/src/types.ts`, add:
   - `export type Isbn13 = Brand<string, 'Isbn13'>` and
     `parseIsbn(input: string): Result<Isbn13, ParseError>`, implementing the rules in
     contracts/commands-002.md "parseIsbn rules" exactly;
   - `export type CoverUrl = Brand<string, 'CoverUrl'>` and
     `parseCoverUrl(input: string): Result<CoverUrl, ParseError>`: "`https://…`, at
     most 500 characters".
-- [ ] T008 Update the core types, following contracts/commands-002.md:
+- [X] T008 Update the core types, following contracts/commands-002.md:
   - `packages/core/src/book.ts`: add to `Item` `isbn: Isbn13 | null`,
     `coverUrl: CoverUrl | null`, and
     `detailsStatus: 'complete' | 'pending' | 'notFound'`. Export
@@ -137,23 +137,23 @@ and the e2e harness.
   - In `packages/core/src/decide.ts`, make `FillDetails` return
     `err({ kind: 'InvalidInput', field: 'command', reason: 'FillDetails not implemented' })`
     until T031.
-- [ ] T009 Implement the `AddBook`/`EditBook` additions in
+- [X] T009 Implement the `AddBook`/`EditBook` additions in
   `packages/core/src/decide.ts`, as described by T004 and the contract.
   - Map `DetailsStatus` to the DB value with a single exported helper:
     `detailsStatusToDb` / `detailsStatusFromDb` in `book.ts`.
   - The placeholder title is exactly `` `ISBN ${isbn13}` ``.
   - Make T003 and T004 pass, with all 001 core tests still green.
-- [ ] T010 In `packages/db/src/migrations.ts`, add migration 2 with the DDL copied
+- [X] T010 In `packages/db/src/migrations.ts`, add migration 2 with the DDL copied
   verbatim from contracts/db-and-worker-002.md "Migration 2". Add the `to` option (or
   equivalent) used by T005. `SCHEMA_VERSION` becomes 2.
-- [ ] T011 Update `packages/db/src/snapshot.ts`: `rowToItem` maps `isbn`, `cover_url`,
+- [X] T011 Update `packages/db/src/snapshot.ts`: `rowToItem` maps `isbn`, `cover_url`,
   and `metadata_status`, using `detailsStatusFromDb`. Unknown values throw, like the
   other converters.
-- [ ] T012 [P] Create `packages/db/src/covers.ts` with `putCover`, `getCover` and
+- [X] T012 [P] Create `packages/db/src/covers.ts` with `putCover`, `getCover` and
   `deleteCover`, as in contracts/db-and-worker-002.md. `putCover` uses
   `INSERT … ON CONFLICT(item_id) DO UPDATE`. None of them touches `change_log` or
   `field_clock`.
-- [ ] T013 Update `packages/db/src/queries.ts` and `packages/db/src/index.ts`:
+- [X] T013 Update `packages/db/src/queries.ts` and `packages/db/src/index.ts`:
   - `BookCard` gains `isbn`, `detailsStatus` and `hasCover`. Compute `hasCover` with
     one `SELECT item_id FROM covers` into a Set.
   - Add `findByIsbn(isbn)` (uses `idx_items_isbn`, non-removed, type book) and
@@ -162,7 +162,7 @@ and the e2e harness.
     `ReaderlogDb`.
 
   Make T005 and T006 pass.
-- [ ] T014 Update the worker and client (`apps/pwa/src/lib/protocol.ts`,
+- [X] T014 Update the worker and client (`apps/pwa/src/lib/protocol.ts`,
   `apps/pwa/src/worker/db.worker.ts`, `apps/pwa/src/lib/dbClient.ts`), following
   contracts/db-and-worker-002.md "Worker API additions":
   - Add the queries `findByIsbn`, `pendingDetails` and `cover` (returns a `Blob` of
@@ -173,7 +173,7 @@ and the e2e harness.
   - Add `storeCover(itemId, blob)` and typed query overloads to `dbClient.ts`.
   - Add a message for `InvalidIsbn` in `apps/pwa/src/lib/errors.ts`: "That isn't a
     valid ISBN — check the digits."
-- [ ] T015 [P] Implement and test the catalog layer in `apps/pwa/src/catalog/`, following
+- [X] T015 [P] Implement and test the catalog layer in `apps/pwa/src/catalog/`, following
   contracts/catalog-lookup.md. Write the tests first, as `*.test.ts` beside each file.
   Every test uses a fake `fetch` that serves the T002 fixtures by URL.
   - `genre.ts`: `genreFromSubjects`, with the ordered table from research R10 copied
@@ -200,7 +200,7 @@ and the e2e harness.
       - #2 returning 404 still gives `found`.
   - `cover.ts`: `fetchCover(url, { fetch, timeoutMs })`, returning null on non-2xx, a
     non-image content type, or under 1 KB.
-- [ ] T016 [P] Create the e2e harness in `e2e/fixtures/catalog.ts`. Export a Playwright
+- [X] T016 [P] Create the e2e harness in `e2e/fixtures/catalog.ts`. Export a Playwright
   `test` extended with fixtures:
   - `catalog`: registers `page.route` handlers for `https://openlibrary.org/**`,
     `https://covers.openlibrary.org/**` and `https://www.googleapis.com/**`.

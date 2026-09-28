@@ -3,7 +3,8 @@ import { decide, err, ok, type Command, type DeviceId, type Instant, type Reject
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot } from './snapshot.ts';
-import { bookView, homeView, libraryView, type BookView, type HomeView, type LibraryView } from './queries.ts';
+import { deleteCover, getCover, putCover } from './covers.ts';
+import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
@@ -59,6 +60,27 @@ export class ReaderlogDb {
 
   book(itemId: string): BookView | null {
     return bookView(this.raw, itemId);
+  }
+
+  findByIsbn(isbn: string): BookCard | null {
+    return findByIsbn(this.raw, isbn);
+  }
+
+  pendingDetails(): { itemId: string; isbn: string }[] {
+    return pendingDetails(this.raw);
+  }
+
+  /** Cover cache: local only, never in change_log (research R5). */
+  putCover(itemId: string, jpeg: Uint8Array, width: number, height: number, fetchedAt: string): void {
+    putCover(this.raw, itemId, jpeg, width, height, fetchedAt);
+  }
+
+  getCover(itemId: string): { mime: 'image/jpeg'; bytes: Uint8Array } | null {
+    return getCover(this.raw, itemId);
+  }
+
+  deleteCover(itemId: string): void {
+    deleteCover(this.raw, itemId);
   }
 
   /** Read → decide → apply in one transaction; nothing is ever partially applied (FR-010). */
