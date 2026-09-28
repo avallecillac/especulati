@@ -493,7 +493,7 @@ fetched fields to apply.
 **Independent Test**: edit a manual book, enter its ISBN, **Look up details**, apply
 only the page count; nothing else changes and the history is untouched.
 
-- [ ] T038 [P] [US5] Write `e2e/refresh.spec.ts`, covering quickstart scenario 11:
+- [X] T038 [P] [US5] Write `e2e/refresh.spec.ts`, covering quickstart scenario 11:
   - add "Dune" by hand with no pages and log one entry;
   - Edit → ISBN `9780441172719` → **Look up details**, which shows a comparison list:
     each field with its current value → the fetched value, and a checkbox, all
@@ -501,7 +501,7 @@ only the page count; nothing else changes and the history is untouched.
   - check only "Total pages", then Save. The pages are updated; title, author and
     genre are unchanged; the history still has its entries; the cover is stored only
     if "Cover" was checked.
-- [ ] T039 [US5] Extend the edit mode of `apps/pwa/src/screens/AddBook.svelte`:
+- [X] T039 [US5] Extend the edit mode of `apps/pwa/src/screens/AddBook.svelte`:
   - an ISBN field (validated with `parseIsbn`), and a **Look up details** button that
     calls `lookupIsbn`;
   - render the comparison list;
@@ -514,12 +514,12 @@ only the page count; nothing else changes and the history is untouched.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T040 [P] Write `e2e/covers-offline.spec.ts`, covering quickstart scenario 12:
+- [X] T040 [P] Write `e2e/covers-offline.spec.ts`, covering quickstart scenario 12:
   scan and save Dune (cover stored), `setOffline(true)`, reload, and the Home card's
   cover `<img>` has `naturalWidth > 0` and a `blob:` src. Then remove the book, and
   `query cover` returns null. Check the latter through the UI: re-adding the same ISBN
   by hand shows the generated initials cover, not the old image.
-- [ ] T041 [P] Create `apps/pwa/scripts/catalog-coverage.ts` and
+- [X] T041 [P] Create `apps/pwa/scripts/catalog-coverage.ts` and
   `apps/pwa/scripts/reference-isbns.json`, with the script
   `"catalog:coverage": "node --experimental-strip-types scripts/catalog-coverage.ts"`
   in `apps/pwa/package.json`.
@@ -528,14 +528,14 @@ only the page count; nothing else changes and the history is untouched.
   - The script runs `lookupIsbn` sequentially with real `fetch`, and prints a table
     plus the totals "title+author: N/20, pages: M/20".
   - **Not** part of `pnpm test` or CI. It is run manually, for SC-002.
-- [ ] T042 [P] Update the performance check in `e2e/perf.spec.ts`: assert that the
+- [X] T042 [P] Update the performance check in `e2e/perf.spec.ts`: assert that the
   initial load of `/` does **not** request `zxing_reader.wasm`, checked through the
   page's `requestfinished` URLs. Cold start stays under 1.5 s.
 - [X] T043 **(main session)** Update `docs/architecture.md`: §8 "Add a book" (scan,
   search and ISBN flows, pending and retry, covers cache) and §6 (schema v2, `covers`).
   Record the results in the quickstart "Validation results" section, including the
   manual `catalog:coverage` output.
-- [ ] T044 **(main session)** Run the full quickstart: `pnpm install --frozen-lockfile`,
+- [X] T044 **(main session)** Run the full quickstart: `pnpm install --frozen-lockfile`,
   `typecheck`, `lint`, `test`, `build`, and `CI=true pnpm e2e`, twice with
   `--repeat-each=2`. Then review the combined diff against the contracts and the
   constitution, and commit.

@@ -16,6 +16,12 @@ export function getCover(db: Database, itemId: string): { mime: 'image/jpeg'; by
   return { mime: 'image/jpeg', bytes: v instanceof Uint8Array ? v : new Uint8Array(v as ArrayBufferLike) };
 }
 
+/** How much the local cover cache holds (FR-010 budget: under 50 MB per 1,000 books). */
+export function coverStats(db: Database): { count: number; bytes: number } {
+  const row = db.selectObject('SELECT count(*) AS count, coalesce(sum(length(bytes)), 0) AS bytes FROM covers');
+  return { count: Number(row?.['count'] ?? 0), bytes: Number(row?.['bytes'] ?? 0) };
+}
+
 export function deleteCover(db: Database, itemId: string): void {
   db.exec('DELETE FROM covers WHERE item_id = ?', { bind: [itemId] });
 }

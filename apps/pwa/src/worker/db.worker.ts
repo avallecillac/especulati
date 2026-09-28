@@ -119,6 +119,7 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
         persisted: persisted === null ? null : persisted === 'true',
         deviceId: d.getMeta('device_id') ?? '',
         schemaVersion: d.schemaVersion,
+        covers: d.coverStats(),
       };
       return info;
     }

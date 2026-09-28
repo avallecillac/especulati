@@ -56,3 +56,18 @@ with a page count.
    Details pending.
 5. Turn off airplane mode and reopen the app. The details fill in.
 6. Force-quit, relaunch offline: the covers still show.
+
+## Validation results (2026-09-28, dev container, Chromium 141 headless)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors, 0 dependency violations |
+| `pnpm test` | ✅ 211 tests (core 113 · db 33 · pwa 65) |
+| `pnpm e2e` | ✅ 46/46; **92/92** with `--repeat-each=2`. No real catalog calls: the harness guard fails any unrouted request, and a mutation check confirmed the cover-delete test fails when deletion is disabled |
+| Scenarios 1–14 | ✅ all automated (scan, search, isbn-entry, offline-scan, refresh, covers-offline, harness) |
+| SC-001: Add → saved in ≤ 3 taps | ✅ scan.spec (a) |
+| SC-004: an outcome within 8 s | ✅ offline-scan (7), and the unit tests for timeout |
+| SC-006: cover offline | ✅ covers-offline.spec |
+| Cold start / scanner WASM kept off the startup path | ✅ about 130 ms; `zxing_reader` isn't requested at startup; precache is 2.4 MB, 20 entries |
+| **SC-002: live catalog coverage** | ⚠️ **Not yet measured reliably.** `catalog:coverage` from the container gave **13/20** (title+author) and **13/20** (pages). All 10 English ISBNs were found. 7 Spanish ISBNs came back "unavailable": Open Library had no match, and the Google Books fallback got a **429** from the container's shared IP. The Spanish ISBNs were picked without an external check, so some may be wrong editions. **Re-run `pnpm --filter pwa catalog:coverage` on a normal network**, fix any wrong ISBNs in `apps/pwa/scripts/reference-isbns.json`, and record the result here. If Spanish coverage stays below target even with Google working, consider the deferred "user-supplied Google Books API key" option (research R1) |
+| Manual iPhone check | ⏳ Pending: needs a device and an HTTPS host |

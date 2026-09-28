@@ -15,6 +15,7 @@ export interface StorageInfo {
   persisted: boolean | null;
   deviceId: string;
   schemaVersion: number;
+  covers: { count: number; bytes: number };
 }
 
 export interface QueryResult {

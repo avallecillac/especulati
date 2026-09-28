@@ -3,7 +3,7 @@ import { decide, err, ok, type Command, type DeviceId, type Instant, type Reject
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot } from './snapshot.ts';
-import { deleteCover, getCover, putCover } from './covers.ts';
+import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
@@ -81,6 +81,10 @@ export class ReaderlogDb {
 
   deleteCover(itemId: string): void {
     deleteCover(this.raw, itemId);
+  }
+
+  coverStats(): { count: number; bytes: number } {
+    return coverStats(this.raw);
   }
 
   /** Read → decide → apply in one transaction; nothing is ever partially applied (FR-010). */

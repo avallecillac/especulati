@@ -34,5 +34,6 @@
     <p class="muted">Device</p>
     <p><code data-testid="device-id">{info.deviceId}</code></p>
     <p class="muted">Schema version {info.schemaVersion}</p>
+    <p class="muted" data-testid="cover-stats">Covers stored: {info.covers.count} ({Math.round(info.covers.bytes / 1024)} KB)</p>
   </section>
 {/if}

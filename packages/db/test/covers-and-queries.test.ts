@@ -87,3 +87,15 @@ describe('findByIsbn and pendingDetails', () => {
     expect(t.db.pendingDetails()).toEqual([{ itemId: uuid(1), isbn: ISBN_A }]);
   });
 });
+
+describe('coverStats (FR-010 budget visibility)', () => {
+  it('counts stored covers and their bytes; deleteCover brings it back to zero', () => {
+    const t = openTestDb();
+    expect(t.db.coverStats()).toEqual({ count: 0, bytes: 0 });
+    t.db.dispatch({ kind: 'AddBook', itemId: uuid(71), title: 'With cover', startNow: false, localDate: '2026-09-28' }, t.env);
+    t.db.putCover(uuid(71), new Uint8Array(1234), 300, 450, '2026-09-28T00:00:00.000Z');
+    expect(t.db.coverStats()).toEqual({ count: 1, bytes: 1234 });
+    t.db.deleteCover(uuid(71));
+    expect(t.db.coverStats()).toEqual({ count: 0, bytes: 0 });
+  });
+});
