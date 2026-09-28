@@ -3,6 +3,7 @@
   import { onChanged, query } from '../lib/dbClient.ts';
   import { STATUS_LABEL, plural, progressLabel } from '../lib/format.ts';
   import { reportError } from '../lib/errors.ts';
+  import Cover from './Cover.svelte';
   import LogSheet from './LogSheet.svelte';
 
   let view = $state<HomeView | null>(null);
@@ -39,14 +40,19 @@
 {#if view}
   {#if current}
     <section class="card" aria-label="Current book">
-      <p class="muted">{STATUS_LABEL[current.status]}</p>
-      <h1><a href={`#/book/${current.itemId}`}>{current.title}</a></h1>
-      {#if current.author}<p class="muted">{current.author}</p>{/if}
-      <p>{progressLabel(current)}</p>
-      {#if current.lastActivity}
-        <p class="muted">Last read <time datetime={current.lastActivity.localDate}>{dateLabel(current.lastActivity.localDate)}</time></p>
-      {/if}
-      <div class="actions"><button class="primary" onclick={() => (logging = current)}>Log</button></div>
+      <div class="with-cover">
+        <Cover itemId={current.itemId} hasCover={current.hasCover} title={current.title} size="md" />
+        <div>
+          <p class="muted">{STATUS_LABEL[current.status]}</p>
+          <h1><a href={`#/book/${current.itemId}`}>{current.title}</a></h1>
+          {#if current.author}<p class="muted">{current.author}</p>{/if}
+          <p>{progressLabel(current)}</p>
+          {#if current.lastActivity}
+            <p class="muted">Last read <time datetime={current.lastActivity.localDate}>{dateLabel(current.lastActivity.localDate)}</time></p>
+          {/if}
+          <div class="actions"><button class="primary" onclick={() => (logging = current)}>Log</button></div>
+        </div>
+      </div>
     </section>
   {:else}
     <section class="card">

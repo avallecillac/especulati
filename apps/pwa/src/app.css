@@ -97,3 +97,12 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
 ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
 
 .update { padding: 8px var(--gutter); background: var(--surface); border-bottom: 1px solid var(--line); }
+
+.cover { flex: none; aspect-ratio: 2 / 3; border-radius: 4px; object-fit: cover; background: var(--line); }
+.cover.sm { width: 40px; height: 60px; }
+.cover.md { width: 96px; height: 144px; }
+.cover.generated { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; }
+.cover.sm.generated { font-size: 1rem; }
+.cover.md.generated { font-size: 1.75rem; }
+.with-cover { display: flex; gap: 12px; align-items: flex-start; }
+.with-cover > :last-child { min-width: 0; flex: 1; }

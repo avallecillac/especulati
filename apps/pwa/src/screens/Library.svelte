@@ -3,6 +3,7 @@
   import { onChanged, query } from '../lib/dbClient.ts';
   import { progressLabel } from '../lib/format.ts';
   import { reportError } from '../lib/errors.ts';
+  import Cover from './Cover.svelte';
 
   let view = $state<LibraryView | null>(null);
 
@@ -39,6 +40,7 @@
         <ul class="plain">
           {#each v[key] as card (card.itemId)}
             <li>
+              <Cover itemId={card.itemId} hasCover={card.hasCover} title={card.title} size="sm" />
               <a href={`#/book/${card.itemId}`}>{card.title}</a>
               <span class="spacer"></span>
               <span class="muted">{progressLabel(card)}</span>

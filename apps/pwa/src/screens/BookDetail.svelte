@@ -9,6 +9,7 @@
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
   import { toastSaved, undoEvent } from '../lib/actions.ts';
+  import Cover from './Cover.svelte';
   import LogSheet from './LogSheet.svelte';
   import Confirm from './Confirm.svelte';
 
@@ -63,10 +64,15 @@
   <p class="muted">It may have been removed. <a href="#/library">Back to library</a></p>
 {:else if view}
   {@const c = view.card}
-  <p class="muted">{STATUS_LABEL[c.status]}</p>
-  <h1>{c.title}</h1>
-  {#if c.author}<p class="muted">{c.author}</p>{/if}
-  <p>{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
+  <div class="with-cover">
+    <Cover itemId={c.itemId} hasCover={c.hasCover} title={c.title} size="md" />
+    <div>
+      <p class="muted">{STATUS_LABEL[c.status]}</p>
+      <h1>{c.title}</h1>
+      {#if c.author}<p class="muted">{c.author}</p>{/if}
+      <p>{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
+    </div>
+  </div>
 
   <div class="row">
     {#if c.status !== 'reading'}<button onclick={() => void record('started')}>Start</button>{/if}
