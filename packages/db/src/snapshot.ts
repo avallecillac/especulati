@@ -1,7 +1,7 @@
 import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import { detailsStatusFromDb } from '@readerlog/core';
 import type {
-  Author, BookSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
+  Author, BookSnapshot, BooksSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
   NonEmptyTitle, Page, PageCount, ReadingEvent,
 } from '@readerlog/core';
 
@@ -32,6 +32,7 @@ export function rowToItem(r: Record<string, SqlValue>): Item {
     detailsStatus: detailsStatusFromDb(text(r['metadata_status'], 'metadata_status')),
     createdAt: text(r['created_at'], 'created_at') as Instant,
     deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
+    mergedInto: textOrNull(r['merged_into'], 'merged_into') as ItemId | null,
   };
 }
 
@@ -53,4 +54,29 @@ export function loadBookSnapshot(db: Database, itemId: string): BookSnapshot | n
   if (!row) return null;
   const events = db.selectObjects('SELECT * FROM reading_events WHERE item_id = ?', [itemId]).map(rowToEvent);
   return { item: rowToItem(row), events };
+}
+
+/**
+ * Snapshot for the multi-book commands: every known book of `ids` with its events, plus the live
+ * dismissals among them. Unknown ids are skipped; decide() answers NotFound.
+ */
+export function loadBooksSnapshot(db: Database, ids: readonly string[]): BooksSnapshot {
+  const unique = [...new Set(ids)];
+  const books = unique.map((id) => loadBookSnapshot(db, id)).filter((b): b is BookSnapshot => b !== null);
+  const dismissals = unique.length === 0 ? [] : db
+    .selectObjects(`SELECT id, deleted_at FROM duplicate_dismissals WHERE item_a IN (${unique.map(() => '?').join(',')}) AND item_b IN (${unique.map(() => '?').join(',')})`, [...unique, ...unique])
+    .map((r) => ({ id: text(r['id'], 'id'), deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null }));
+  return { books, dismissals };
+}
+
+/** `id` followed by every book on its `merged_into` chain (cycle-safe), for validating a sweep. */
+export function mergeChainIds(db: Database, id: string): string[] {
+  const out = [id];
+  let cur: string | null = id;
+  while (cur !== null) {
+    const next: SqlValue | undefined = db.selectValue('SELECT merged_into FROM items WHERE id = ?', [cur]);
+    cur = typeof next === 'string' && !out.includes(next) ? next : null;
+    if (cur !== null) out.push(cur);
+  }
+  return out;
 }

@@ -20,7 +20,7 @@ all their events, loaded by `loadBooksSnapshot(db, ids)`.
 | `survivorId === duplicateId` | `InvalidInput { field: 'duplicateId' }` |
 | the survivor isn't the smaller `(created_at, id)`. This applies to a regular merge only, not a sweep | `InvalidInput { field: 'survivorId', reason: 'not earliest' }` |
 | `copies.from` isn't exactly the duplicate's live event ids | `InvalidInput { field: 'copies' }` |
-| a `to` is malformed, repeated within `copies`, or equals an existing event id of a **different** book | `InvalidInput { field: 'copies' }` |
+| a `to` is malformed, equals an existing event id of a **different** book, or is repeated within `copies` for entries with different content. The same `to` for identical entries is inserted once, and every source is tombstoned | `InvalidInput { field: 'copies' }` |
 
 **Changes emitted, in order:**
 

@@ -1,8 +1,8 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Rejection, type Result, type StatsView } from '@readerlog/core';
+import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Rejection, type Result, type StatsView } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
-import { loadBookSnapshot } from './snapshot.ts';
+import { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
@@ -10,7 +10,7 @@ import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookC
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
-export { loadBookSnapshot } from './snapshot.ts';
+export { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
 export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
 export { loadStatsBooks, statsView } from './stats.ts';
@@ -143,13 +143,25 @@ export class ReaderlogDb {
     setSyncMeta(this.raw, patch);
   }
 
+  /** The snapshot each command kind needs: one book, or several for merge/dismiss (contracts/commands-004.md). */
+  #snapshotFor(cmd: Command): BookSnapshot | BooksSnapshot | null {
+    switch (cmd.kind) {
+      case 'MergeBooks':
+        return loadBooksSnapshot(this.raw, [cmd.survivorId, ...mergeChainIds(this.raw, cmd.duplicateId)]);
+      case 'DismissDuplicate':
+        return loadBooksSnapshot(this.raw, [cmd.itemA, cmd.itemB]);
+      default:
+        return loadBookSnapshot(this.raw, cmd.itemId);
+    }
+  }
+
   /** Read → decide → apply in one transaction; nothing is ever partially applied (FR-010). */
   dispatch(cmd: Command, env: DispatchEnv): Result<DispatchOutcome, Rejection> {
     const deviceId = this.#deviceId;
     if (!deviceId) throw new Error('ensureDeviceId() must run before dispatch()');
     this.raw.exec('BEGIN IMMEDIATE');
     try {
-      const decision = decide(loadBookSnapshot(this.raw, cmd.itemId), cmd, env.now);
+      const decision = decide(this.#snapshotFor(cmd), cmd, env.now);
       if (!decision.ok) {
         this.raw.exec('ROLLBACK');
         return err(decision.error);

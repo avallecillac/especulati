@@ -6,3 +6,4 @@ export * from './commands.ts';
 export * from './decide.ts';
 export * from './stats.ts';
 export * from './merge.ts';
+export * from './duplicates.ts';

@@ -1,4 +1,5 @@
 import type { BookStatus, DetailsStatus, EventType, Item, ReadingEvent } from './book.ts';
+import type { Instant } from './types.ts';
 
 /**
  * Commands carry raw user input plus shell-generated ids (constitution IV, v1.0.1):
@@ -51,7 +52,15 @@ export type Command =
       readonly page?: number | null;
       readonly localDate: string;
     }
-  | { readonly kind: 'RemoveEvent'; readonly itemId: string; readonly eventId: string };
+  | { readonly kind: 'RemoveEvent'; readonly itemId: string; readonly eventId: string }
+  /** 004 R8. `copies` carries the shell's deterministic ids (core has no crypto). */
+  | {
+      readonly kind: 'MergeBooks';
+      readonly survivorId: string;
+      readonly duplicateId: string;
+      readonly copies: readonly { readonly from: string; readonly to: string }[];
+    }
+  | { readonly kind: 'DismissDuplicate'; readonly dismissalId: string; readonly itemA: string; readonly itemB: string };
 
 export type Rejection =
   | { readonly kind: 'TitleRequired' }
@@ -87,4 +96,14 @@ export interface BookSnapshot {
   readonly item: Item;
   /** All events of the item, including tombstoned ones. */
   readonly events: readonly ReadingEvent[];
+}
+
+/**
+ * Snapshot for the multi-book commands (contracts/commands-004.md). For a sweep merge it also
+ * holds the books on the duplicate's `merged_into` chain, so decide() can verify the chain.
+ */
+export interface BooksSnapshot {
+  readonly books: readonly BookSnapshot[];
+  /** Dismissals among these books, for DismissDuplicate idempotence. */
+  readonly dismissals?: readonly { readonly id: string; readonly deletedAt: Instant | null }[];
 }

@@ -1,8 +1,8 @@
 // Convergence (research R11, SC-003), the 10k-op perf case (SC-004) and the free-tier usage
 // measurement (research R1, FR-023, SC-007). All randomness is a seeded PRNG in this file.
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { parseRemoteOp, type EventType, type OpWire } from '@readerlog/core';
-import { applyChanges } from '../../db/src/index.ts';
 import { fakeRelay, makePeer, prng, uuid, type FakeRelay, type Peer } from './harness.ts';
 
 // SC-003 requires 1,000 runs: `pnpm test:convergence`. The everyday `pnpm test` runs 200.
@@ -15,6 +15,62 @@ const int = (rng: () => number, lo: number, hi: number) => lo + Math.floor(rng()
 
 let idN = 0x40000000;
 const newId = () => uuid(++idN);
+
+/** Same derivation as apps/pwa/src/lib/ids.ts (SHA-256, first 16 bytes, v4/variant bits), via node:crypto. */
+function hashId(label: string): string {
+  const b = createHash('sha256').update(label).digest().subarray(0, 16);
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = b.toString('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+/** Content-addressed v2 copy id, as in apps/pwa/src/lib/ids.ts: the source event's content, read from `p`. */
+const mergeCopyId = (p: Peer, survivor: string, event: string): string => {
+  const r = p.db.raw.selectObject('SELECT event_type, page, occurred_at, local_date FROM reading_events WHERE id = ?', [event])!;
+  const page = r.page === null ? '' : (r.page as number);
+  return hashId(`readerlog-merge-v2|${survivor}|${r.event_type as string}|${page}|${r.occurred_at as string}|${r.local_date as string}`);
+};
+const dismissalId = (a: string, b: string) => hashId(`readerlog-dismiss-v1|${a < b ? a : b}|${a < b ? b : a}`);
+
+const liveEventIds = (p: Peer, item: string): string[] =>
+  p.db.raw.selectValues('SELECT id FROM reading_events WHERE item_id = ? AND deleted_at IS NULL ORDER BY id', [item]).map(String);
+
+/** MergeBooks with the deterministic copy ids the shell would compute. `survivor` defaults to the earlier book. */
+function mergeBooks(p: Peer, a: string, b: string) {
+  const created = (id: string) => p.db.raw.selectValue('SELECT created_at FROM items WHERE id = ?', [id]) as string;
+  const aFirst = created(a) !== created(b) ? created(a) < created(b) : a < b;
+  const [survivorId, duplicateId] = aFirst ? [a, b] : [b, a];
+  const copies = liveEventIds(p, duplicateId).map((from) => ({ from, to: mergeCopyId(p, survivorId, from) }));
+  return p.db.dispatch({ kind: 'MergeBooks', survivorId, duplicateId, copies }, p.env);
+}
+
+/**
+ * The sweep (T028 ships the real one): every live event still on a merged-away book moves to the
+ * final live book at the end of its merged_into chain. Returns how many books were swept.
+ */
+function sweep(p: Peer): number {
+  const stragglers = p.db.raw.selectValues(
+    'SELECT DISTINCT e.item_id FROM reading_events e JOIN items i ON i.id = e.item_id WHERE e.deleted_at IS NULL AND i.merged_into IS NOT NULL ORDER BY e.item_id',
+  ).map(String);
+  let swept = 0;
+  for (const item of stragglers) {
+    let target = item;
+    const seen = new Set([item]);
+    for (;;) {
+      const row = p.db.raw.selectObject('SELECT deleted_at, merged_into FROM items WHERE id = ?', [target]);
+      if (!row || row.deleted_at === null) break;
+      const next = row.merged_into;
+      if (typeof next !== 'string' || seen.has(next)) { target = ''; break; }
+      seen.add(next);
+      target = next;
+    }
+    if (target === '' || target === item) continue;
+    const copies = liveEventIds(p, item).map((from) => ({ from, to: mergeCopyId(p, target, from) }));
+    const r = p.db.dispatch({ kind: 'MergeBooks', survivorId: target, duplicateId: item, copies }, p.env);
+    if (r.ok) swept++;
+  }
+  return swept;
+}
 
 const ids = (p: Peer, sql: string): string[] => p.db.raw.selectValues(sql).map(String);
 
@@ -41,16 +97,12 @@ function localWrite(rng: () => number, p: Peer): void {
     }
   } else if (kind < 0.94) {
     p.db.dispatch({ kind: 'RemoveBook', itemId: pick(rng, items) }, p.env);
+  } else if (items.length >= 2 && kind < 0.97) {
+    const [a, b] = [pick(rng, items), pick(rng, items)];
+    if (a !== b) mergeBooks(p, a, b);
   } else if (items.length >= 2) {
-    // A duplicate dismissal (no command exists yet): create or tombstone one.
-    const existing = ids(p, 'SELECT id FROM duplicate_dismissals');
-    const changes =
-      existing.length > 0 && rng() < 0.4
-        ? [{ tbl: 'duplicate_dismissals' as const, rowId: pick(rng, existing), fields: { deleted_at: p.env.now } }]
-        : [{ tbl: 'duplicate_dismissals' as const, rowId: newId(), fields: { item_a: items[0]!, item_b: items[1]!, created_at: p.env.now } }];
-    p.db.raw.exec('BEGIN IMMEDIATE');
-    applyChanges(p.db.raw, changes, p.device, () => p.wall(), p.env.newOpId);
-    p.db.raw.exec('COMMIT');
+    const [a, b] = [pick(rng, items), pick(rng, items)];
+    if (a !== b) p.db.dispatch({ kind: 'DismissDuplicate', dismissalId: dismissalId(a, b), itemA: a, itemB: b }, p.env);
   }
 }
 
@@ -98,7 +150,7 @@ async function untilQuiet(peers: Peer[]): Promise<void> {
   if (quiet < 2) throw new Error('did not go quiet in 12 rounds');
 }
 
-const stats = { ops: 0, items: 0, events: 0 };
+const stats = { ops: 0, items: 0, events: 0, merged: 0, swept: 0, dismissed: 0 };
 
 async function oneRun(seed: number): Promise<void> {
   const rng = prng(seed);
@@ -126,14 +178,25 @@ async function oneRun(seed: number): Promise<void> {
       }
     }
     await untilQuiet(peers);
+    // Stragglers: sweep on every peer until nothing is left on a merged-away book (FR-029).
+    for (let pass = 0; pass < 6; pass++) {
+      let swept = 0;
+      for (const p of peers) swept += sweep(p);
+      stats.swept += swept;
+      if (swept === 0) break;
+      await untilQuiet(peers);
+    }
     const first = dump(peers[0]!);
     for (const p of peers.slice(1)) {
       if (dump(p) !== first) throw new Error(`peer ${p.n} differs from peer 1 (${n} peers, ${steps} steps)`);
     }
     stats.ops += Number(peers[0]!.db.raw.selectValue('SELECT COUNT(*) FROM change_log'));
     stats.items += Number(peers[0]!.db.raw.selectValue('SELECT COUNT(*) FROM items'));
+    stats.merged += Number(peers[0]!.db.raw.selectValue('SELECT COUNT(*) FROM items WHERE merged_into IS NOT NULL'));
+    stats.dismissed += Number(peers[0]!.db.raw.selectValue('SELECT COUNT(*) FROM duplicate_dismissals'));
     stats.events += Number(peers[0]!.db.raw.selectValue('SELECT COUNT(*) FROM reading_events'));
     for (const p of peers) {
+      if (sweep(p) !== 0) throw new Error(`peer ${p.n} still has stragglers after sweeping`);
       if (p.db.raw.selectValue('SELECT COUNT(*) FROM sync_inbox') !== 0) throw new Error(`peer ${p.n} has a stuck inbox`);
     }
   } finally {
@@ -155,6 +218,139 @@ describe('convergence (SC-003)', () => {
     console.log(`convergence: ${RUNS} runs in ${((performance.now() - t0) / 1000).toFixed(1)} s (${JSON.stringify(stats)} converged ops/items/events in total)`);
   });
 });
+
+describe('merge stragglers (FR-029, research R8)', () => {
+  /** Two peers on one space, with T (oldest), S and X added by A and synced to B. */
+  async function setup(count: 2 | 3 = 2) {
+    const relay = fakeRelay();
+    const peers = Array.from({ length: count }, (_, i) => makePeer(i + 1, relay));
+    const [a, b] = [peers[0]!, peers[1]!];
+    expect((await a.engine.turnOn()).ok).toBe(true);
+    for (const p of peers.slice(1)) expect((await p.engine.join(a.engine.showCode()!.code)).ok).toBe(true);
+    const [T, S, X] = [newId(), newId(), newId()];
+    for (const id of [T, S, X]) {
+      a.tick(1000);
+      expect(a.db.dispatch({ kind: 'AddBook', itemId: id, title: `Same book`, totalPages: 400, startNow: true, startEventId: newId(), localDate: '2026-09-01' }, a.env).ok).toBe(true);
+    }
+    await untilQuiet(peers);
+    return { relay, peers, a, b, T, S, X };
+  }
+  const log = (p: Peer, item: string, page: number) => {
+    p.tick(1000);
+    const id = newId();
+    expect(p.db.dispatch({ kind: 'LogEvent', itemId: item, eventId: id, type: 'progress', page, localDate: '2026-09-02' }, p.env).ok).toBe(true);
+    return id;
+  };
+  const closeAll = (peers: Peer[]) => peers.forEach((p) => p.close());
+
+  it('an entry logged on X by B while A merges X into S ends up exactly once on S, on every peer', async () => {
+    const { peers, a, b, S, X } = await setup(3);
+    try {
+      a.tick(1000);
+      expect(mergeBooks(a, S, X).ok).toBe(true);
+      const straggler = log(b, X, 77); // B has not synced yet
+      await untilQuiet(peers);
+      expect(liveEventIds(b, X)).toEqual([straggler]); // stranded on the removed book
+      // Sweep on every peer before syncing: the deterministic ids make the copies identical.
+      for (const p of peers) expect(sweep(p)).toBe(1);
+      await untilQuiet(peers);
+      const copy = mergeCopyId(b, S, straggler);
+      for (const p of peers) {
+        expect(liveEventIds(p, X)).toEqual([]);
+        expect(liveEventIds(p, S)).toContain(copy);
+        expect(liveEventIds(p, S).filter((e) => e === copy)).toHaveLength(1);
+        expect(p.db.raw.selectValue("SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 77 AND deleted_at IS NULL", [S])).toBe(1);
+        expect(sweep(p)).toBe(0);
+      }
+      expect(dumpAll(peers)).toBe(true);
+    } finally {
+      closeAll(peers);
+    }
+  });
+
+  it('a chain X -> S then S -> T moves a straggler on X to T', async () => {
+    const { peers, a, b, T, S, X } = await setup(2);
+    try {
+      log(a, X, 10); // synced-in entry already on X, merged along with it
+      expect(mergeBooks(a, S, X).ok).toBe(true);
+      const straggler = log(b, X, 88); // B is offline from the merges
+      expect(mergeBooks(a, T, S).ok).toBe(true);
+      await untilQuiet(peers);
+      expect(liveEventIds(b, X)).toEqual([straggler]);
+      expect(sweep(b)).toBe(1);
+      await untilQuiet(peers);
+      for (const p of peers) {
+        expect(liveEventIds(p, X)).toEqual([]);
+        expect(liveEventIds(p, S)).toEqual([]);
+        expect(liveEventIds(p, T)).toContain(mergeCopyId(b, T, straggler));
+        expect(p.db.raw.selectValue('SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 88 AND deleted_at IS NULL', [T])).toBe(1);
+        expect(p.db.raw.selectValue('SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 10 AND deleted_at IS NULL', [T])).toBe(1);
+        expect(sweep(p)).toBe(0);
+      }
+      expect(dumpAll(peers)).toBe(true);
+    } finally {
+      closeAll(peers);
+    }
+  });
+
+  it('multi-path sweeps: A sweeps e straight to T while stale B sweeps it to S, then S -> T; T holds e once', async () => {
+    const { peers, a, b, T, S, X } = await setup(3);
+    try {
+      const e = log(b, X, 99); // B logs while it still sees X as live
+      expect(mergeBooks(a, S, X).ok).toBe(true);
+      directDelivery(() => 0, a, b); // B learns X -> S, but not the later S -> T
+      a.tick(1000);
+      expect(mergeBooks(a, T, S).ok).toBe(true);
+      directDelivery(() => 0, b, a); // A receives e (and knows S -> T)
+      expect(sweep(a)).toBe(1); // straight to T
+      expect(sweep(b)).toBe(1); // to S, the only live book B knows on the chain
+      expect(b.db.raw.selectValue('SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 99 AND deleted_at IS NULL', [S])).toBe(1);
+      await untilQuiet(peers);
+      for (let pass = 0; pass < 4; pass++) {
+        let n = 0;
+        for (const p of peers) n += sweep(p);
+        if (n === 0) break;
+        await untilQuiet(peers);
+      }
+      for (const p of peers) {
+        expect(liveEventIds(p, X)).toEqual([]);
+        expect(p.db.raw.selectValue('SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 99 AND deleted_at IS NULL', [S])).toBe(0);
+        expect(p.db.raw.selectValue('SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 99 AND deleted_at IS NULL', [T])).toBe(1);
+      }
+      expect(e).toBeTruthy();
+      expect(dumpAll(peers)).toBe(true);
+    } finally {
+      closeAll(peers);
+    }
+  });
+
+  it('a straggler swept onto S before S is merged into T follows to T (a copy of a copy)', async () => {
+    const { peers, a, b, T, S, X } = await setup(2);
+    try {
+      expect(mergeBooks(a, S, X).ok).toBe(true);
+      const straggler = log(b, X, 55);
+      await untilQuiet(peers);
+      expect(sweep(a)).toBe(1); // lands on S
+      await untilQuiet(peers);
+      expect(mergeBooks(a, T, S).ok).toBe(true);
+      await untilQuiet(peers);
+      for (const p of peers) {
+        expect(liveEventIds(p, X)).toEqual([]);
+        expect(liveEventIds(p, S)).toEqual([]);
+        expect(p.db.raw.selectValue('SELECT COUNT(*) FROM reading_events WHERE item_id = ? AND page = 55 AND deleted_at IS NULL', [T])).toBe(1);
+      }
+      expect(straggler).toBeTruthy();
+      expect(dumpAll(peers)).toBe(true);
+    } finally {
+      closeAll(peers);
+    }
+  });
+});
+
+function dumpAll(peers: Peer[]): boolean {
+  const first = dump(peers[0]!);
+  return peers.every((p) => dump(p) === first);
+}
 
 describe('perf (SC-004)', () => {
   it('10k ops push to an empty space and a second peer pulls them, each under 60 s', { timeout: 300_000 }, async () => {

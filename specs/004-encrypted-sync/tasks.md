@@ -420,7 +420,7 @@ the offline and conflict cases.
 
 ## Phase 7: User Story 5 - Merge books I added on both devices (Priority: P2)
 
-- [ ] T024 [P] [US5] Write `packages/core/test/duplicates.test.ts` for
+- [X] T024 [P] [US5] Write `packages/core/test/duplicates.test.ts` for
   `normalizeForMatch` and `findDuplicates` (research R8):
   - `"Cien años de soledad"` and `"CIEN AÑOS  DE SOLEDAD!"` match;
   - the same ISBN matches whatever the titles;
@@ -430,14 +430,14 @@ the offline and conflict cases.
   - removed books are ignored;
   - a dismissed pair (in either order) is excluded;
   - each pair is reported once.
-- [ ] T025 [P] [US5] Write `packages/core/test/decide.mergeBooks.test.ts` and
+- [X] T025 [P] [US5] Write `packages/core/test/decide.mergeBooks.test.ts` and
   `decide.dismissDuplicate.test.ts`, covering every rejection row and the change order
   in contracts/commands-004.md:
   - the sweep mode;
   - fill-only-empty fields, including the `total_pages` below-max-page guard;
   - invariants M-1, M-2 and M-3, as a property test with random event sets;
   - `DismissDuplicate` is idempotent and normalizes `itemA`/`itemB` to min and max.
-- [ ] T026 [US5] Implement the merge commands:
+- [X] T026 [US5] Implement the merge commands:
   - `packages/core/src/duplicates.ts`;
   - the `MergeBooks` and `DismissDuplicate` commands and the multi-book snapshot
     (`packages/core/src/commands.ts`, `decide.ts`);
@@ -447,7 +447,7 @@ the offline and conflict cases.
     per the contract, and a unit test in the `pwa` Vitest project with fixed vectors.
 
   T024 and T025 must pass.
-- [ ] T027 [US5] Add convergence coverage: extend `packages/sync/test/convergence.test.ts`
+- [X] T027 [US5] Add convergence coverage: extend `packages/sync/test/convergence.test.ts`
   with `MergeBooks` and `DismissDuplicate` steps, and a **straggler** scenario:
   - peer A merges X into S while peer B logs an entry on X;
   - after sync, a sweep dispatch on any peer moves the entry onto S;

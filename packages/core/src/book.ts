@@ -32,6 +32,8 @@ export interface Item {
   readonly detailsStatus: DetailsStatus;
   readonly createdAt: Instant;
   readonly deletedAt: Instant | null;
+  /** Set on a book merged away by MergeBooks (004 R8); follow it to the surviving book. */
+  readonly mergedInto: ItemId | null;
 }
 
 export interface ReadingEvent {

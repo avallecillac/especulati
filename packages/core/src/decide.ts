@@ -1,6 +1,6 @@
 import { err, ok, type Result } from './result.ts';
-import type { BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
-import { deriveStatus, detailsStatusToDb, maxLoggedPage, type BookStatus, type EventType } from './book.ts';
+import type { BooksSnapshot, BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
+import { deriveStatus, detailsStatusToDb, maxLoggedPage, type BookStatus, type EventType, type ReadingEvent } from './book.ts';
 import {
   parseAuthor, parseCoverUrl, parseEventId, parseGenre, parseIsbn, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
   type CoverUrl, type Instant, type Isbn13, type ParseError,
@@ -230,8 +230,114 @@ function removeEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind
   return decided([{ tbl: 'reading_events', rowId: target.id, fields: { deleted_at: now } }]);
 }
 
+/** Both live books must be plain books; a sweep accepts a removed duplicate whose merged_into chain reaches the survivor. */
+function chainReaches(books: ReadonlyMap<string, BookSnapshot>, from: BookSnapshot, target: string): boolean {
+  const seen = new Set<string>([from.item.id]);
+  let cur = from.item.mergedInto;
+  while (cur !== null && !seen.has(cur)) {
+    if (cur === target) return true;
+    seen.add(cur);
+    cur = books.get(cur)?.item.mergedInto ?? null;
+  }
+  return false;
+}
+
+const copiesInvalid = (reason: string): Rejection => ({ kind: 'InvalidInput', field: 'copies', reason });
+
+/** Contract: contracts/commands-004.md "MergeBooks". Events are copied, never edited in place. */
+function mergeBooks(snapshot: BooksSnapshot | null, cmd: Extract<Command, { kind: 'MergeBooks' }>, now: Instant): Decided {
+  const sid = need(parseItemId(cmd.survivorId), () => ({ kind: 'InvalidInput', field: 'survivorId', reason: 'not a lowercase uuid' }));
+  if (!sid.ok) return sid;
+  const did = need(parseItemId(cmd.duplicateId), () => ({ kind: 'InvalidInput', field: 'duplicateId', reason: 'not a lowercase uuid' }));
+  if (!did.ok) return did;
+  const byId = new Map((snapshot?.books ?? []).map((b) => [b.item.id as string, b]));
+  const survivor = byId.get(sid.value);
+  const duplicate = byId.get(did.value);
+  if (!survivor || !duplicate || survivor.item.deletedAt !== null || survivor.item.type !== 'book' || duplicate.item.type !== 'book') return err({ kind: 'NotFound' });
+  const sweep = duplicate.item.deletedAt !== null;
+  if (sweep && !chainReaches(byId, duplicate, sid.value)) return err({ kind: 'NotFound' });
+  if (sid.value === did.value) return err({ kind: 'InvalidInput', field: 'duplicateId', reason: 'same as survivorId' });
+  if (!sweep) {
+    const s = survivor.item;
+    const d = duplicate.item;
+    const survivorIsEarlier = s.createdAt !== d.createdAt ? s.createdAt < d.createdAt : s.id < d.id;
+    if (!survivorIsEarlier) return err({ kind: 'InvalidInput', field: 'survivorId', reason: 'not earliest' });
+  }
+
+  const liveIds = duplicate.events.filter((e) => e.deletedAt === null).map((e) => e.id as string);
+  const froms = cmd.copies.map((c) => c.from);
+  if (froms.length !== liveIds.length || new Set(froms).size !== froms.length || !liveIds.every((id) => froms.includes(id)))
+    return err(copiesInvalid('from must be exactly the duplicate live event ids'));
+  // A `to` already on the survivor means another device copied the same entry: skip that insert.
+  const onSurvivor = new Set(survivor.events.map((e) => e.id as string));
+  const elsewhere = new Set([...byId.values()].filter((b) => b !== survivor).flatMap((b) => b.events.map((e) => e.id as string)));
+  const bySource = new Map(duplicate.events.map((e) => [e.id as string, e]));
+  // Copy ids are content-addressed (research R8), so identical entries share a `to`: insert it once.
+  const sameContent = (a: ReadingEvent, b: ReadingEvent) =>
+    a.type === b.type && a.page === b.page && a.occurredAt === b.occurredAt && a.localDate === b.localDate;
+  const tos = new Map<string, ReadingEvent>();
+  for (const c of cmd.copies) {
+    if (!parseEventId(c.to).ok) return err(copiesInvalid('to is not a lowercase uuid'));
+    if (elsewhere.has(c.to)) return err(copiesInvalid('to exists on another book'));
+    const src = bySource.get(c.from)!;
+    const prev = tos.get(c.to);
+    if (prev && !sameContent(prev, src)) return err(copiesInvalid('to is repeated for different entries'));
+    tos.set(c.to, src);
+  }
+  const changes: Change[] = [];
+  const inserted = new Set<string>();
+  for (const c of cmd.copies) {
+    if (onSurvivor.has(c.to) || inserted.has(c.to)) continue;
+    inserted.add(c.to);
+    const e = bySource.get(c.from)!;
+    changes.push({
+      tbl: 'reading_events',
+      rowId: c.to,
+      fields: { item_id: sid.value, event_type: e.type, page: e.page, occurred_at: e.occurredAt, local_date: e.localDate },
+    });
+  }
+  for (const c of cmd.copies) changes.push({ tbl: 'reading_events', rowId: c.from, fields: { deleted_at: now } });
+  if (sweep) return decided(changes);
+
+  // FillDetails rule: only still-empty fields; total_pages must not fall below a page already logged.
+  const s = survivor.item;
+  const d = duplicate.item;
+  const fill: Record<string, FieldValue> = {};
+  if (s.author === null && d.author !== null) fill['author'] = d.author;
+  if (s.totalPages === null && d.totalPages !== null) {
+    const maxLogged = maxLoggedPage([...survivor.events, ...duplicate.events]);
+    if (maxLogged === null || d.totalPages >= maxLogged) fill['total_pages'] = d.totalPages;
+  }
+  if (s.genre === null && d.genre !== null) fill['genre'] = d.genre;
+  if (s.isbn === null && d.isbn !== null) fill['isbn'] = d.isbn;
+  if (s.coverUrl === null && d.coverUrl !== null) fill['cover_url'] = d.coverUrl;
+  if (Object.keys(fill).length > 0) changes.push({ tbl: 'items', rowId: s.id, fields: fill });
+  changes.push({ tbl: 'items', rowId: d.id, fields: { deleted_at: now, merged_into: sid.value } });
+  return decided(changes);
+}
+
+function dismissDuplicate(snapshot: BooksSnapshot | null, cmd: Extract<Command, { kind: 'DismissDuplicate' }>, now: Instant): Decided {
+  const field = (name: string) => (): Rejection => ({ kind: 'InvalidInput', field: name, reason: 'not a lowercase uuid' });
+  const id = need(parseItemId(cmd.dismissalId), field('dismissalId'));
+  if (!id.ok) return id;
+  const a = need(parseItemId(cmd.itemA), field('itemA'));
+  if (!a.ok) return a;
+  const b = need(parseItemId(cmd.itemB), field('itemB'));
+  if (!b.ok) return b;
+  if (a.value === b.value) return err({ kind: 'InvalidInput', field: 'itemB', reason: 'same as itemA' });
+  if (snapshot?.dismissals?.some((d) => d.id === id.value && d.deletedAt === null)) return decided([]);
+  const [lo, hi] = a.value < b.value ? [a.value, b.value] : [b.value, a.value];
+  return decided([{ tbl: 'duplicate_dismissals', rowId: id.value, fields: { item_a: lo, item_b: hi, created_at: now } }]);
+}
+
 /** The single write path (constitution IV): pure, deterministic, no I/O. */
-export function decide(snapshot: BookSnapshot | null, cmd: Command, now: Instant): Decided {
+export function decide(snapshot: BookSnapshot | BooksSnapshot | null, cmd: Command, now: Instant): Decided {
+  if (cmd.kind === 'MergeBooks') return mergeBooks(snapshot && 'books' in snapshot ? snapshot : null, cmd, now);
+  if (cmd.kind === 'DismissDuplicate') return dismissDuplicate(snapshot && 'books' in snapshot ? snapshot : null, cmd, now);
+  return decideOne(snapshot && 'books' in snapshot ? null : snapshot, cmd, now);
+}
+
+function decideOne(snapshot: BookSnapshot | null, cmd: Exclude<Command, { kind: 'MergeBooks' | 'DismissDuplicate' }>, now: Instant): Decided {
   switch (cmd.kind) {
     case 'AddBook':
       return addBook(snapshot, cmd, now);
