@@ -19,6 +19,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,wasm,svg,png,webmanifest}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//],
       },
       manifest: {
         name: 'Readerlog',

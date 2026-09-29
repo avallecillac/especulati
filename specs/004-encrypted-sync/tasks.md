@@ -116,7 +116,7 @@ run loop, and convergence.
     `pushed = 1` for `seq ≤ maxSeq`;
   - **`resetPushState`** sets every row, local and received, to `pushed = 0` and
     `sync_cursor = 0`.
-- [ ] T005 [P] Write `apps/relay/test/handler.test.ts`, plus
+- [X] T005 [P] Write `apps/relay/test/handler.test.ts`, plus
   `apps/relay/test/sqliteStore.ts`: a `RelayStore` over in-memory SQLite-WASM that runs
   `apps/relay/schema.sql`. Cover every row of the table in contracts/relay-api.md:
   - create, exists, delete;
@@ -176,7 +176,7 @@ run loop, and convergence.
 
   Export them from `packages/db/src/index.ts`, with thin `ReaderlogDb` wrappers. T003
   and T004 must pass.
-- [ ] T009 Implement the relay:
+- [X] T009 Implement the relay:
   - `apps/relay/schema.sql`, verbatim from data-model.md;
   - `apps/relay/src/store.ts` (`RelayStore`);
   - `apps/relay/src/handler.ts`:
@@ -482,6 +482,13 @@ the offline and conflict cases.
     string, `op_id`, row id or device id appears in plaintext or in base64;
   - decrypt every pushed batch with the test key: no `covers` data, `meta` keys or the
     Google key.
+- [ ] T029b Rate-limit space creation. `PUT /spaces/:id` is currently open and not
+  rate-limited, because a new space has no token to check yet. Anyone who knows the URL
+  could fill D1 with junk spaces.
+  - Add a per-client limit of 10 PUTs a minute, keyed by
+    `SHA-256("put|" + CF-Connecting-IP)`, in the `rate` table. The hash is kept at most
+    10 minutes and is never logged.
+  - Add a handler test for it.
 - [ ] T030 Update the docs (main session):
   - `docs/architecture.md` §5 and §7, and `CLAUDE.md` Commands and Layout
     (`packages/sync`, `apps/relay`, `functions/`);
