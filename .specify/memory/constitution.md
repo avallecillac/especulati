@@ -56,6 +56,16 @@ after edits, after backdating, and when events sync in from other devices.
   idempotently. The resulting
   changes MUST be applied in a single SQLite transaction that also writes
   `field_clock` and `change_log`. Partial application is a bug.
+- **Exception: remote changes.** Changes merged from other devices by the sync rules
+  (per-field last-writer-wins on HLC plus a union of events, Principle VI) are exempt
+  from `decide()`, because they were already validated on the device that made them.
+  - Re-deciding them against a different local state could reject them and break
+    convergence.
+  - They MUST still be applied all-or-nothing, in a single SQLite transaction.
+  - They MUST update `field_clock` and be recorded in `change_log`.
+  - They MUST pass a pure allow-list check (known table, writable field, well-formed
+    ids and clock) before they are applied. A change that fails it MUST be skipped,
+    not partially applied.
 - Inputs MUST be parsed into branded types (`ItemId`, `LocalDate`, `Page`, and so on)
   at the boundary. Illegal states SHOULD be unrepresentable in the type system.
 - CI MUST enforce the core/shell boundary mechanically.
@@ -155,4 +165,4 @@ Rationale: stats that are silently wrong are worse than no stats.
 - **Runtime guidance.** `docs/architecture.md` is the runtime architecture reference.
   When the two disagree, this document wins, and the architecture doc MUST be updated.
 
-**Version**: 1.0.1 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-09-27
+**Version**: 1.1.0 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-09-29
