@@ -142,6 +142,39 @@ details**. The fetched values are offered for review before anything changes.
 2. **Given** I apply fetched values, **When** I save, **Then** only the chosen fields
    change, and the book's reading history is untouched.
 
+### User Story 6 - Use my own Google Books key (Priority: P2) *(amendment, 2026-09-29)*
+
+Without a key, Google Books lookups share a global anonymous quota that is often used
+up (HTTP 429), so the Google fallback rarely helps. I create a free Google Books API
+key, paste it into Settings once per device, and from then on the fallback uses my
+own quota. Books that Open Library doesn't know, which is common for Latin American
+editions, are then found through Google.
+
+**Why this priority**: it was seen in real use. `9789871544059` (Murakami, *After
+Dark*, Tusquets Argentina) is not in Open Library, and the anonymous Google quota was
+exhausted.
+
+**Independent Test**: with a key saved, looking up an ISBN that Open Library doesn't
+have sends the key with the Google request and fills in the details from Google.
+
+**Acceptance Scenarios**:
+
+1. **Given** Settings, **When** I paste a key and choose **Save**, **Then** it is
+   stored on this device only, and shown masked, with the last 4 characters visible.
+2. **Given** a saved key, **When** I choose **Test key**, **Then** I see one of:
+   "Key works", "Key rejected by Google", "Key blocked for this website (check the
+   referrer restriction)", "Daily quota used up", or "No connection".
+3. **Given** a saved key, **When** an ISBN lookup or title search falls back to Google,
+   **Then** the request includes the key, and sends only this site's origin as the
+   referrer.
+4. **Given** no saved key, **When** a lookup falls back to Google, **Then** it behaves
+   as before, with no key and no referrer.
+5. **Given** Google rejects the key during a lookup, **When** the lookup ends, **Then**
+   the book saves as pending as usual, and the status line adds "Google Books key was
+   rejected — check Settings."
+6. **Given** a saved key, **When** I choose **Remove**, **Then** it is deleted from
+   this device.
+
 ### Edge Cases
 
 - **Scanning a barcode that isn't an ISBN** (for example a UPC price code, or a 979
@@ -212,6 +245,16 @@ details**. The fetched values are offered for review before anything changes.
   from the edit screen, then choose which fetched fields to apply.
 - **FR-016**: Every lookup outcome MUST be communicated in plain words: found, not
   found in catalogs, no network (will retry), or timed out (continue without).
+
+- **FR-017**: Users MUST be able to save, test, and remove a Google Books API key in
+  Settings. It MUST be stored only in this device's local settings (the `meta` table),
+  MUST NOT be written to `change_log`, exported, or synced, and MUST NOT appear in the
+  app bundle, logs, or error messages.
+- **FR-018**: When a key is saved, every Google Books request MUST include it, and MUST
+  send only the site origin as the referrer. That allows an HTTP-referrer-restricted
+  key; the page path is never sent. Requests to other catalogs keep sending no referrer.
+- **FR-019**: When Google answers 400 or 403 to a keyed request, the lookup MUST treat
+  Google as unavailable (never "not found"), and the UI MUST say the key was rejected.
 
 ### Key Entities
 

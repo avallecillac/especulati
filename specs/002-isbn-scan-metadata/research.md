@@ -251,6 +251,33 @@ from the dev container on 2026-09-28 with `Origin: https://readerlog.pages.dev`.
   - A `packages/catalog` package: only one consumer.
   - Live APIs in CI: flaky, and against the privacy spirit of the constitution.
 
+## R14. User-supplied Google Books key (amendment, 2026-09-29)
+
+- **Decision**: the key is optional, pasted in Settings, and stored in `meta` under
+  `google_books_api_key`. The main thread loads it into a small settings store at
+  startup.
+  - `lookupIsbn` and `searchTitle` take `googleApiKey?: string | null`. Cover
+    downloads never get the key.
+  - With a key, Google requests add `&key=<key>` and use
+    `referrerPolicy: 'strict-origin'`, which sends `https://<site>/` only. That lets
+    a referrer-restricted key work.
+  - Without a key, Google requests are unchanged: keyless, `no-referrer`.
+- **Rationale**:
+  - Real use found `9789871544059` missing from Open Library, and the keyless Google
+    quota is shared globally: the 429 names project 624717413613.
+  - A personal key gives Google's roughly 1,000 free queries a day.
+  - Storing it in `meta` keeps it on the device: `meta` is never in `change_log`, so
+    sync (004) and export (006) won't carry it (FR-017).
+- **Recommended key setup** (in quickstart):
+  - API restriction: Books API only.
+  - Application restriction: HTTP referrers, `https://<domain>/*`.
+  - Optionally, a daily quota cap.
+- **Alternatives considered**:
+  - A key compiled into the bundle: public, rejected.
+  - A server-side proxy holding the key: needs a backend, deferred with option B (the
+    isbnsearch.org scraper).
+  - ISBNdb: no API on free plans.
+
 ## R13. New runtime dependency
 
 - **Decision**: `zxing-wasm@3.1.4`. It is the only new runtime dependency, justified in
