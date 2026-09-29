@@ -197,8 +197,8 @@ then check days-to-finish, the average, and the abandon rate per genre.
   MUST work offline. Nothing is sent anywhere.
 - **FR-002**: A reading day MUST be counted for each distinct `local_date` that has at
   at least one non-removed counting event of a non-removed book. `started`, `progress`
-  (with or without a page) and `finished` events always count. An `abandoned` event
-  counts only when it carries a page (FR-022).
+  (with or without a page) and `finished` events always count. Abandoning counts only
+  when the user entered the page they stopped at (FR-022).
 - **FR-003**: Removed events and all events of removed books MUST be excluded from
   every stat.
 - **FR-004**: Every date-based stat MUST use each event's stored `local_date`. It MUST
@@ -208,7 +208,7 @@ then check days-to-finish, the average, and the abandon rate per genre.
   finishes. Article stats will be a separate section that 005 adds.
 
 - **FR-006**: Pages read MUST be computed per read-through, from the page-bearing
-  events (`progress`, and `abandoned` with a page) in event order (by `local_date`, then recorded time). Each entry adds its page
+  events (including the page entered when abandoning) in event order (by `local_date`, then recorded time). Each entry adds its page
   minus the highest page logged earlier in the same read-through, or 0 if that is
   negative. The first page-bearing entry of a read-through adds:
   its full page number (counting from page 0) when the read-through began with a
@@ -274,8 +274,8 @@ then check days-to-finish, the average, and the abandon rate per genre.
   rules apply (a whole number of at least 1, and
   at most the book's page count when known). Leaving it empty keeps today's behaviour.
   Abandoning stays within the 2-tap budget: the field does not add a required step.
-  This amends 001's `LogEvent`, which today rejects a page on any non-`progress`
-  event.
+  The page is recorded as a progress entry on the same day, just before the abandon,
+  so it shows in the book's history and can be removed on its own.
 
 **Presentation**
 

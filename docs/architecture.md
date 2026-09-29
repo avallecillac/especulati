@@ -236,28 +236,27 @@ Details: `specs/002-isbn-scan-metadata/`.
 - A URL typed in by hand keeps only its domain, because a browser can't fetch
   arbitrary pages due to CORS. Its status is `metadata_status = 'failed'`.
 
-## 9. Stats (on-device SQL)
+## 9. Stats (on-device)
 
 The headline stat is **reading days per year**. It counts books only.
 
-```sql
-SELECT substr(e.local_date, 1, 4) AS year, COUNT(DISTINCT e.local_date) AS reading_days
-FROM reading_events e JOIN items i ON i.id = e.item_id
-WHERE i.type = 'book' AND e.deleted_at IS NULL AND i.deleted_at IS NULL
-GROUP BY year;
-```
+**How stats are computed:**
+- One query loads every live event of every live book.
+- Pure functions in `packages/core/src/stats.ts` compute each stat. See
+  `specs/003-reading-stats/` for the full rules.
 
 | Stat | Source |
 |---|---|
-| Reading-day heatmap | distinct `local_date` from book events |
-| Current and longest streak | consecutive distinct `local_date`s |
-| Books finished per month and year | `finished` events |
-| Pages read per period | positive deltas between consecutive non-null `page`s per book |
+| Reading-day heatmap | distinct `local_date`s of `started`, `progress` and `finished` events. A bare `abandoned` doesn't count; abandoning at a page adds a `progress` event |
+| Current and longest streak | consecutive reading days. The current streak survives until the end of today |
+| Books finished per month and year | `finished` events, one per read-through |
+| Pages read per period | per read-through, each page minus the highest page so far. The first page counts in full only if the read-through began with `started` |
 | Pages per reading day | pages read ÷ reading days |
-| Average days to finish | first `started` → `finished`, per book |
-| Abandon rate, overall and by genre | `abandoned` vs `finished` |
-| Articles per week and month | `items.read_on` where `type = 'article'` |
-| Estimated article reading time | `SUM(word_count) / 238` wpm |
+| Average days to finish | a read-through's first event → `finished`, both days counted |
+| Abandon rate, overall and by genre | current status: abandoned ÷ (finished + abandoned) |
+| Pace and estimated finish | pages in the last 14 days of the open read-through ÷ days |
+| Articles per week and month (005) | `items.read_on` where `type = 'article'` |
+| Estimated article reading time (005) | `SUM(word_count) / 238` wpm |
 | Top authors, genres, and domains | grouped counts |
 
 Streaks and reading days count books only. Article stats have their own section.
