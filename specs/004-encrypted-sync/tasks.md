@@ -490,7 +490,7 @@ the offline and conflict cases.
     `SHA-256("put|" + CF-Connecting-IP)`, in the `rate` table. The hash is kept at most
     10 minutes and is never logged.
   - Add a handler test for it.
-- [ ] T030 Update the docs (main session):
+- [X] T030 Update the docs (main session):
   - `docs/architecture.md` §5 and §7, and `CLAUDE.md` Commands and Layout
     (`packages/sync`, `apps/relay`, `functions/`);
   - confirm the quickstart's Cloudflare setup steps against the implementation.

@@ -75,7 +75,7 @@ packages/db     SQLite schema + migrations, repositories, stats SQL (browser wor
 packages/sync   HKDF keys, AES-GCM envelopes, relay client, push/pull loop
 apps/pwa        Svelte UI, DB worker, service worker, barcode scanner, /capture route
 apps/extension  Chrome MV3 extension
-apps/relay      Cloudflare Worker
+apps/relay      zero-knowledge relay handler (+ functions/ = Cloudflare Pages Functions adapter, D1)
 shortcuts/      iOS Shortcut + JS snippet + install guide
 e2e/            Playwright scenarios
 ```
@@ -90,7 +90,7 @@ e2e/            Playwright scenarios
 - Types follow "parse, don't validate": `ItemId`, `LocalDate`, `Page`,
   `NonEmptyTitle`, and so on are branded and built only through smart constructors.
 
-## 6. Data model (schema v2)
+## 6. Data model (schema v3)
 
 ```sql
 CREATE TABLE items (
@@ -157,6 +157,16 @@ The spec's indexes are kept (`reading_events(item_id, local_date)`,
 `covers(item_id PK, mime, bytes, width, height, fetched_at)`.
 `items.metadata_status` holds the details status: `ok` (complete), `pending`, or
 `failed` (not found). `cover_blob_key` is unused; it was superseded by `covers`.
+
+**Migration 3 (feature 004)** adds:
+- the synced table `duplicate_dismissals(id, item_a, item_b, created_at, deleted_at)`,
+  holding "Keep both" decisions;
+- the synced column `items.merged_into`, set on a book merged away;
+- the **local-only** inbox `sync_inbox`, holding remote ops that arrived before their
+  row.
+
+Sync state lives in `meta` (`sync_key`, `sync_cursor`, `pending_batch`, `sync_status`,
+`sync_old_space`), which is never synced.
 
 ## 7. Sync (v1)
 

@@ -1,7 +1,7 @@
 # Readerlog
 
-A local-first reading log: a PWA (SQLite-WASM on OPFS) plus, later, a Chrome extension and an
-end-to-end-encrypted sync relay. Read `docs/architecture.md` and
+A local-first reading log: a PWA (SQLite-WASM on OPFS) with end-to-end-encrypted sync
+through a relay (Cloudflare Pages Functions + D1), plus, later, a Chrome extension. Read `docs/architecture.md` and
 `.specify/memory/constitution.md` before changing anything. The constitution wins over this
 file.
 
@@ -11,7 +11,8 @@ file.
 pnpm install
 pnpm typecheck        # all packages; packages/core has no DOM lib (purity check)
 pnpm lint             # ESLint + dependency-cruiser boundary rules
-pnpm test             # Vitest: packages/core + packages/db (Node, in-memory SQLite-WASM)
+pnpm test             # Vitest: core, db, sync, relay, pwa (Node, in-memory SQLite-WASM)
+pnpm test:convergence # the full 1,000-run sync convergence test (SC-003; about 2 min)
 pnpm e2e              # Playwright on Chromium against the production build
 pnpm --filter pwa dev # local dev server
 ```
@@ -25,6 +26,17 @@ pnpm --filter pwa dev # local dev server
 - `packages/db`: SQLite schema and migrations, `applyChanges` (rows + `field_clock` +
   `change_log` in one transaction), and the read models. It runs in the browser worker and
   in Node tests.
+- `packages/sync`: the sync code, HKDF keys, AES-GCM envelopes, relay client and engine.
+  The engine runs **inside the DB worker**. It must not import `apps/*`; inject `fetch`,
+  `now`, `random` and `online`.
+- `apps/relay` + `functions/`: the zero-knowledge relay. It stores opaque
+  `{ batchId, iv, ct }` only, and must not import `packages/*` (dependency-cruiser
+  enforces this). `functions/api/[[path]].ts` is the Pages Functions adapter (D1 binding
+  `RELAY_DB`).
+- **Remote changes** (merged from other devices) skip `decide()` under the constitution
+  v1.1.0 exception: `parseRemoteOp`'s allow-list, then `applyRemoteOps`, all-or-nothing.
+  Local writes, including `MergeBooks`, still go through `decide()`.
+- Never log, throw or store in errors: the sync code, keys, auth token or plaintext ops.
 - `apps/pwa`: Svelte 5 UI. The UI never touches SQLite directly; it talks to
   `src/worker/db.worker.ts` through `src/lib/dbClient.ts`
   (`specs/001-local-book-log/contracts/worker-api.md`).
