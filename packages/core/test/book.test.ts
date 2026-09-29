@@ -27,6 +27,50 @@ describe('eventOrder', () => {
     const y = ev({ type: 'progress', id: eventId(400) });
     expect(eventOrder([x, y]).map((e) => e.id)).toEqual([y.id, x.id]);
   });
+
+  describe('type-rank tie-break on equal (local_date, occurred_at)', () => {
+    const lowId = eventId(400);
+    const highId = eventId(500);
+
+    it.each([
+      ['abandoned has the lower id', lowId, highId],
+      ['abandoned has the higher id', highId, lowId],
+    ])('progress and started sort before abandoned and finished (%s)', (_name, abandonedId, otherId) => {
+      const abandoned = ev({ type: 'abandoned', id: abandonedId });
+      const progress = ev({ type: 'progress', id: otherId, page: 120 as Page });
+      expect(eventOrder([abandoned, progress]).map((e) => e.type)).toEqual(['progress', 'abandoned']);
+      expect(eventOrder([progress, abandoned]).map((e) => e.type)).toEqual(['progress', 'abandoned']);
+
+      const finished = ev({ type: 'finished', id: abandonedId });
+      const started = ev({ type: 'started', id: otherId });
+      expect(eventOrder([finished, started]).map((e) => e.type)).toEqual(['started', 'finished']);
+    });
+
+    it.each([
+      ['abandoned has the lower id', lowId, highId],
+      ['abandoned has the higher id', highId, lowId],
+    ])('deriveStatus is abandoned and lastPage is the progress page (%s)', (_name, abandonedId, progressId) => {
+      const abandoned = ev({ type: 'abandoned', id: abandonedId });
+      const progress = ev({ type: 'progress', id: progressId, page: 120 as Page });
+      expect(deriveStatus([abandoned, progress])).toBe('abandoned');
+      expect(lastPage([abandoned, progress])).toBe(120);
+    });
+
+    it('equal type rank still falls back to id order', () => {
+      const a = ev({ type: 'finished', id: eventId(500) });
+      const b = ev({ type: 'abandoned', id: eventId(400) });
+      expect(eventOrder([a, b]).map((e) => e.id)).toEqual([b.id, a.id]);
+      const c = ev({ type: 'started', id: eventId(500) });
+      const d = ev({ type: 'progress', id: eventId(400) });
+      expect(eventOrder([c, d]).map((e) => e.id)).toEqual([d.id, c.id]);
+    });
+
+    it('different occurred_at still sorts by time, whatever the type', () => {
+      const early = ev({ type: 'abandoned', occurredAt: instant('2026-09-01T09:00:00.000Z') });
+      const late = ev({ type: 'progress', occurredAt: instant('2026-09-01T11:00:00.000Z') });
+      expect(eventOrder([late, early]).map((e) => e.id)).toEqual([early.id, late.id]);
+    });
+  });
 });
 
 describe('deriveStatus', () => {

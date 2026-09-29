@@ -9,6 +9,7 @@ import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookC
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot } from './snapshot.ts';
+export { loadStatsBooks } from './stats.ts';
 
 /** Everything impure the write path needs, injected by the shell (or a test). */
 export interface DispatchEnv {

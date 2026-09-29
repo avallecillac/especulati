@@ -45,13 +45,17 @@ export interface ReadingEvent {
   readonly deletedAt: Instant | null;
 }
 
-/** Non-deleted events in (local_date, occurred_at, id) order — the single ordering all derivations use. */
+/** Ties on (local_date, occurred_at): started/progress before finished/abandoned (003 R4). */
+const TYPE_RANK: Record<EventType, number> = { started: 0, progress: 0, finished: 1, abandoned: 1 };
+
+/** Non-deleted events in (local_date, occurred_at, type rank, id) order — the single ordering all derivations use. */
 export function eventOrder(events: readonly ReadingEvent[]): ReadingEvent[] {
   return events
     .filter((e) => e.deletedAt === null)
     .sort((a, b) =>
       a.localDate !== b.localDate ? (a.localDate < b.localDate ? -1 : 1)
       : a.occurredAt !== b.occurredAt ? (a.occurredAt < b.occurredAt ? -1 : 1)
+      : TYPE_RANK[a.type] !== TYPE_RANK[b.type] ? TYPE_RANK[a.type] - TYPE_RANK[b.type]
       : a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
     );
 }

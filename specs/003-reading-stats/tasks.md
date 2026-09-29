@@ -45,7 +45,7 @@ pages-per-day credits (research R2, R3, R4), plus the db loader (R1, R8, R10).
 
 ### Tests first
 
-- [ ] T001 [P] Write `packages/core/test/stats.dates.test.ts` for
+- [X] T001 [P] Write `packages/core/test/stats.dates.test.ts` for
   `dayNumber(d: LocalDate): number` (days since 1970-01-01) and
   `fromDayNumber(n): LocalDate`:
   - `dayNumber('1970-01-01') === 0`, `dayNumber('2000-03-01') === 11017`,
@@ -54,7 +54,7 @@ pages-per-day credits (research R2, R3, R4), plus the db loader (R1, R8, R10).
     consecutive; 2025-12-31 → 2026-01-01 are consecutive;
   - a round trip for every day from 1999-01-01 to 2031-12-31;
   - agreement with `previousLocalDate` for 1,000 sampled days.
-- [ ] T002 [P] Extend `packages/core/test/book.test.ts` for the `eventOrder` tie-break
+- [X] T002 [P] Extend `packages/core/test/book.test.ts` for the `eventOrder` tie-break
   (contracts/commands-003.md):
   - for two events with an equal `(local_date, occurred_at)`, `progress` and `started`
     sort before `abandoned` and `finished`, **whatever their ids are** (test both id
@@ -63,7 +63,7 @@ pages-per-day credits (research R2, R3, R4), plus the db loader (R1, R8, R10).
     page;
   - equal type rank still falls back to id order;
   - different `occurred_at` values still sort by time, as in 001.
-- [ ] T003 [P] Write `packages/core/test/stats.readthrough.test.ts` for
+- [X] T003 [P] Write `packages/core/test/stats.readthrough.test.ts` for
   `readThroughs(events)` and `readingDays(books)` (research R3, data-model
   `ReadThrough` and `DayStat`), each with hand-computed expectations:
   - **started, then pages 40, 90, 150**: credits 40, 50, 60 on their days;
@@ -84,7 +84,7 @@ pages-per-day credits (research R2, R3, R4), plus the db loader (R1, R8, R10).
 
 ### Implementation
 
-- [ ] T004 Implement in `packages/core`:
+- [X] T004 Implement in `packages/core`:
   - in `src/book.ts`: `eventOrder` sorts by `(localDate, occurredAt, typeRank, id)`,
     where `started` and `progress` rank 0 and `finished` and `abandoned` rank 1;
   - new `src/stats.ts`:
@@ -96,7 +96,7 @@ pages-per-day credits (research R2, R3, R4), plus the db loader (R1, R8, R10).
   - export from `src/index.ts`.
 
   T001–T003 must pass, and all existing core tests must stay green.
-- [ ] T005 Write `packages/db/test/stats.test.ts` (loader part) for
+- [X] T005 Write `packages/db/test/stats.test.ts` (loader part) for
   `loadStatsBooks(db)`:
   - books added through `dispatch`, with events, are returned with `genre`,
     `totalPages` and their non-removed events;
