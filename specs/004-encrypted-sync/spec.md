@@ -6,6 +6,18 @@
 
 **Status**: Draft
 
+## Clarifications
+
+### Session 2026-09-29
+
+- Q: When a device joins and both devices already have books, how are duplicates
+  handled? → A: Combine everything, then offer to merge likely duplicates (same ISBN,
+  or same title and author). The user chooses **Merge** or **Keep both** for each. On
+  Merge, the copy added first survives, receives every entry from the other with its
+  original dates, and has its empty fields filled from the other copy. The survivor is
+  chosen the same way on every device, and merging the same pair on two devices gives
+  the same result.
+
 **Input**: User description: "004 encrypted sync: keep the reading log identical across
 my devices (iPhone PWA, Mac Chrome PWA, later the Chrome extension) through a tiny relay
 on Cloudflare Worker + D1 that only ever sees ciphertext. First device creates a sync
@@ -152,6 +164,34 @@ join a third device with the new code, and check the old code no longer works.
 4. **Given** B rejoins with A's new code, **When** it syncs, **Then** B's local data is
    combined per FR-011, so nothing B still has locally is lost.
 
+### User Story 5 - Merge books I added on both devices (Priority: P2)
+
+After my Mac joins, the app tells me "3 books may be duplicates". For each, I see both
+copies side by side (title, author, ISBN, number of entries, date added) and choose
+**Merge** or **Keep both**.
+
+**Why this priority**: both of your devices already have books, so duplicates are
+likely on the first join. But sync works without it, and duplicates can be merged
+later from Settings.
+
+**Independent Test**: add the same book on two unsynced devices and log on each, join
+them, then merge. One book remains, with every entry from both.
+
+**Acceptance Scenarios**:
+
+1. **Given** *Dune* (same ISBN) was added on A on Mar 1 and on B on Mar 5, each with
+   entries, **When** B joins and I choose **Merge**, **Then** one *Dune* remains on
+   both devices: the Mar 1 copy, holding the entries from both, and its status and
+   last page reflect all of them.
+2. **Given** the Mar 1 copy has no page count and the Mar 5 copy has 412, **When** I
+   merge, **Then** the survivor has 412 pages.
+3. **Given** two books with the same title and author but different ISBNs (different
+   editions), **When** the list is built, **Then** they are not offered.
+4. **Given** I choose **Keep both** for a pair, **When** duplicates are checked again on
+   any device, **Then** that pair is not offered again.
+5. **Given** I merge the same pair on A and on B before they sync, **When** they sync,
+   **Then** both show one book with each entry exactly once.
+
 ### Edge Cases
 
 - **Both devices offline for weeks:** everything merges when they reconnect, with
@@ -214,10 +254,9 @@ join a third device with the new code, and check the old code no longer works.
   - a removal is a field edit like any other, so a later removal wins over an earlier
     edit, and a later restore (if one ever exists) wins over an earlier removal.
 - **FR-011**: When a device joins or rejoins a space that already has data, its
-  existing local data MUST be combined with the space's data using the same rules:
-  [NEEDS CLARIFICATION: when both devices already have books, should the app simply
-  combine them (duplicates possible if the same book was added on both), or also help
-  find and merge likely duplicates?]
+  existing local data MUST be combined with the space's data using the same rules.
+  Nothing on either side is discarded. Likely duplicates are then offered for merging
+  (FR-026 to FR-029).
 - **FR-012**: Received changes MUST be applied all-or-nothing per batch, and a batch
   that fails to apply MUST leave the local data unchanged and be retried later.
 - **FR-013**: A received change that cannot be decrypted or understood (corrupt, or
@@ -231,6 +270,29 @@ join a third device with the new code, and check the old code no longer works.
   without a manual reload.
 - **FR-016**: A device that receives a book with a cover address and has no cached
   cover MUST download and cache it when online, as for books it added itself.
+
+**Duplicate books after joining (US5)**
+
+- **FR-026**: After a device joins or rejoins a space, and whenever the user asks from
+  Settings → Sync, the app MUST list pairs of live books that are likely the same:
+  - the same ISBN; or
+  - no ISBN on at least one of them, and the same title and author, compared ignoring
+    case, accents, punctuation and extra spaces.
+
+  A pair the user has marked **Keep both** MUST NOT be offered again, on any device.
+- **FR-027**: For each pair, the user MUST be able to choose **Merge** or **Keep both**.
+  Nothing is merged without that choice.
+- **FR-028**: **Merge** MUST:
+  - keep the copy that was added first, by the time it was added, with ties broken the
+    same way on every device;
+  - carry over every entry of the other copy to it, keeping each entry's day and time,
+    so the reading history, status, last page and stats are as if everything had been
+    logged on one book;
+  - fill the survivor's empty fields (author, page count, genre, ISBN, cover) from the
+    other copy, without overwriting anything already set;
+  - remove the other copy.
+- **FR-029**: Merging the same pair on two devices, even at the same time, MUST end with
+  the same single book and the same entries on every device, with no doubled entries.
 
 **Status (US3)**
 

@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,8 +31,8 @@
 
 ## Notes
 
-- One open question (FR-011: combining two existing logs when a device joins) is
-  waiting on the user.
+- FR-011 was resolved on 2026-09-29: combine, then offer duplicate merging (US5,
+  FR-026 to FR-029).
 - The user's description named the technology (Worker + D1, HLC, AES); the spec keeps
   those out and leaves them to the plan. "Relay" and "sync code" are product terms.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.
