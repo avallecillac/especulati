@@ -3,6 +3,7 @@ import type { Isbn13 } from '@readerlog/core';
 import { lookupIsbn } from '../catalog/isbnLookup.ts';
 import { draft, type Draft } from './draft.svelte.ts';
 import { query } from './dbClient.ts';
+import { settings } from './settings.svelte.ts';
 import { navigate } from './router.svelte.ts';
 
 export type IsbnFlowResult = { kind: 'duplicate'; existing: BookCard } | { kind: 'started' };
@@ -25,11 +26,12 @@ export async function startIsbnFlow(
   draft.current = mine;
   navigate('/add');
 
-  void lookupIsbn(isbn as Isbn13, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine }).then((outcome) => {
+  void lookupIsbn(isbn as Isbn13, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine, googleApiKey: settings.googleBooksKey }).then((outcome) => {
     // Stale if the user saved, left, or started another flow meanwhile.
     const cur = draft.current;
     if (!cur || cur.isbn !== isbn || cur.lookup !== 'running' || cur.source !== mine.source) return;
     cur.lookup = outcome.kind;
+    if (outcome.kind === 'unavailable' && outcome.keyRejected) cur.keyRejected = true;
     if (outcome.kind === 'found') cur.details = outcome.details;
   });
   return { kind: 'started' };

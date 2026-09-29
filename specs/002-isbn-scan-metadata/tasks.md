@@ -552,7 +552,7 @@ and research R14.
 is found through Google, and the request carries `key=` and an origin-only
 `Referer`.
 
-- [ ] T045 [P] [US6] Write tests first, in `apps/pwa/src/catalog/googleKey.test.ts` and
+- [X] T045 [P] [US6] Write tests first, in `apps/pwa/src/catalog/googleKey.test.ts` and
   in additions to `isbnLookup.test.ts` and `titleSearch.test.ts`. Follow
   contracts/catalog-lookup.md "Google Books key":
   - with a key, the Google URL ends with `&key=<encoded>` and its init has
@@ -568,10 +568,10 @@ is found through Google, and the request carries `key=` and an origin-only
   Google error-body shapes (`error.errors[0].reason` values `badRequest` or
   `keyInvalid`, and `API_KEY_HTTP_REFERRER_BLOCKED` in `error.details` or the
   message).
-- [ ] T046 [US6] Implement the key plumbing in `apps/pwa/src/catalog/` (request
+- [X] T046 [US6] Implement the key plumbing in `apps/pwa/src/catalog/` (request
   helper, `isbnLookup.ts`, `titleSearch.ts`, and a new `googleKey.ts` for
   `testGoogleKey`). `cover.ts` must NOT receive the key, making T045 pass.
-- [ ] T047 [US6] Store the key on the device. It must stay in the local settings table
+- [X] T047 [US6] Store the key on the device. It must stay in the local settings table
   only: never in `change_log`, export, or logs.
   - Add `apps/pwa/src/lib/settings.svelte.ts`, holding `settings.googleBooksKey`
     (`$state`). It loads once at startup through a new worker query
@@ -581,7 +581,7 @@ is found through Google, and the request carries `key=` and an origin-only
   - Pass `googleApiKey: settings.googleBooksKey` into every `lookupIsbn` and
     `searchTitle` call site: `isbnFlow.ts`, `detailsRetry.ts`, `Search.svelte`, and the
     AddBook edit lookup. Never pass it to `fetchCover`.
-- [ ] T048 [US6] Add a section "Google Books API key (optional)" to
+- [X] T048 [US6] Add a section "Google Books API key (optional)" to
   `apps/pwa/src/screens/Settings.svelte`:
   - a password-type input labelled "Google Books API key", with **Save**, **Test
     key**, and **Remove**;
@@ -593,7 +593,7 @@ is found through Google, and the request carries `key=` and an origin-only
 
   In `AddBook.svelte`, when the lookup outcome has `keyRejected`, add the line
   "Google Books key was rejected — check Settings."
-- [ ] T049 [P] [US6] Write `e2e/google-key.spec.ts` using the catalog harness. Extend
+- [X] T049 [P] [US6] Write `e2e/google-key.spec.ts` using the catalog harness. Extend
   `e2e/fixtures/catalog.ts` so googleapis routes serve `gb-isbn-9789871544059.json`
   for that ISBN. Create that file by hand from the Google volumes schema: title "After
   Dark", author "Haruki Murakami", publisher "Tusquets", pageCount **null**, since it
@@ -609,7 +609,7 @@ is found through Google, and the request carries `key=` and an origin-only
     rejected — check Settings.", and the book saves as pending.
   - **(e)** The key string never appears in the page's `document.body.innerText`,
     except masked.
-- [ ] T050 **(main session)** Review, run the full validation, update the quickstart
+- [X] T050 **(main session)** Review, run the full validation, update the quickstart
   (key setup steps and the US6 results), then commit.
 
 ## Dependencies & Execution Order

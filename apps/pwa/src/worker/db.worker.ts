@@ -113,6 +113,11 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       const c = d.getCover(q.itemId);
       return c ? new Blob([c.bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }) : null;
     }
+    case 'setting': {
+      // Allow-list: the UI may read only this one meta key (it is a secret kept on this device).
+      if (q.key !== 'google_books_api_key') throw new Error('setting not readable');
+      return d.getMeta(q.key);
+    }
     case 'storage': {
       const persisted = d.getMeta('storage_persisted');
       const info: StorageInfo = {

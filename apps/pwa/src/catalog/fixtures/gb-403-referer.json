@@ -1,0 +1,22 @@
+{
+  "error": {
+    "code": 403,
+    "message": "Requests from referer https://example.invalid/ are blocked.",
+    "errors": [
+      {
+        "message": "Requests from referer https://example.invalid/ are blocked.",
+        "domain": "global",
+        "reason": "forbidden"
+      }
+    ],
+    "status": "PERMISSION_DENIED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "API_KEY_HTTP_REFERRER_BLOCKED",
+        "domain": "googleapis.com",
+        "metadata": { "service": "books.googleapis.com", "consumer": "projects/0" }
+      }
+    ]
+  }
+}

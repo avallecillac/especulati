@@ -33,10 +33,12 @@ export interface Catalog {
   miss(isbn: string): void;
   /** Delay every catalog response by `ms`. */
   delay(ms: number): void;
-  /** Make a host answer every request with `status` (googleapis 429 serves gb-429.json). */
+  /** Make a host answer every request with `status` (googleapis 429 serves gb-429.json, 403 serves gb-403-referer.json). */
   fail(host: CatalogHost, status: number): void;
   /** URLs of every request seen on the catalog hosts, in order. */
   requests(): string[];
+  /** Every catalog request with the headers the browser sent (lower-case names), in order. */
+  requestLog(): { url: string; headers: Record<string, string> }[];
   /** URLs that no rule matched (these were aborted and fail the test). */
   unmatched(): string[];
   /** Self-test only: accept the unmatched requests recorded so far without failing the test. */
@@ -45,6 +47,7 @@ export interface Catalog {
 
 function createCatalog(): { api: Catalog; handle: (route: Route) => Promise<void>; guardErrors: () => string[] } {
   const seen: string[] = [];
+  const log: { url: string; headers: Record<string, string> }[] = [];
   const unmatched: string[] = [];
   const misses = new Set<string>();
   const failures = new Map<CatalogHost, number>();
@@ -58,13 +61,18 @@ function createCatalog(): { api: Catalog; handle: (route: Route) => Promise<void
     const url = new URL(route.request().url());
     const href = url.href;
     seen.push(href);
+    log.push({ url: href, headers: await route.request().allHeaders() });
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
     const host = HOST_NAMES[url.hostname];
     if (!host) return void (unmatched.push(href), await route.abort());
 
     const failStatus = failures.get(host);
     if (failStatus !== undefined) {
-      const body = host === 'googleapis' && failStatus === 429 ? readFixture('gb-429.json') : null;
+      const body =
+        host !== 'googleapis' ? null
+        : failStatus === 429 ? readFixture('gb-429.json')
+        : failStatus === 403 ? readFixture('gb-403-referer.json')
+        : null;
       return json(route, body ?? '{"error":"failed"}', failStatus);
     }
 
@@ -112,6 +120,7 @@ function createCatalog(): { api: Catalog; handle: (route: Route) => Promise<void
     delay: (ms) => void (delayMs = ms),
     fail: (host, status) => void failures.set(host, status),
     requests: () => [...seen],
+    requestLog: () => log.map((l) => ({ url: l.url, headers: { ...l.headers } })),
     unmatched: () => [...unmatched],
     allowUnmatchedForSelfTest: () => void (allowed = true),
   };

@@ -2,6 +2,7 @@ import type { Isbn13 } from '@readerlog/core';
 import { lookupIsbn } from '../catalog/isbnLookup.ts';
 import { fetchCover } from '../catalog/cover.ts';
 import { authorsLabel } from '../catalog/merge.ts';
+import { settings } from './settings.svelte.ts';
 import { dispatch, query, storeCover } from './dbClient.ts';
 
 const CONCURRENCY = 2;
@@ -15,7 +16,7 @@ let running = false;
 
 /** Returns false when no request was made (offline), so the item can be tried again this launch. */
 async function retryOne(itemId: string, isbn: string): Promise<boolean> {
-  const outcome = await lookupIsbn(isbn as Isbn13, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine });
+  const outcome = await lookupIsbn(isbn as Isbn13, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine, googleApiKey: settings.googleBooksKey });
   if (outcome.kind === 'unavailable' && outcome.reason === 'offline') return false;
   if (outcome.kind === 'notFound') {
     await dispatch({ kind: 'FillDetails', itemId, outcome: 'notFound' });
