@@ -1,12 +1,6 @@
-import { err, ok, type Result } from '@readerlog/core';
+import { err, ok, type OpWire, type Result } from '@readerlog/core';
 
-export interface OpWire {
-  op: string;
-  hlc: string;
-  tbl: string;
-  row: string;
-  fields: Record<string, string | number | null>;
-}
+export type { OpWire };
 export interface Plain {
   v: 1;
   device: string;

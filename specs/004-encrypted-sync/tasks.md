@@ -199,7 +199,7 @@ run loop, and convergence.
   - no dependencies.
 
   T006 must pass.
-- [ ] T011 Write `packages/sync/test/engine.test.ts` first, then implement
+- [X] T011 Write `packages/sync/test/engine.test.ts` first, then implement
   `packages/sync/src/relayClient.ts` and the run loop in `packages/sync/src/engine.ts`.
   The fake relay is the real `handle()` from `apps/relay/src/handler.ts` with the test
   SQLite store, wrapped as `fetch`. Import it **only in tests**, through a relative path
@@ -237,7 +237,7 @@ run loop, and convergence.
 
   In this task, implement `turnOn` and `join` only as far as the tests need to set up
   a space (a space-creation helper). Their user-facing flows are T015 and T016.
-- [ ] T012 Write and pass `packages/sync/test/convergence.test.ts` (research R11,
+- [X] T012 Write and pass `packages/sync/test/convergence.test.ts` (research R11,
   SC-003):
   - 2 to 5 peers (`ReaderlogDb` on in-memory SQLite, each with its own `DeviceId` and
     fake clock), plus one fake relay;
@@ -249,7 +249,8 @@ run loop, and convergence.
   - then every peer runs until quiet (two full rounds with no changes);
   - assert that the dumps of `items`, `reading_events`, `duplicate_dismissals` and
     `field_clock`, ordered by primary key, are identical across peers;
-  - print the seed on failure;
+  - print the seed on failure. *As built:* `pnpm test` runs 200 seeds, and `pnpm test:convergence`
+    runs the full 1,000 required by SC-003 (about 2 minutes), as part of T031;
   - also add a 10k-op perf case (SC-004): one peer with about 10,000 ops pushes to an
     empty space, and a second peer joins and pulls. Both finish in under 60 s in Node,
     and the time is logged;

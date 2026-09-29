@@ -8,6 +8,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . && depcruise packages apps/pwa/src apps/relay/src --config .dependency-cruiser.cjs",
     "test": "vitest run",
+    "test:convergence": "CONVERGENCE_RUNS=1000 vitest run --project sync convergence",
     "e2e": "pnpm --filter e2e test"
   },
   "devDependencies": {

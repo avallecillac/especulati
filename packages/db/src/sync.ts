@@ -131,10 +131,10 @@ export function applyRemoteOps(db: Database, ops: readonly RemoteOp[], deviceId:
 }
 
 /** Local (not yet pushed) ops in seq order, as they go into an encrypted batch (FR-004). */
-export function unpushedOps(db: Database, limit: number): { maxSeq: number; ops: OpWire[] } {
+export function unpushedOps(db: Database, limit: number, upToSeq: number = Number.MAX_SAFE_INTEGER): { maxSeq: number; ops: OpWire[] } {
   const rows = db.selectObjects(
-    'SELECT seq, op_id, hlc, tbl, row_id, fields_json FROM change_log WHERE pushed = 0 ORDER BY seq LIMIT ?',
-    [limit],
+    'SELECT seq, op_id, hlc, tbl, row_id, fields_json FROM change_log WHERE pushed = 0 AND seq <= ? ORDER BY seq LIMIT ?',
+    [upToSeq, limit],
   );
   let maxSeq = 0;
   const ops: OpWire[] = rows.map((r) => {
@@ -152,6 +152,45 @@ export function unpushedOps(db: Database, limit: number): { maxSeq: number; ops:
 
 export function markPushed(db: Database, maxSeq: number): void {
   db.exec('UPDATE change_log SET pushed = 1 WHERE pushed = 0 AND seq <= ?', { bind: [maxSeq] });
+}
+
+/** A batch was accepted: its rows are pushed and the pending batch is cleared, together. */
+export function completePush(db: Database, maxSeq: number): void {
+  db.exec('SAVEPOINT complete_push');
+  try {
+    markPushed(db, maxSeq);
+    db.exec("DELETE FROM meta WHERE key = 'pending_batch'");
+    db.exec('RELEASE complete_push');
+  } catch (e) {
+    rollbackQuietly(db, 'ROLLBACK TO complete_push');
+    rollbackQuietly(db, 'RELEASE complete_push');
+    throw e;
+  }
+}
+
+/** Apply one pulled page of ops and advance the cursor in the same transaction (research R6). */
+export function applyPulledPage(db: Database, ops: readonly RemoteOp[], cursor: number, deviceId: DeviceId, wallMs: () => number): ApplyResult {
+  db.exec('SAVEPOINT pulled_page');
+  try {
+    const result = applyRemoteOps(db, ops, deviceId, wallMs);
+    writeMeta(db, 'sync_cursor', String(cursor));
+    db.exec('RELEASE pulled_page');
+    return result;
+  } catch (e) {
+    rollbackQuietly(db, 'ROLLBACK TO pulled_page');
+    rollbackQuietly(db, 'RELEASE pulled_page');
+    throw e;
+  }
+}
+
+/** Local rows waiting to be pushed. */
+export function pendingCount(db: Database): number {
+  return Number(db.selectValue('SELECT COUNT(*) FROM change_log WHERE pushed = 0'));
+}
+
+/** Ops parked in the inbox, waiting for their row to arrive. */
+export function inboxOpIds(db: Database): string[] {
+  return db.selectValues('SELECT op_id FROM sync_inbox').map(String);
 }
 
 /** Joining a different space: everything is pushed again, and the cursor starts over. */

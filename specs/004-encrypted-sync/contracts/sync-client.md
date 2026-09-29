@@ -94,7 +94,8 @@ function createSyncEngine(deps: SyncDeps): {
 };
 type SyncError = { kind: 'format' | 'checksum' | 'notFound' | 'offline' | 'relay'; status?: number };
 interface SyncStatusView { on: boolean; lastOkAt: string | null; pending: number; problem: SyncProblem | null; undecryptable: number; inboxStuck: number }
-interface SyncRunResult { pulled: number; pushed: number; changed: boolean }
+interface SyncRunResult { pulled: number; pushed: number; changed: boolean; problem: SyncProblem | null; backoffMs: number | null }
+// pulled = remote ops applied (not batches); changed = pulled > 0; backoffMs = when to retry after a failure
 ```
 
 The run order (research R6) is: first retry `pending_batch`, then pull all, then push

@@ -5,13 +5,13 @@ import { migrate } from './migrations.ts';
 import { loadBookSnapshot } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { statsView } from './stats.ts';
-import { applyRemoteOps, markPushed, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
+import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
 import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot } from './snapshot.ts';
-export { applyRemoteOps, markPushed, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
+export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
 export { loadStatsBooks, statsView } from './stats.ts';
 
@@ -103,8 +103,28 @@ export class ReaderlogDb {
     return applyRemoteOps(this.raw, ops, deviceId, wallMs);
   }
 
-  unpushedOps(limit: number): { maxSeq: number; ops: OpWire[] } {
-    return unpushedOps(this.raw, limit);
+  /** Apply one pulled page and advance `sync_cursor` in the same transaction. */
+  applyPulledPage(ops: readonly RemoteOp[], cursor: number, wallMs: () => number): ApplyResult {
+    const deviceId = this.#deviceId;
+    if (!deviceId) throw new Error('ensureDeviceId() must run before applyPulledPage()');
+    return applyPulledPage(this.raw, ops, cursor, deviceId, wallMs);
+  }
+
+  unpushedOps(limit: number, upToSeq?: number): { maxSeq: number; ops: OpWire[] } {
+    return unpushedOps(this.raw, limit, upToSeq);
+  }
+
+  /** Mark rows up to `maxSeq` pushed and clear `pending_batch`, in one step. */
+  completePush(maxSeq: number): void {
+    completePush(this.raw, maxSeq);
+  }
+
+  pendingCount(): number {
+    return pendingCount(this.raw);
+  }
+
+  inboxOpIds(): string[] {
+    return inboxOpIds(this.raw);
   }
 
   markPushed(maxSeq: number): void {
