@@ -5,6 +5,8 @@ export interface Draft {
   isbn: string | null;
   lookup: 'idle' | 'running' | 'found' | 'notFound' | 'unavailable' | 'timeout';
   details: BookDetails | null;
+  /** The lookup was refused because of the user's Google Books key. */
+  keyRejected?: true;
   /** Set when the user chose "Add another copy" past the duplicate check. */
   allowDuplicate?: boolean;
 }

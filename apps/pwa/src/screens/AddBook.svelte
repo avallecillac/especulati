@@ -11,6 +11,7 @@
   import { todayLocal } from '../lib/clock.ts';
   import { errorMessage } from '../lib/errors.ts';
   import { navigate } from '../lib/router.svelte.ts';
+  import { settings } from '../lib/settings.svelte.ts';
 
   import { onDestroy, untrack } from 'svelte';
 
@@ -32,6 +33,7 @@
   let isbnText = $state('');
   let isbnInvalid = $state(false);
   let editLookup = $state<Draft['lookup']>('idle');
+  let editKeyRejected = $state(false);
   let fetched = $state<BookDetails | null>(null);
   let picked = $state<Record<Row, boolean>>({ title: false, author: false, totalPages: false, genre: false, cover: false });
   let current = $state({ title: '', author: '', totalPages: '', genre: '', hasCover: false });
@@ -89,6 +91,7 @@
     return !d || editId !== undefined ? null : lookupText(d.lookup, d.details);
   });
   const editLine = $derived(lookupText(editLookup, fetched));
+  const KEY_REJECTED = 'Google Books key was rejected — check Settings.';
 
   const fetchedAuthor = $derived(fetched ? authorsLabel(fetched.authors) : null);
   const rows = $derived.by(() => {
@@ -109,10 +112,12 @@
     if (!parsed.ok) return;
     const mine = ++lookupToken;
     editLookup = 'running';
+    editKeyRejected = false;
     fetched = null;
-    const outcome = await lookupIsbn(parsed.value as Isbn13, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine });
+    const outcome = await lookupIsbn(parsed.value as Isbn13, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine, googleApiKey: settings.googleBooksKey });
     if (mine !== lookupToken) return;
     editLookup = outcome.kind;
+    editKeyRejected = outcome.kind === 'unavailable' && outcome.keyRejected === true;
     picked = { title: false, author: false, totalPages: false, genre: false, cover: false };
     if (outcome.kind === 'found') fetched = outcome.details;
   }
@@ -205,6 +210,7 @@
     <div>
       {#if draft.current.isbn}<p class="muted">ISBN {draft.current.isbn}</p>{/if}
       {#if lookupLine}<p role="status">{lookupLine}</p>{/if}
+      {#if draft.current.keyRejected}<p role="status">{KEY_REJECTED}</p>{/if}
     </div>
   </div>
 {/if}
@@ -244,6 +250,7 @@
         <button type="button" disabled={editLookup === 'running'} onclick={() => void lookUp()}>Look up details</button>
       </div>
       {#if editLine}<p role="status">{editLine}</p>{/if}
+      {#if editKeyRejected}<p role="status">{KEY_REJECTED}</p>{/if}
       {#if rows.length > 0}
         <div role="group" aria-label="Fetched details">
           {#each rows as row (row.key)}

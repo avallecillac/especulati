@@ -1,0 +1,16 @@
+{
+  "kind": "books#volumes",
+  "totalItems": 1,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "AfterDarkTst1",
+      "volumeInfo": {
+        "title": "After Dark",
+        "authors": ["Haruki Murakami"],
+        "publisher": "Tusquets",
+        "industryIdentifiers": [{ "type": "ISBN_13", "identifier": "9789871544059" }]
+      }
+    }
+  ]
+}

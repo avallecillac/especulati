@@ -25,12 +25,17 @@ export async function lookupIsbn(isbn: Isbn13, deps: LookupDeps): Promise<Lookup
 
   if (searchRes.kind === 'timeout') return { kind: 'timeout' };
 
-  const googleRes = await get(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`);
+  const googleRes = await get(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`, { googleKey: deps.googleApiKey ?? null });
   if (googleRes.kind === 'timeout') return { kind: 'timeout' };
   if (googleRes.kind === 'ok') {
     const items = (googleRes.json as { items?: unknown })?.items;
     const google = Array.isArray(items) ? parseGbVolume(items[0]) : null;
     if (google) return { kind: 'found', details: mergeDetails({ search: null, edition, google }) };
+  }
+
+  // A key Google refuses must never read as "not in any catalog".
+  if (deps.googleApiKey && googleRes.kind === 'fail' && (googleRes.status === 400 || googleRes.status === 403)) {
+    return { kind: 'unavailable', reason: 'http', status: googleRes.status, keyRejected: true };
   }
 
   // No title anywhere. notFound only if every queried catalog answered successfully.

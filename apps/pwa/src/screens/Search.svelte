@@ -7,6 +7,7 @@
   import { query as dbQuery } from '../lib/dbClient.ts';
   import { draft } from '../lib/draft.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
+  import { settings } from '../lib/settings.svelte.ts';
   import Cover from './Cover.svelte';
   import DuplicatePrompt from './DuplicatePrompt.svelte';
 
@@ -37,7 +38,7 @@
     asked = q;
     const mine = ++generation;
     view = { kind: 'searching' };
-    const out = await searchTitle(q, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine });
+    const out = await searchTitle(q, { fetch: (u, i) => fetch(u, i), online: () => navigator.onLine, googleApiKey: settings.googleBooksKey });
     if (mine !== generation || destroyed) return;
     view = out;
   }

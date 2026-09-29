@@ -542,6 +542,76 @@ only the page count; nothing else changes and the history is untouched.
 
 ---
 
+## Phase 9: User Story 6 - Own Google Books key (Priority: P2, amendment 2026-09-29)
+
+**Goal**: an optional per-device Google Books key, stored locally, used only for Google
+requests, sending only the site origin as the referrer. See spec US6, FR-017 to FR-019,
+and research R14.
+
+**Independent Test**: with a key saved in Settings, an ISBN that Open Library misses
+is found through Google, and the request carries `key=` and an origin-only
+`Referer`.
+
+- [X] T045 [P] [US6] Write tests first, in `apps/pwa/src/catalog/googleKey.test.ts` and
+  in additions to `isbnLookup.test.ts` and `titleSearch.test.ts`. Follow
+  contracts/catalog-lookup.md "Google Books key":
+  - with a key, the Google URL ends with `&key=<encoded>` and its init has
+    `referrerPolicy: 'strict-origin'`, while OL requests stay `no-referrer`;
+  - with no key, or an empty one, the Google URL and init are identical to today's;
+  - a keyed 403 or 400 gives `unavailable` with `keyRejected: true`, never
+    `notFound`;
+  - every `testGoogleKey` branch;
+  - the key string never appears in any returned outcome
+    (`JSON.stringify(outcome)` doesn't contain it).
+
+  Add fixtures `gb-400-invalid-key.json` and `gb-403-referer.json` with the real
+  Google error-body shapes (`error.errors[0].reason` values `badRequest` or
+  `keyInvalid`, and `API_KEY_HTTP_REFERRER_BLOCKED` in `error.details` or the
+  message).
+- [X] T046 [US6] Implement the key plumbing in `apps/pwa/src/catalog/` (request
+  helper, `isbnLookup.ts`, `titleSearch.ts`, and a new `googleKey.ts` for
+  `testGoogleKey`). `cover.ts` must NOT receive the key, making T045 pass.
+- [X] T047 [US6] Store the key on the device. It must stay in the local settings table
+  only: never in `change_log`, export, or logs.
+  - Add `apps/pwa/src/lib/settings.svelte.ts`, holding `settings.googleBooksKey`
+    (`$state`). It loads once at startup through a new worker query
+    `{ name: 'setting', key: 'google_books_api_key' }`, which returns the value or
+    null. Allow-list only that key in the worker.
+  - Saving uses the existing `setMeta`. Removing sets `''`; empty means "no key".
+  - Pass `googleApiKey: settings.googleBooksKey` into every `lookupIsbn` and
+    `searchTitle` call site: `isbnFlow.ts`, `detailsRetry.ts`, `Search.svelte`, and the
+    AddBook edit lookup. Never pass it to `fetchCover`.
+- [X] T048 [US6] Add a section "Google Books API key (optional)" to
+  `apps/pwa/src/screens/Settings.svelte`:
+  - a password-type input labelled "Google Books API key", with **Save**, **Test
+    key**, and **Remove**;
+  - when saved, show `••••` plus the last 4 characters;
+  - `testGoogleKey` results shown in `role="status"` with the exact messages from
+    spec US6 · 2;
+  - one line of help: "Restrict the key to the Books API and to this website's
+    address."
+
+  In `AddBook.svelte`, when the lookup outcome has `keyRejected`, add the line
+  "Google Books key was rejected — check Settings."
+- [X] T049 [P] [US6] Write `e2e/google-key.spec.ts` using the catalog harness. Extend
+  `e2e/fixtures/catalog.ts` so googleapis routes serve `gb-isbn-9789871544059.json`
+  for that ISBN. Create that file by hand from the Google volumes schema: title "After
+  Dark", author "Haruki Murakami", publisher "Tusquets", pageCount **null**, since it
+  is unknown. The harness must record request headers. Scenarios:
+  - **(a)** Save a key in Settings; "Test key" gives "Key works".
+  - **(b)** Scan `9789871544059`, which misses in Open Library. The Add screen fills
+    in "After Dark" / "Haruki Murakami". The recorded Google request URL contains
+    `key=`, and its `referer` header equals the site origin plus `/`, with no path or
+    hash.
+  - **(c)** Remove the key, scan again (Add another copy): the Google request has no
+    `key=` and no `referer`.
+  - **(d)** `catalog.fail('googleapis', 403)` with a key gives "Google Books key was
+    rejected — check Settings.", and the book saves as pending.
+  - **(e)** The key string never appears in the page's `document.body.innerText`,
+    except masked.
+- [X] T050 **(main session)** Review, run the full validation, update the quickstart
+  (key setup steps and the US6 results), then commit.
+
 ## Dependencies & Execution Order
 
 - **Setup (T001–T002)** comes first. T002 can run in parallel with T001.

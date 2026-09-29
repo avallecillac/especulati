@@ -71,3 +71,26 @@ with a page count.
 | Cold start / scanner WASM kept off the startup path | ✅ about 130 ms; `zxing_reader` isn't requested at startup; precache is 2.4 MB, 20 entries |
 | **SC-002: live catalog coverage** | ⚠️ **Not yet measured reliably.** `catalog:coverage` from the container gave **13/20** (title+author) and **13/20** (pages). All 10 English ISBNs were found. 7 Spanish ISBNs came back "unavailable": Open Library had no match, and the Google Books fallback got a **429** from the container's shared IP. The Spanish ISBNs were picked without an external check, so some may be wrong editions. **Re-run `pnpm --filter pwa catalog:coverage` on a normal network**, fix any wrong ISBNs in `apps/pwa/scripts/reference-isbns.json`, and record the result here. If Spanish coverage stays below target even with Google working, consider the deferred "user-supplied Google Books API key" option (research R1) |
 | Manual iPhone check | ⏳ Pending: needs a device and an HTTPS host |
+
+## US6: Google Books API key (amendment, 2026-09-29)
+
+**Setting up the key** (Google Cloud Console → APIs & Services):
+
+1. Enable the **Books API**.
+2. Create an **API key**, then under **Edit API key**:
+   - API restrictions: **Books API only**;
+   - Application restrictions: **Websites**, with `https://<your-domain>/*` (plus
+     `http://localhost:5173/*` if you develop locally);
+   - optionally, Books API → Quotas: cap queries per day at about 200.
+3. In Readerlog → **Settings → Google Books API key**, paste it, **Save**, then **Test
+   key**, which should say "Key works". Repeat on each device. The key never syncs.
+
+**Manual check:** scan `9789871544059`. With the key, the Add screen fills in "After
+Dark" / "Haruki Murakami" from Google. Enter the page count by hand, since Google has
+none for this edition.
+
+**Validation (dev container):** `pnpm test` 230/230, e2e 51/51 and **102/102** over 2
+repeats, typecheck and lint clean.
+
+A mutation check removed the `&key=` append in the request helper: 5 key tests failed,
+and all passed again once restored. Tests use only a fake key.

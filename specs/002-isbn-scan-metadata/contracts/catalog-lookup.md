@@ -47,6 +47,28 @@ The only variable data sent is the ISBN or the query text (FR-013).
 | 4 | `https://openlibrary.org/search.json?q={query}&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,isbn&limit=20` | title search |
 | 5 | `https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=20` | title search, only if #4 fails (not merely empty) |
 
+### Google Books key (amendment, research R14)
+
+- `lookupIsbn` and `searchTitle` accept `googleApiKey?: string | null` in their deps.
+  `fetchCover` does **not**: Google cover images on `books.google.com` need no key,
+  so the key is never sent to any host except `www.googleapis.com`.
+- **When set**, requests #3 and #5 append `&key=${encodeURIComponent(key)}` and use
+  `referrerPolicy: 'strict-origin'`. Every other request keeps `no-referrer`.
+- **When null or empty**, the requests are byte-for-byte the same as before.
+- A keyed Google **400 or 403** gives
+  `{ kind: 'unavailable', reason: 'http', status, keyRejected: true }`, so the book is
+  never marked "not found".
+- New export: `testGoogleKey(key, { fetch })` issues request #3 for `9780441172719`
+  and returns one of:
+  - `{ kind: 'ok' }`
+  - `{ kind: 'rejected' }` for a 400 where the body contains `API key not valid`
+  - `{ kind: 'refererBlocked' }` for a 403 with `API_KEY_HTTP_REFERRER_BLOCKED` or
+    "referer" in the body
+  - `{ kind: 'quota' }` for a 429
+  - `{ kind: 'offline' }` for a network error
+  - `{ kind: 'other', status }`
+- The key MUST never appear in a thrown error, a log, or an outcome object.
+
 ## Merge rules (`lookupIsbn`)
 
 1. `title` and `authors` come from #1, or else #3.

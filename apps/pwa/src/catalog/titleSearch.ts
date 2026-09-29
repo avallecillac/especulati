@@ -45,7 +45,7 @@ export async function searchTitle(query: string, deps: LookupDeps): Promise<Sear
   }
 
   // Open Library failed (not merely empty): try Google Books.
-  const gb = await get(`https://www.googleapis.com/books/v1/volumes?q=${enc}&maxResults=${MAX_HITS}`);
+  const gb = await get(`https://www.googleapis.com/books/v1/volumes?q=${enc}&maxResults=${MAX_HITS}`, { googleKey: deps.googleApiKey ?? null });
   if (gb.kind === 'timeout') return { kind: 'timeout' };
   if (gb.kind !== 'ok') return { kind: 'unavailable' };
   const items = (gb.json as { items?: unknown })?.items;

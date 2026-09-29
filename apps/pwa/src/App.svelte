@@ -1,6 +1,7 @@
 <script lang="ts">
   import { router } from './lib/router.svelte.ts';
   import { query, refreshAll } from './lib/dbClient.ts';
+  import { loadSettings } from './lib/settings.svelte.ts';
   import { runDetailsRetry } from './lib/detailsRetry.ts';
   import { applyUpdate, pwa } from './lib/pwa.svelte.ts';
   import { dismissToast, toasts } from './lib/toast.svelte.ts';
@@ -37,7 +38,8 @@
   $effect(() => {
     if (dbReady && !retried) {
       retried = true;
-      void runDetailsRetry();
+      // Load settings first so the retry's Google requests carry the key.
+      void loadSettings().then(() => runDetailsRetry());
     }
   });
 

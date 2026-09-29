@@ -18,13 +18,15 @@ export type PartialDetails = Omit<BookDetails, 'source'>;
 export type LookupOutcome =
   | { kind: 'found'; details: BookDetails }
   | { kind: 'notFound' }
-  | { kind: 'unavailable'; reason: 'offline' | 'network' | 'http'; status?: number }
+  | { kind: 'unavailable'; reason: 'offline' | 'network' | 'http'; status?: number; keyRejected?: true }
   | { kind: 'timeout' };
 
 export interface LookupDeps {
   fetch: Fetch;
   online: () => boolean;
   timeoutMs?: number;
+  /** Optional per-device Google Books key. Sent only to www.googleapis.com. */
+  googleApiKey?: string | null;
 }
 
 export interface SearchHit extends BookDetails {
