@@ -318,9 +318,10 @@ books.
 the offline and conflict cases.
 
 - [ ] T017 [P] [US2] Write `e2e/sync-flow.spec.ts`:
-  - **log and receive**: log a page on A, and B, with no reload and no taps, shows it
-    within 10 s (a `visible` or `write` trigger on A, and a poll on B via
-    `visibilitychange`: bring B to the front);
+  - **log and receive**: log a page on A (A pushes on the `write` trigger). Then B shows
+    it within 10 s, with no reload, after each of:
+    - bringing B to the front (`visibilitychange`);
+    - tapping B's top-bar **Sync** button (accessible name "Sync now");
   - **offline**: A goes offline (`context.setOffline(true)`), logs 3 entries with
     **Yesterday** on one, then goes online. B receives them with the original dates;
   - **concurrent edits**: both offline, a title edit on A and a page-count edit on B,
@@ -328,10 +329,17 @@ the offline and conflict cases.
   - **remove**: removing a book on A removes it on B;
   - **relay down**: with the relay routed to `503`, add a book and log a page. No error
     dialog is shown, only the sync status (SC-006).
-- [ ] T018 [US2] Implement the triggers and refresh:
+- [ ] T018 [US2] Implement the triggers, the sync button and refresh:
   - `apps/pwa/src/lib/sync.svelte.ts` sends `start` after DB-ready, `visible` on
     `visibilitychange`, `online`, and `write` 3 s after the last successful `dispatch`
-    (hook into `dbClient.dispatch`, debounced);
+    (hook into `dbClient.dispatch`, debounced). There is no background polling (spec
+    Clarifications);
+  - the **sync button** in the top bar of `apps/pwa/src/App.svelte` is shown only while
+    sync is on:
+    - its accessible name is "Sync now";
+    - it sends `manual`;
+    - it shows a spinning state while a run is in progress, and is disabled then;
+    - it doesn't show errors (US3 owns the status);
   - after a run with `changed: true`, the worker broadcasts on `CHANNEL`, and the
     calling tab `notify()`s (FR-015);
   - after a changed run, the main thread queries `missingCovers` (new, in

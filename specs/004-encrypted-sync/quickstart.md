@@ -54,7 +54,8 @@ pnpm e2e    # two browser contexts + routed in-memory relay (research R10)
 2. On the Mac, go to Settings → Sync → **Join**, and paste the code. Books from both
    devices appear, and the duplicate prompt lists books you added on both.
 3. Merge one pair, and check its entries on both devices.
-4. Log a page on the phone. It shows on the Mac within about 10 s.
+4. Log a page on the phone, then tap the sync button on the Mac (or bring it to the
+   front). The page shows within about 10 s.
 5. Put the phone in airplane mode, log two entries, then turn airplane mode off and
    reopen the app. They reach the Mac.
 

@@ -65,7 +65,9 @@ with Functions and D1.
 
 **Performance Goals**:
 
-- A change is visible on another open device within 10 s (SC-002).
+- A change is visible on another device within 10 s of it being opened, brought to the
+  front, or its sync button being tapped (SC-002). There's no background polling in the
+  MVP.
 - A first sync of 10k ops takes under 60 s (SC-004).
 - Sync never blocks the UI: it runs in the worker, one page per transaction.
 
@@ -91,7 +93,7 @@ with Functions and D1.
 | I. Local-first | Every read and write stays local. Sync runs in the background and is optional; offline is a normal state (FR-014, SC-006). No flow waits on the relay. | PASS |
 | II. The user owns the data | E2E encryption with a key only the devices hold. The relay stores ciphertext plus sizes and times only, and holds no op ids, row ids or table names (R4, SC-005). No analytics. `meta` (keys, settings) and `covers` never sync (FR-004). **Note:** the relay learns batch sizes and timing, which is metadata inherent to any relay. It is accepted and documented. | PASS |
 | III. Events over state | Remote ops apply as field LWW, so events are only inserted or tombstoned. `MergeBooks` tombstones and re-inserts events rather than moving them (R8). Status is still derived. | PASS |
-| IV. Functional core, imperative shell | `mergeOp`, `hlcReceive`, `findDuplicates` and `MergeBooks` are pure, in core. Crypto, `fetch` and ids come from the shell. **Justified:** applying *remote* ops doesn't go through `decide()`. They are already-decided changes from another device, merged by the pure `mergeOp` inside one transaction, exactly as `docs/architecture.md` §7 and the constitution's sync rule (VI) prescribe. Local writes, including merges and dismissals, still go through `decide()`. | PASS (see Complexity Tracking) |
+| IV. Functional core, imperative shell | `mergeOp`, `hlcReceive`, `findDuplicates` and `MergeBooks` are pure, in core. Crypto, `fetch` and ids come from the shell. Remote ops use the **remote-change exception** (constitution v1.1.0): they skip `decide()`, pass `parseRemoteOp`'s allow-list, and are applied all-or-nothing, updating `field_clock` and `change_log`. Local writes, including merges and dismissals, still go through `decide()`. | PASS |
 | V. Near-zero friction | No capture flow changes. Pairing is one-time: at most 5 taps on the new device (SC-001). Sync is automatic. | PASS |
 | VI. Simplicity | Per-field LWW plus an event union, and no CRDT library. The only new dependency is a QR generator (R3). `packages/sync` was already planned. The relay is one handler of about 150 lines, with no Durable Objects. | PASS |
 | VII. Verified correctness | Convergence tests with 2 to 5 peers, any order, duplicates, 1,000 runs (R11). Property tests for merge. A migration fixture test. Relay tests on the real schema. E2e with two devices. | PASS |
@@ -183,6 +185,5 @@ e2e/
 
 | Deviation | Why needed | Simpler alternative rejected because |
 |---|---|---|
-| Remote ops are applied without `decide()` | They are decisions already made on another device. Re-deciding them against a different local snapshot could reject them and break convergence (SC-003). | Routing remote ops through `decide()` would make merge results depend on local state and arrival order. The constitution's own sync model (VI) is field LWW. |
 | New runtime dependency (`qrcode-generator`) | QR encoding: Reed-Solomon codes plus mask scoring. | Hand-writing it is about 500 lines of error-prone code. Text-only pairing would make the phone ↔ Mac pairing worse. |
 | Migration 3 | A synced dismissals table, the `merged_into` straggler fix, and the local inbox. | Storing dismissals in `meta` wouldn't sync (FR-026 needs "on any device"). |

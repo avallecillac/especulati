@@ -10,6 +10,11 @@
 
 ### Session 2026-09-29
 
+- Q: Should an open device pull changes in the background (polling) to meet the 10 s
+  target? → A: Not for the MVP. A sync button in the top bar lets the user pull on
+  demand, alongside the automatic triggers (open, brought to front, back online, after
+  local changes). Background polling may come later.
+
 - Q: When a device joins and both devices already have books, how are duplicates
   handled? → A: Combine everything, then offer to merge likely duplicates (same ISBN,
   or same title and author). The user chooses **Merge** or **Keep both** for each. On
@@ -91,8 +96,9 @@ and conflicting ones, then bring both online and compare.
 
 **Acceptance Scenarios**:
 
-1. **Given** paired devices, **When** I log a page on A, **Then** B shows it within
-   10 s if B is open and online, or the next time B is opened or brought to the front.
+1. **Given** paired devices, **When** I log a page on A, **Then** B shows it the next
+   time B is opened or brought to the front, or within 10 s of my tapping the sync
+   button on B. There is no background polling in this version.
 2. **Given** A is offline, **When** I log 3 entries on A and then A comes back online,
    **Then** they reach B with no action from me, and the entries keep their original
    dates.
@@ -299,7 +305,9 @@ them, then merge. One book remains, with every entry from both.
 - **FR-017**: Settings → Sync MUST show: whether sync is on; the time of the last
   successful sync; the number of local changes not yet sent; and the latest problem,
   in plain words, with what to do about it.
-- **FR-018**: The user MUST be able to trigger a sync immediately.
+- **FR-018**: The user MUST be able to trigger a sync immediately with one tap on a sync
+  button that is always visible in the app's top bar while sync is on. The button shows
+  when a sync is running. Settings → Sync also offers **Sync now**.
 
 **Leaving and resetting (US4)**
 
@@ -345,8 +353,9 @@ them, then merge. One book remains, with every entry from both.
 
 - **SC-001**: Pairing a second device takes under 1 minute and at most 5 taps or clicks
   on the new device, starting from Settings.
-- **SC-002**: With both devices open and online, a change on one appears on the other
-  within 10 s in 95% of attempts.
+- **SC-002**: With both devices online, a change on one appears on the other within 10 s
+  of the other device being opened, brought to the front, or its sync button being
+  tapped, in 95% of attempts.
 - **SC-003**: In automated tests, any number of devices (2 to 5) that receive the same
   changes in any order, with duplicates, end with identical data, every time
   (1,000 randomized runs).

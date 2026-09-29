@@ -21,7 +21,8 @@ These extend `apps/pwa/src/lib/protocol.ts`. The sync engine lives in the DB wor
 - `visible`: on `visibilitychange`;
 - `online`;
 - `write`: 3 s after the last successful `dispatch`, debounced;
-- `manual`: **Sync now**.
+- `manual`: the top-bar sync button, or **Sync now** in Settings → Sync.
+- No background polling in the MVP.
 
 **QR generation and QR scanning run on the main thread**, lazily imported. The sync code
 text crosses the worker boundary only for Show code, Turn on, Join and Reset.

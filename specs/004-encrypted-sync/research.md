@@ -139,7 +139,11 @@
   - `visibilitychange` → visible;
   - `online`;
   - 3 s after the last successful `dispatch` (debounced);
-  - **Sync now**.
+  - **the sync button** in the top bar (and **Sync now** in Settings → Sync).
+  - There is **no background polling** in the MVP (the spec's Clarifications). An open
+    device that sits idle receives changes when it's brought to the front or when the
+    user taps the sync button. Polling every 5 s while visible fits the free tier
+    (about 36 requests a minute for 3 devices) and can be added later.
   - After a run that received changes, the worker broadcasts on the existing channel,
     so the UI refreshes (FR-015).
 - **Failures**:
