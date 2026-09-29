@@ -1,14 +1,5 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { hlcNext, type Change, type DeviceId, type Hlc } from '@readerlog/core';
-
-/** Columns a Change may set. Guards against building SQL from untrusted field names. */
-const WRITABLE: Readonly<Record<string, ReadonlySet<string>>> = {
-  items: new Set([
-    'type', 'title', 'author', 'isbn', 'total_pages', 'genre', 'cover_url', 'cover_blob_key',
-    'url', 'domain', 'word_count', 'read_on', 'metadata_status', 'rating', 'created_at', 'deleted_at',
-  ]),
-  reading_events: new Set(['item_id', 'event_type', 'page', 'occurred_at', 'local_date', 'deleted_at']),
-};
+import { hlcNext, WRITABLE_FIELDS, type Change, type DeviceId, type Hlc } from '@readerlog/core';
 
 /**
  * Run cleanup after a failed write without masking the original error. On SQLITE_FULL/IOERR/
@@ -32,8 +23,9 @@ export function writeMeta(db: Database, key: string, value: string): void {
   db.exec('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', { bind: [key, value] });
 }
 
-function upsertRow(db: Database, change: Change): void {
-  const cols = WRITABLE[change.tbl];
+/** Insert the row, or update the given fields of an existing one. Field names are allow-listed. */
+export function upsertRow(db: Database, change: Change): void {
+  const cols = Object.hasOwn(WRITABLE_FIELDS, change.tbl) ? WRITABLE_FIELDS[change.tbl] : undefined;
   if (!cols) throw new Error(`unknown table: ${change.tbl}`);
   const entries = Object.entries(change.fields);
   for (const [col] of entries) if (!cols.has(col)) throw new Error(`unknown column ${change.tbl}.${col}`);

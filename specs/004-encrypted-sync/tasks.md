@@ -68,7 +68,7 @@ run loop, and convergence.
 
 ### Tests first
 
-- [ ] T002 [P] Write `packages/core/test/merge.test.ts` and
+- [X] T002 [P] Write `packages/core/test/merge.test.ts` and
   `packages/core/test/merge.property.test.ts` (contracts/sync-client.md "Merge"):
   - **`hlcReceive(local, remote, wallMs, deviceId)`**:
     - the result is greater than both;
@@ -88,7 +88,7 @@ run loop, and convergence.
   - **`mergeOp`**: a field wins if and only if its clock is null or `op.hlc > clock`.
   - **Properties** (seeded PRNG in the test): invariants 1–3 of the contract, with
     order independence over random permutations of 2 to 30 ops on 1 to 3 rows.
-- [ ] T003 [P] Write `packages/db/test/migration3.test.ts`:
+- [X] T003 [P] Write `packages/db/test/migration3.test.ts`:
   - take a v2 fixture DB (built by running migrations 1–2 and inserting books, events
     and covers), then run `migrate()`;
   - `user_version` is 3;
@@ -96,7 +96,7 @@ run loop, and convergence.
   - `duplicate_dismissals`, `sync_inbox` and `items.merged_into` exist, matching
     data-model.md verbatim;
   - `SCHEMA_VERSION` is 3.
-- [ ] T004 [P] Write `packages/db/test/sync.apply.test.ts` for `applyRemoteOps`,
+- [X] T004 [P] Write `packages/db/test/sync.apply.test.ts` for `applyRemoteOps`,
   `unpushedOps`, `markPushed` and `resetPushState` (contracts/sync-client.md "Apply"):
   - **a remote item insert** creates the row, sets `field_clock` for every field, and
     adds a `change_log` row with the op's own `op_id`, `hlc` and `device_id`, and
@@ -153,7 +153,7 @@ run loop, and convergence.
 
 ### Implementation
 
-- [ ] T007 Implement the merge core in `packages/core/src/hlc.ts` (`hlcReceive`) and a
+- [X] T007 Implement the merge core in `packages/core/src/hlc.ts` (`hlcReceive`) and a
   new `packages/core/src/merge.ts`:
   - `RemoteOp`, `parseRemoteOp`, `mergeOp`;
   - `WRITABLE_FIELDS`: moved from db and extended with `duplicate_dismissals: id-less
@@ -162,7 +162,7 @@ run loop, and convergence.
 
   Update `packages/db/src/apply.ts` to import `WRITABLE_FIELDS`. T002 must pass, and
   all existing tests must stay green.
-- [ ] T008 Implement migration 3 in `packages/db/src/migrations.ts`, verbatim from
+- [X] T008 Implement migration 3 in `packages/db/src/migrations.ts`, verbatim from
   data-model.md, then `packages/db/src/sync.ts`:
   - `applyRemoteOps`, following the per-op steps in contracts/sync-client.md, with the
     park requirements quoted there:

@@ -28,8 +28,8 @@ describe('migration 2', () => {
   it('upgrades a v1 database with data, changing nothing but adding the new objects', () => {
     const raw = v1Fixture();
     const before = dumpLogical(raw, TABLES);
-    migrate(raw);
-    expect(SCHEMA_VERSION).toBe(2);
+    migrate(raw, { to: 2 });
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(2);
     expect(raw.selectValue('PRAGMA user_version')).toBe(2);
     expect(dumpLogical(raw, TABLES)).toEqual(before);
     const names = raw.selectArrays(`SELECT name FROM sqlite_schema WHERE name IN ('idx_items_isbn','covers')`).map((r) => r[0]).sort();
@@ -38,9 +38,9 @@ describe('migration 2', () => {
 
   it('is a no-op when run again', () => {
     const raw = v1Fixture();
-    migrate(raw);
+    migrate(raw, { to: 2 });
     const before = dumpLogical(raw, TABLES);
-    migrate(raw);
+    migrate(raw, { to: 2 });
     expect(raw.selectValue('PRAGMA user_version')).toBe(2);
     expect(dumpLogical(raw, TABLES)).toEqual(before);
   });

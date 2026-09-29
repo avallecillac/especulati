@@ -1,15 +1,18 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type Command, type DeviceId, type Instant, type LocalDate, type Rejection, type Result, type StatsView } from '@readerlog/core';
+import { decide, err, ok, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Rejection, type Result, type StatsView } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { statsView } from './stats.ts';
+import { applyRemoteOps, markPushed, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
 import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot } from './snapshot.ts';
+export { applyRemoteOps, markPushed, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
+export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
 export { loadStatsBooks, statsView } from './stats.ts';
 
 /** Everything impure the write path needs, injected by the shell (or a test). */
@@ -91,6 +94,33 @@ export class ReaderlogDb {
 
   coverStats(): { count: number; bytes: number } {
     return coverStats(this.raw);
+  }
+
+  /** Merge ops pulled from the relay (constitution IV, remote-changes exception). */
+  applyRemoteOps(ops: readonly RemoteOp[], wallMs: () => number): ApplyResult {
+    const deviceId = this.#deviceId;
+    if (!deviceId) throw new Error('ensureDeviceId() must run before applyRemoteOps()');
+    return applyRemoteOps(this.raw, ops, deviceId, wallMs);
+  }
+
+  unpushedOps(limit: number): { maxSeq: number; ops: OpWire[] } {
+    return unpushedOps(this.raw, limit);
+  }
+
+  markPushed(maxSeq: number): void {
+    markPushed(this.raw, maxSeq);
+  }
+
+  resetPushState(): void {
+    resetPushState(this.raw);
+  }
+
+  syncMeta(): SyncMeta {
+    return syncMeta(this.raw);
+  }
+
+  setSyncMeta(patch: Partial<SyncMeta>): void {
+    setSyncMeta(this.raw, patch);
   }
 
   /** Read → decide → apply in one transaction; nothing is ever partially applied (FR-010). */

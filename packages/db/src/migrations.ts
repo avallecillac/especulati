@@ -73,6 +73,29 @@ const MIGRATIONS: readonly string[] = [
     fetched_at TEXT NOT NULL
   ) WITHOUT ROWID;
   `,
+  /* 3 */ `
+  -- Synced: "Keep both" decisions (US5). A row per dismissed pair; id derived from the pair.
+  CREATE TABLE duplicate_dismissals (
+    id         TEXT PRIMARY KEY,
+    item_a     TEXT NOT NULL,          -- min(item ids)
+    item_b     TEXT NOT NULL,          -- max(item ids)
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
+  );
+
+  -- Synced: set on a book merged away by MergeBooks (research R8, stragglers).
+  ALTER TABLE items ADD COLUMN merged_into TEXT;
+
+  -- Local only: remote ops that can't be applied yet (research R5). Never in change_log.
+  CREATE TABLE sync_inbox (
+    op_id       TEXT PRIMARY KEY,
+    hlc         TEXT NOT NULL,
+    device_id   TEXT NOT NULL,
+    tbl         TEXT NOT NULL,
+    row_id      TEXT NOT NULL,
+    fields_json TEXT NOT NULL
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

@@ -67,7 +67,7 @@ export type Rejection =
   /** Malformed ids, dates or over-long text: a programming or input error the UI can't normally produce. */
   | { readonly kind: 'InvalidInput'; readonly field: string; readonly reason: string };
 
-export type Table = 'items' | 'reading_events';
+export type Table = 'items' | 'reading_events' | 'duplicate_dismissals';
 export type FieldValue = string | number | null;
 
 /** One row upsert: only the fields being set. Column names are DB columns. */

@@ -30,3 +30,24 @@ export function hlcNext(prev: Hlc | null, wallMs: number, deviceId: DeviceId): H
 }
 
 export const compareHlc = (a: Hlc, b: Hlc): -1 | 0 | 1 => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * Standard HLC receive rule for a remote stamp. The result carries OUR device id and is greater
+ * than both inputs, so the next local write orders after everything seen (spec: clock skew).
+ */
+export function hlcReceive(local: Hlc | null, remote: Hlc, wallMs: number, deviceId: DeviceId): Hlc {
+  const r = parseHlc(remote);
+  if (!r.ok) throw new Error(`corrupt remote hlc: ${remote}`);
+  let l: { ms: number; counter: number } | null = null;
+  if (local !== null) {
+    const p = parseHlc(local);
+    if (!p.ok) throw new Error(`corrupt hlc state: ${local}`);
+    l = p.value;
+  }
+  const ms = Math.max(l?.ms ?? 0, r.value.ms, wallMs);
+  let counter = -1;
+  if (l && l.ms === ms) counter = Math.max(counter, l.counter);
+  if (r.value.ms === ms) counter = Math.max(counter, r.value.counter);
+  if (counter < 0) return format(ms, 0, deviceId);
+  return counter < MAX_COUNTER ? format(ms, counter + 1, deviceId) : format(ms + 1, 0, deviceId);
+}
