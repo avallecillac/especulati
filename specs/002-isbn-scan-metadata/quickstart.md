@@ -85,9 +85,14 @@ with a page count.
 3. In Readerlog → **Settings → Google Books API key**, paste it, **Save**, then **Test
    key**, which should say "Key works". Repeat on each device. The key never syncs.
 
-**Manual check:** scan `9789871544059`. With the key, the Add screen fills in "After
-Dark" / "Haruki Murakami" from Google. Enter the page count by hand, since Google has
-none for this edition.
+**Manual check:** with the key saved, scan any book Open Library lacks but Google has.
+The Add screen fills in from Google, and **Test key** says "Key works".
+
+`9789871544059` is **not** a working example. The user checked on 2026-09-29, and it is
+in neither Open Library nor Google Books. The "After Dark" answer in
+`e2e/google-key.spec.ts` is a synthetic fixture, never a live response. For books in
+neither catalog, the app shows "Not found in book catalogs", keeps the ISBN, and the
+title is typed by hand.
 
 **Validation (dev container):** `pnpm test` 230/230, e2e 51/51 and **102/102** over 2
 repeats, typecheck and lint clean.
