@@ -6,6 +6,13 @@
 
 **Status**: Draft
 
+## Clarifications
+
+### Session 2026-09-29
+
+- Q: How many pages does the first logged page of a read-through count for? → A: The
+  full page number if the read-through began with a `started` event, otherwise 0.
+
 **Input**: User description: "003 reading stats: on-device statistics derived from the
 reading-event log. Reading days per year and a calendar heatmap, current and longest
 streaks, books finished per month/year, pages read per period, reading pace (pages/day)
@@ -88,7 +95,8 @@ and check the month's books-finished count, the pages total, and pages per readi
    **Then** March shows **2** books finished and April shows **1**.
 2. **Given** I log pages 40, then 90, then 150 of one book on three days, **When** I
    view the month, **Then** the second and third days are credited 50 and 60 pages.
-   The first day's credit depends on FR-006.
+   If I started the book with **Start reading now**, the first day is credited 40
+   pages; if my first entry was page 40 with no start, it is credited 0 (FR-006).
 3. **Given** I log page 120 and later correct it to page 100 (a lower page), **When** I
    view pages read, **Then** the lower entry adds 0 pages and nothing is subtracted.
 4. **Given** I re-read a finished book and log page 30 of the new read-through,
@@ -196,8 +204,9 @@ then check days-to-finish, the average, and the abandon rate per genre.
   events in event order (by `local_date`, then recorded time). Each entry adds its page
   minus the highest page logged earlier in the same read-through, or 0 if that is
   negative. The first page-bearing entry of a read-through adds:
-  [NEEDS CLARIFICATION: its full page number (counting from page 0), or 0 (it only
-  sets a starting point)?]
+  its full page number (counting from page 0) when the read-through began with a
+  `started` event, or 0 when it did not (the book was picked up part-way, so the entry
+  only sets a starting point).
   Pages are credited to the entry's `local_date`.
 
 **Reading days, heatmap and streaks (US1)**
