@@ -1,5 +1,6 @@
-import type { Command, Rejection, StatsView } from '@readerlog/core';
+import type { Command, Rejection, Result, StatsView } from '@readerlog/core';
 import type { BookCard, BookView, HomeView, LibraryView } from '@readerlog/db';
+import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
 /** UI ↔ DB worker messages (contracts/worker-api.md). */
 export type Query =
@@ -36,7 +37,32 @@ export type Request =
   | { id: number; kind: 'dispatch'; cmd: Command }
   | { id: number; kind: 'query'; q: Query }
   | { id: number; kind: 'setMeta'; key: string; value: string }
-  | { id: number; kind: 'storeCover'; itemId: string; image: Blob };
+  | { id: number; kind: 'storeCover'; itemId: string; image: Blob }
+  | { id: number; kind: 'sync'; op: SyncOp };
+
+/** Sync requests (contracts/worker-api-004.md). The code text crosses only for turnOn, join and showCode. */
+export type SyncOp =
+  | { action: 'run'; reason: SyncReason }
+  | { action: 'status' }
+  | { action: 'turnOn' }
+  | { action: 'join'; code: string }
+  | { action: 'showCode' }
+  | { action: 'leave' };
+
+export interface SyncCode {
+  code: string;
+  /** The QR payload. The main thread renders it. */
+  qr: string;
+}
+
+export interface SyncResult {
+  run: SyncRunResult;
+  status: SyncStatusView;
+  turnOn: Result<SyncCode, SyncError>;
+  join: Result<{ duplicates: number }, SyncError>;
+  showCode: SyncCode | null;
+  leave: null;
+}
 
 export type ClientError = Rejection | { kind: 'Storage'; message: string } | { kind: 'Busy' };
 

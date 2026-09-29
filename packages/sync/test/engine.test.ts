@@ -328,3 +328,91 @@ describe('engine: status', () => {
     expect(a.engine.status().lastOkAt).toMatch(/Z$/);
   });
 });
+
+describe('engine: turnOn / join errors (US1)', () => {
+  const unknownCode = async () => {
+    const { formatSyncCode } = await import('../src/code.ts');
+    return formatSyncCode(Uint8Array.from({ length: 32 }, (_, i) => i + 7));
+  };
+
+  it('format: garbage is rejected locally, with no request and no local change', async () => {
+    const relay = fakeRelay();
+    const b = makePeer(2, relay);
+    const r = await b.engine.join('not a code');
+    expect(r).toMatchObject({ ok: false, error: { kind: 'format' } });
+    expect(relay.log).toEqual([]);
+    expect(b.engine.status().on).toBe(false);
+  });
+
+  it('checksum: one changed character is rejected locally, with no request and no local change', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    const code = a.engine.showCode()!.code;
+    const typo = (code[0] === 'A' ? 'B' : 'A') + code.slice(1);
+    const b = makePeer(2, relay);
+    relay.log.length = 0;
+    expect(await b.engine.join(typo)).toMatchObject({ ok: false, error: { kind: 'checksum' } });
+    expect(relay.log).toEqual([]);
+    expect(b.engine.status().on).toBe(false);
+  });
+
+  it('notFound: a valid code for an unknown space (404) changes nothing locally', async () => {
+    const relay = fakeRelay();
+    const b = makePeer(2, relay);
+    addBook(b, 'Mine');
+    const before = b.db.pendingCount();
+    expect(await b.engine.join(await unknownCode())).toMatchObject({ ok: false, error: { kind: 'notFound' } });
+    expect(b.engine.status().on).toBe(false);
+    expect(b.engine.showCode()).toBeNull();
+    expect(b.db.pendingCount()).toBe(before);
+    expect(titles(b)).toEqual(['Mine']);
+  });
+
+  it('offline: join and turnOn report offline and change nothing', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    const code = a.engine.showCode()!.code;
+    const b = makePeer(2, relay);
+    b.online = false;
+    expect(await b.engine.join(code)).toMatchObject({ ok: false, error: { kind: 'offline' } });
+    expect(await b.engine.turnOn()).toMatchObject({ ok: false, error: { kind: 'offline' } });
+    expect(b.engine.status().on).toBe(false);
+    b.online = true;
+    relay.before = () => {
+      throw new TypeError('Failed to fetch');
+    };
+    expect(await b.engine.join(code)).toMatchObject({ ok: false, error: { kind: 'offline' } });
+    expect(b.engine.status().on).toBe(false);
+  });
+
+  it('relay: a 5xx on join or turnOn reports relay with its status and changes nothing', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    const code = a.engine.showCode()!.code;
+    const b = makePeer(2, relay);
+    relay.before = () => new Response('{"error":"x"}', { status: 503 });
+    expect(await b.engine.join(code)).toMatchObject({ ok: false, error: { kind: 'relay', status: 503 } });
+    expect(await b.engine.turnOn()).toMatchObject({ ok: false, error: { kind: 'relay', status: 503 } });
+    expect(b.engine.status().on).toBe(false);
+  });
+
+  it('no error text carries the code', async () => {
+    const relay = fakeRelay();
+    const b = makePeer(2, relay);
+    const code = await unknownCode();
+    const r = await b.engine.join(code);
+    expect(JSON.stringify(r)).not.toContain(code.replace(/-/g, '').slice(0, 8));
+  });
+
+  it('join returns duplicates: 0 and pulls the host books; showCode matches turnOn', async () => {
+    const relay = fakeRelay();
+    const a = makePeer(1, relay);
+    addBook(a, 'Dune');
+    const on = await a.engine.turnOn();
+    expect(on.ok && on.value.code).toBe(a.engine.showCode()!.code);
+    const b = makePeer(2, relay);
+    const r = await b.engine.join(a.engine.showCode()!.code);
+    expect(r).toMatchObject({ ok: true, value: { duplicates: 0 } });
+    expect(titles(b)).toEqual(['Dune']);
+  });
+});

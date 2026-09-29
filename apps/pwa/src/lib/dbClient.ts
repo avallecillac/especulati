@@ -1,6 +1,6 @@
 import type { Command, Result } from '@readerlog/core';
 import type { DispatchOutcome } from '@readerlog/db';
-import { CHANNEL, type ClientError, type Control, type Query, type QueryResult, type Request, type Response } from './protocol.ts';
+import { CHANNEL, type ClientError, type Control, type Query, type QueryResult, type Request, type Response, type SyncOp, type SyncResult } from './protocol.ts';
 
 type Pending = (res: Response) => void;
 
@@ -75,6 +75,20 @@ export async function storeCover(itemId: string, image: Blob): Promise<{ stored:
 
 export async function setMeta(key: string, value: string): Promise<void> {
   await send({ kind: 'setMeta', key, value });
+}
+
+/** Run a sync action in the DB worker. Engine errors (typo, not found, offline) are inside the value. */
+export async function sync<A extends SyncOp['action']>(
+  op: Extract<SyncOp, { action: A }>,
+): Promise<Result<SyncResult[A], ClientError>> {
+  const res = await send({ kind: 'sync', op });
+  if (!res.ok) return { ok: false, error: res.error };
+  const value = res.result as SyncResult[A];
+  // Applied remote ops (a run that pulled, or a join) change what every screen shows.
+  const changed =
+    op.action === 'join' || op.action === 'turnOn' || (op.action === 'run' && (value as SyncResult['run']).changed);
+  if (changed) notify();
+  return { ok: true, value };
 }
 
 /** Ask every screen to reload, e.g. after regaining the DB from another window. */

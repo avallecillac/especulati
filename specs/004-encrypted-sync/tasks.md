@@ -273,12 +273,12 @@ paste or scan, and show the code again.
 **Independent Test**: turn on sync in context A (with books), join in context B, and B
 shows A's books.
 
-- [ ] T013 [P] [US1] Write `e2e/fixtures/relay.ts`:
+- [X] T013 [P] [US1] Write `e2e/fixtures/relay.ts`:
   - a Playwright fixture that routes `**/api/v1/**` for any page to the real `handle()`
     with one in-memory store per test, shared across contexts;
   - a `twoDevices` fixture that creates two contexts with separate storage;
   - extend the existing unrouted-host guard so it also fails on any other `/api` call.
-- [ ] T014 [P] [US1] Write `e2e/sync-pair.spec.ts`:
+- [X] T014 [P] [US1] Write `e2e/sync-pair.spec.ts`:
   - **Turn on**: A adds 2 books, then Settings → Sync → **Turn on sync**.
     - A QR image (`role="img"`, name "Sync code QR") and a text code matching
       `/^([0-9A-Z]{4}-){13}[0-9A-Z]{4}$/` are shown, with the "save this code" advice.
@@ -291,7 +291,7 @@ shows A's books.
   - **Show code again**: on A, **Show code** displays the same code.
   - **Scan**: covered with the fake camera (from 002's harness), showing a canvas that
     renders the QR payload. B joins by **Scan code**.
-- [ ] T015 [US1] Implement the engine's `turnOn`, `join` and `showCode` in
+- [X] T015 [US1] Implement the engine's `turnOn`, `join` and `showCode` in
   `packages/sync/src/engine.ts` (research R7):
   - `join` validates the code locally, then calls `GET /spaces/:id`. A `404` gives
     `notFound`, with no local change.
@@ -299,7 +299,7 @@ shows A's books.
   - `join` returns `{ duplicates }` (0 until US5).
 
   Add engine tests for the error kinds.
-- [ ] T016 [US1] Wire up the worker and UI:
+- [X] T016 [US1] Wire up the worker and UI:
   - `apps/pwa/src/worker/db.worker.ts` creates the engine with the real `fetch`,
     `crypto.getRandomValues` and `navigator.onLine`, and handles the `sync` messages in
     contracts/worker-api-004.md;

@@ -1,5 +1,5 @@
 import { err, ok, type Result } from '@readerlog/core';
-import type { ScanIn, ScanOut } from './protocol.ts';
+import type { ScanFormat, ScanIn, ScanOut } from './protocol.ts';
 
 const FRAME_INTERVAL_MS = 166; // about 6 fps
 
@@ -40,9 +40,14 @@ export function stopCamera(stream: MediaStream, video?: HTMLVideoElement): void 
 
 /**
  * Send center-crop frames to the worker, one in flight at a time, about 6 per second.
- * Calls `onIsbn` once with the first ISBN and stops. Returns a stop function.
+ * Calls `onIsbn` once with the first ISBN (or, for QRCode, the decoded text) and stops. Returns a stop function.
  */
-export function scanFrames(video: HTMLVideoElement, worker: Worker, onIsbn: (isbn: string) => void): () => void {
+export function scanFrames(
+  video: HTMLVideoElement,
+  worker: Worker,
+  onIsbn: (isbn: string) => void,
+  formats: ScanFormat[] = ['EAN13'],
+): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -61,9 +66,9 @@ export function scanFrames(video: HTMLVideoElement, worker: Worker, onIsbn: (isb
 
   const onMessage = (ev: MessageEvent<ScanOut>) => {
     const m = ev.data;
-    if (m.kind === 'isbn') {
+    if (m.kind === 'isbn' || m.kind === 'text') {
       stop();
-      onIsbn(m.isbn);
+      onIsbn(m.kind === 'isbn' ? m.isbn : m.text);
     } else if (m.kind === 'none' || m.kind === 'error') {
       schedule();
     }
@@ -87,7 +92,7 @@ export function scanFrames(video: HTMLVideoElement, worker: Worker, onIsbn: (isb
         bitmap.close();
         return;
       }
-      const msg: ScanIn = { kind: 'frame', bitmap };
+      const msg: ScanIn = { kind: 'frame', bitmap, formats };
       worker.postMessage(msg, [bitmap]);
     } catch {
       schedule();

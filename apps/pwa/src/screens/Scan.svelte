@@ -6,6 +6,9 @@
   import { navigate } from '../lib/router.svelte.ts';
   import DuplicatePrompt from './DuplicatePrompt.svelte';
 
+  /** `qr`: read a sync-code QR and hand its text to `onscanned` (the Sync screen); no ISBN flow. */
+  let { mode = 'isbn', onscanned, oncancel: oncancelScan }: { mode?: 'isbn' | 'qr'; onscanned?: (text: string) => void; oncancel?: () => void } = $props();
+
   const HINT_AFTER_MS = 10_000;
 
   let video = $state<HTMLVideoElement>();
@@ -49,7 +52,7 @@
     stream = r.value;
     problem = null;
     worker ??= createScannerWorker();
-    stopScan = scanFrames(video, worker, (isbn) => void onIsbn(isbn));
+    stopScan = scanFrames(video, worker, (text) => void onIsbn(text), mode === 'qr' ? ['QRCode'] : ['EAN13']);
     hintTimer = setTimeout(() => (hint = true), HINT_AFTER_MS);
   }
 
@@ -58,6 +61,10 @@
     flash = true;
     setTimeout(() => (flash = false), 250);
     stop();
+    if (mode === 'qr') {
+      onscanned?.(isbn);
+      return;
+    }
     const r = await startIsbnFlow(isbn);
     if (r.kind === 'duplicate' && !destroyed) duplicate = { isbn, existing: r.existing };
   }
@@ -82,18 +89,33 @@
 
 <svelte:document onvisibilitychange={onHidden} />
 
-<h1>Scan barcode</h1>
+{#if mode === 'qr'}
+  <h2>Scan sync code</h2>
+{:else}
+  <h1>Scan barcode</h1>
+{/if}
 
 {#if problem}
   <p role="alert">{problem === 'denied' ? 'Camera permission was denied.' : 'No camera is available.'}</p>
-  <div class="actions"><button class="primary" onclick={enterIsbn}>Enter ISBN</button></div>
+  <div class="actions">
+    {#if mode === 'qr'}
+      <button class="primary" onclick={() => oncancelScan?.()}>Type the code instead</button>
+    {:else}
+      <button class="primary" onclick={enterIsbn}>Enter ISBN</button>
+    {/if}
+  </div>
 {:else}
   <div class="scan-view" class:flash>
     <video bind:this={video} playsinline muted></video>
     <div class="scan-guide" aria-hidden="true"></div>
   </div>
-  <p class="muted">Point the camera at the barcode on the back of the book.</p>
-  {#if hint}
+  {#if mode === 'qr'}
+    <p class="muted">Point the camera at the QR code on your other device.</p>
+    <div class="actions"><button onclick={() => oncancelScan?.()}>Cancel</button></div>
+  {:else}
+    <p class="muted">Point the camera at the barcode on the back of the book.</p>
+  {/if}
+  {#if hint && mode !== 'qr'}
     <p role="status">Having trouble? <button class="link" onclick={enterIsbn}>Enter ISBN</button></p>
   {/if}
 {/if}

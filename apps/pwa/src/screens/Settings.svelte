@@ -78,6 +78,12 @@
 {/if}
 
 <section class="card">
+  <h2>Sync</h2>
+  <p class="muted">Keep your reading log on more than one device, end-to-end encrypted.</p>
+  <a class="button" href="#/settings/sync">Sync</a>
+</section>
+
+<section class="card">
   <h2>Google Books API key (optional)</h2>
   <p class="muted">Restrict the key to the Books API and to this website's address.</p>
   {#if settings.googleBooksKey}

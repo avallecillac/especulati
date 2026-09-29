@@ -130,6 +130,8 @@ function createCatalog(): { api: Catalog; handle: (route: Route) => Promise<void
 export interface FakeCamera {
   /** Show this barcode value to the camera (before or after the page loaded). */
   show(value: string): Promise<void>;
+  /** Show a QR code with this text to the camera. */
+  showQr(text: string): Promise<void>;
   /** Make getUserMedia reject with NotAllowedError. */
   deny(): void;
   /** Number of `track.stop()` calls on tracks handed out by getUserMedia. */
@@ -140,13 +142,13 @@ export interface FakeCamera {
   requests(): number;
 }
 
-async function barcodeDataUrl(value: string): Promise<string> {
-  const { image, error } = await writeBarcode(value, { format: 'EAN13', scale: 4 });
+async function barcodeDataUrl(value: string, format: 'EAN13' | 'QRCode' = 'EAN13'): Promise<string> {
+  const { image, error } = await writeBarcode(value, { format, scale: 4 });
   if (!image) throw new Error(`fakeCamera: cannot draw ${value}: ${error ?? 'unknown error'}`);
   return `data:image/png;base64,${Buffer.from(await image.arrayBuffer()).toString('base64')}`;
 }
 
-async function installFakeCamera(page: Page): Promise<FakeCamera> {
+export async function installFakeCamera(page: Page): Promise<FakeCamera> {
   let dataUrl: string | null = null;
   let denied = false;
   let created = 0;
@@ -212,6 +214,9 @@ async function installFakeCamera(page: Page): Promise<FakeCamera> {
   return {
     async show(value) {
       dataUrl = await barcodeDataUrl(value);
+    },
+    async showQr(text) {
+      dataUrl = await barcodeDataUrl(text, 'QRCode');
     },
     deny() {
       denied = true;

@@ -117,3 +117,7 @@ ul.plain li { padding: 10px 0; border-bottom: 1px solid var(--line); display: fl
 .badge { font-size: 0.8rem; }
 
 button.hit { width: 100%; min-height: var(--tap); border-radius: 12px; justify-content: flex-start; gap: 12px; padding: 6px 10px; text-align: left; }
+
+.qr { width: 240px; max-width: 100%; margin: 12px 0; background: #fff; }
+.qr svg { width: 100%; height: auto; display: block; }
+code[data-testid='sync-code'] { word-break: break-all; }

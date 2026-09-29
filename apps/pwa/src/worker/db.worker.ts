@@ -2,7 +2,8 @@
 import sqlite3InitModule, { type SAHPoolUtil, type Sqlite3Static } from '@sqlite.org/sqlite-wasm';
 import { ReaderlogDb, type DispatchEnv } from '@readerlog/db';
 import { parseLocalDate, type Instant } from '@readerlog/core';
-import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo } from '../lib/protocol.ts';
+import { createSyncEngine, type SyncEngine } from '@readerlog/sync';
+import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo, type SyncOp } from '../lib/protocol.ts';
 
 /**
  * Owns the on-device database (research R1/R2). opfs-sahpool allows one connection at a
@@ -80,8 +81,56 @@ async function open(): Promise<ReaderlogDb> {
   }
 }
 
+/** One engine per open DB handle: a tab that was hidden reopens the DB as a new ReaderlogDb. */
+let engine: { db: ReaderlogDb; engine: SyncEngine } | null = null;
+
+function syncEngine(d: ReaderlogDb): SyncEngine {
+  if (engine?.db !== d) {
+    engine = {
+      db: d,
+      engine: createSyncEngine({
+        db: d,
+        fetch: (input, init) => fetch(input, init),
+        now: () => Date.now(),
+        random: (n) => crypto.getRandomValues(new Uint8Array(n)),
+        online: () => navigator.onLine,
+      }),
+    };
+  }
+  return engine.engine;
+}
+
+async function runSync(d: ReaderlogDb, op: SyncOp): Promise<unknown> {
+  const e = syncEngine(d);
+  switch (op.action) {
+    case 'run': {
+      const r = await e.run(op.reason);
+      if (r.changed) channel.postMessage({ type: 'changed' });
+      return r;
+    }
+    case 'status':
+      return e.status();
+    case 'turnOn': {
+      const r = await e.turnOn();
+      if (r.ok) channel.postMessage({ type: 'changed' });
+      return r;
+    }
+    case 'join': {
+      const r = await e.join(op.code);
+      if (r.ok) channel.postMessage({ type: 'changed' });
+      return r;
+    }
+    case 'showCode':
+      return e.showCode();
+    case 'leave':
+      e.leave();
+      return null;
+  }
+}
+
 function close(): void {
   if (!db) return;
+  engine = null;
   db.raw.close();
   db = null;
   pool?.pauseVfs();
@@ -187,6 +236,8 @@ async function handle(req: Request): Promise<Response> {
         return { id: req.id, ok: true, result: runQuery(d, req.q) };
       case 'storeCover':
         return { id: req.id, ok: true, result: { stored: await storeCover(d, req.itemId, req.image) } };
+      case 'sync':
+        return { id: req.id, ok: true, result: await runSync(d, req.op) };
       case 'setMeta':
         d.setMeta(req.key, req.value);
         return { id: req.id, ok: true, result: null };
