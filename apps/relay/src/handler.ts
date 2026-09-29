@@ -2,6 +2,7 @@ import type { RelayStore } from './store.ts';
 
 const MAX_BODY = 1024 * 1024;
 const RATE_LIMIT = 120;
+const PUT_LIMIT = 10;
 const RATE_KEEP_MINUTES = 10;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -38,6 +39,16 @@ function bearer(req: Request): string | null {
   return m?.[1] ?? null;
 }
 
+/** Count one hit against `key` for this minute; a 429 Response when over `limit`, else null. */
+async function limited(store: RelayStore, key: string, limit: number, t: number): Promise<Response | null> {
+  const minute = Math.floor(t / 60_000);
+  const count = await store.hit(key, minute);
+  if (count === 1) await store.prune(minute - RATE_KEEP_MINUTES);
+  if (count <= limit) return null;
+  const retry = Math.max(1, 60 - Math.floor((t % 60_000) / 1000));
+  return err(429, 'rate limited', { 'retry-after': String(retry) });
+}
+
 /** Zero-knowledge relay: it only ever sees opaque `{ batchId, iv, ct }`. */
 export async function handle(req: Request, store: RelayStore, now: () => number): Promise<Response> {
   try {
@@ -63,6 +74,11 @@ async function route(req: Request, store: RelayStore, now: () => number): Promis
 
   if (method === 'PUT') {
     if (token === null) return err(401, 'unauthorized');
+    // A new space has no token to check yet, so limit creation per client. Only a hash of the IP is
+    // stored (in `rate`, pruned after 10 minutes) and it is never logged.
+    const ip = req.headers.get('cf-connecting-ip') ?? 'unknown';
+    const over = await limited(store, await sha256hex(`put|${ip}`), PUT_LIMIT, now());
+    if (over) return over;
     const created = await store.createSpace(id, await sha256hex(token), now());
     return created ? json(201, {}) : err(409, 'conflict');
   }
@@ -74,13 +90,8 @@ async function route(req: Request, store: RelayStore, now: () => number): Promis
   }
 
   const t = now();
-  const minute = Math.floor(t / 60_000);
-  const count = await store.hit(id, minute);
-  if (count === 1) await store.prune(minute - RATE_KEEP_MINUTES);
-  if (count > RATE_LIMIT) {
-    const retry = Math.max(1, 60 - Math.floor((t % 60_000) / 1000));
-    return err(429, 'rate limited', { 'retry-after': String(retry) });
-  }
+  const over = await limited(store, id, RATE_LIMIT, t);
+  if (over) return over;
 
   if (!isBatches) {
     if (method === 'DELETE') {

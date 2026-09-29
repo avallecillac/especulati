@@ -13,7 +13,7 @@ const bid = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12
 interface Env {
   store: TestStore;
   clock: { t: number };
-  call(method: string, path: string, opts?: { token?: string | null; body?: unknown; raw?: string }): Promise<Response>;
+  call(method: string, path: string, opts?: { token?: string | null; body?: unknown; raw?: string; ip?: string }): Promise<Response>;
 }
 
 function setup(): Env {
@@ -25,6 +25,7 @@ function setup(): Env {
     call(method, path, opts = {}) {
       const headers: Record<string, string> = {};
       if (opts.token) headers.authorization = `Bearer ${opts.token}`;
+      if (opts.ip) headers['cf-connecting-ip'] = opts.ip;
       const body = opts.raw ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body));
       const init: RequestInit = { method, headers };
       if (body !== undefined) init.body = body;
@@ -49,7 +50,10 @@ describe('relay handler', () => {
     const del = await e.call('DELETE', `/spaces/${A}`, { token: TOKEN_A });
     expect(del.status).toBe(204);
     expect((await e.call('GET', `/spaces/${A}`, { token: TOKEN_A })).status).toBe(404);
-    expect(e.store.dumpAll()).toBe('');
+    // Only the per-client PUT rate row (a hash, pruned after 10 minutes) may remain; nothing of the space.
+    const left = e.store.dumpAll().split('\n').filter(Boolean);
+    expect(left).toHaveLength(1);
+    expect(left[0]).not.toContain(A);
   });
 
   it('PUT on an existing space is 409; bad ids are 400', async () => {
@@ -185,6 +189,28 @@ describe('relay handler', () => {
     expect((await e.call('GET', `/spaces/${B}`, { token: TOKEN_B })).status).toBe(200);
     e.clock.t += 60_000;
     expect((await e.call('GET', `/spaces/${A}`, { token: TOKEN_A })).status).toBe(200);
+  });
+
+  it('limits space creation to 10 PUTs a minute per client, keyed by a hash of the IP', async () => {
+    const e = setup();
+    const spaceN = (n: number) => n.toString(16).padStart(32, '0');
+    for (let i = 0; i < 10; i++) {
+      expect((await e.call('PUT', `/spaces/${spaceN(i)}`, { token: TOKEN_A, ip: '203.0.113.7' })).status).toBe(201);
+    }
+    const limited = await e.call('PUT', `/spaces/${spaceN(10)}`, { token: TOKEN_A, ip: '203.0.113.7' });
+    expect(limited.status).toBe(429);
+    expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(0);
+    expect(limited.headers.get('cache-control')).toBe('no-store');
+    expect(await e.call('GET', `/spaces/${spaceN(10)}`, { token: TOKEN_A })).toHaveProperty('status', 404); // not created
+    // A different IP is independent; so is a request without the header (its own "unknown" bucket).
+    expect((await e.call('PUT', `/spaces/${spaceN(20)}`, { token: TOKEN_A, ip: '203.0.113.8' })).status).toBe(201);
+    for (let i = 30; i < 40; i++) expect((await e.call('PUT', `/spaces/${spaceN(i)}`, { token: TOKEN_A })).status).toBe(201);
+    expect((await e.call('PUT', `/spaces/${spaceN(40)}`, { token: TOKEN_A })).status).toBe(429);
+    // The raw IP is never stored; the key is a SHA-256 hex digest.
+    expect(e.store.dumpAll()).not.toContain('203.0.113');
+    // Allowed again in the next minute.
+    e.clock.t += 60_000;
+    expect((await e.call('PUT', `/spaces/${spaceN(10)}`, { token: TOKEN_A, ip: '203.0.113.7' })).status).toBe(201);
   });
 
   it('prunes stale rate rows', async () => {

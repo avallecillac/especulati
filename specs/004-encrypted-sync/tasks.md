@@ -478,12 +478,12 @@ the offline and conflict cases.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T029 [P] Add a privacy audit test (SC-005, FR-004), `packages/sync/test/privacy.test.ts`:
+- [X] T029 [P] Add a privacy audit test (SC-005, FR-004), `packages/sync/test/privacy.test.ts`:
   - after a convergence run, dump every relay row: no title, author, ISBN, date, page
     string, `op_id`, row id or device id appears in plaintext or in base64;
   - decrypt every pushed batch with the test key: no `covers` data, `meta` keys or the
     Google key.
-- [ ] T029b Rate-limit space creation. `PUT /spaces/:id` is currently open and not
+- [X] T029b Rate-limit space creation. `PUT /spaces/:id` is currently open and not
   rate-limited, because a new space has no token to check yet. Anyone who knows the URL
   could fill D1 with junk spaces.
   - Add a per-client limit of 10 PUTs a minute, keyed by
