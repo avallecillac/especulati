@@ -10,6 +10,8 @@
 
 ### Session 2026-09-29
 
+- Q: Does an `abandoned` event count as a reading day? → A: Only when it carries a
+  page. Abandoning gains an optional "stopped at page" field (FR-022).
 - Q: How many pages does the first logged page of a read-through count for? → A: The
   full page number if the read-through began with a `started` event, otherwise 0.
 
@@ -160,6 +162,11 @@ then check days-to-finish, the average, and the abandon rate per genre.
    genre" shows **0%** (0 of 2), and overall shows **17%** (1 of 6).
 5. **Given** a book I abandoned and later resumed and finished, **When** I view abandon
    rate, **Then** it counts as finished, not abandoned.
+6. **Given** I abandon a book today and enter "stopped at page 120" (last logged page
+   90), **When** I view Stats, **Then** today is a reading day and 30 pages are
+   credited to today.
+7. **Given** I abandon a book today without entering a page, and log nothing else,
+   **When** I view Stats, **Then** today is not a reading day.
 
 ### Edge Cases
 
@@ -189,9 +196,9 @@ then check days-to-finish, the average, and the abandon rate per genre.
 - **FR-001**: Every stat MUST be computed on the device from the local event log, and
   MUST work offline. Nothing is sent anywhere.
 - **FR-002**: A reading day MUST be counted for each distinct `local_date` that has at
-  least one non-removed event of a non-removed book, for the event types:
-  [NEEDS CLARIFICATION: does an `abandoned` event count as a reading day?
-  `started`, `progress` (with or without a page) and `finished` count.]
+  at least one non-removed counting event of a non-removed book. `started`, `progress`
+  (with or without a page) and `finished` events always count. An `abandoned` event
+  counts only when it carries a page (FR-022).
 - **FR-003**: Removed events and all events of removed books MUST be excluded from
   every stat.
 - **FR-004**: Every date-based stat MUST use each event's stored `local_date`. It MUST
@@ -201,7 +208,7 @@ then check days-to-finish, the average, and the abandon rate per genre.
   finishes. Article stats will be a separate section that 005 adds.
 
 - **FR-006**: Pages read MUST be computed per read-through, from the page-bearing
-  events in event order (by `local_date`, then recorded time). Each entry adds its page
+  events (`progress`, and `abandoned` with a page) in event order (by `local_date`, then recorded time). Each entry adds its page
   minus the highest page logged earlier in the same read-through, or 0 if that is
   negative. The first page-bearing entry of a read-through adds:
   its full page number (counting from page 0) when the read-through began with a
@@ -258,6 +265,17 @@ then check days-to-finish, the average, and the abandon rate per genre.
   divided by books whose current status is finished or abandoned. It is shown as a
   whole percentage, overall and per genre. Books with no genre are grouped as "No
   genre". A genre with no finished or abandoned books is not listed.
+
+**Abandoning at a page**
+
+- **FR-022**: When marking a book as abandoned, the user MUST be able to enter the page
+  they stopped at, optionally. The field starts empty, showing the last logged page as
+  a hint only (pre-filling it would make every abandon a reading day). The same page
+  rules apply (a whole number of at least 1, and
+  at most the book's page count when known). Leaving it empty keeps today's behaviour.
+  Abandoning stays within the 2-tap budget: the field does not add a required step.
+  This amends 001's `LogEvent`, which today rejects a page on any non-`progress`
+  event.
 
 **Presentation**
 
