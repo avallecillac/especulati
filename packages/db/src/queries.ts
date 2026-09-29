@@ -1,7 +1,7 @@
 import type { BookStatus, DetailsStatus, EventType } from '@readerlog/core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { deriveStatus, eventOrder, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
-import { loadBookSnapshot, rowToEvent, rowToItem, text } from './snapshot.ts';
+import { deriveStatus, eventOrder, findDuplicates, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
+import { loadBookSnapshot, mergeChainIds, rowToEvent, rowToItem, text } from './snapshot.ts';
 
 /** Read models returned to the UI (contracts/worker-api.md). Plain JSON: nulls, no brands. */
 export interface BookCard {
@@ -146,4 +146,70 @@ export function missingCovers(db: Database): { itemId: string; coverUrl: string 
        ORDER BY i.created_at`,
     )
     .map((r) => ({ itemId: text(r['id'], 'id'), coverUrl: text(r['cover_url'], 'cover_url') }));
+}
+
+/** One side of a possible duplicate, for the review screen (worker-api-004.md). */
+export interface DuplicateBookView {
+  itemId: string;
+  title: string;
+  author: string | null;
+  isbn: string | null;
+  entryCount: number;
+  createdAt: string;
+}
+
+/** `survivor` is the suggested book to keep: the smaller (createdAt, id), the same on every device. */
+export interface DuplicatePairView {
+  survivor: DuplicateBookView;
+  duplicate: DuplicateBookView;
+  reason: 'isbn' | 'titleAuthor';
+}
+
+/** Pairs of live books that look like the same book, minus the pairs the user chose to keep. */
+export function duplicatePairs(db: Database): DuplicatePairView[] {
+  const items = db.selectObjects(`SELECT * FROM items WHERE type = 'book' AND deleted_at IS NULL`).map(rowToItem);
+  const dismissed = db
+    .selectObjects('SELECT item_a, item_b FROM duplicate_dismissals WHERE deleted_at IS NULL')
+    .map((r) => ({ itemA: text(r['item_a'], 'item_a'), itemB: text(r['item_b'], 'item_b') }));
+  const counts = new Map<string, number>();
+  for (const r of db.selectObjects(
+    `SELECT item_id, COUNT(*) AS n FROM reading_events WHERE deleted_at IS NULL GROUP BY item_id`,
+  )) counts.set(text(r['item_id'], 'item_id'), Number(r['n']));
+  const byId = new Map(items.map((i) => [i.id as string, i]));
+  const view = (id: string): DuplicateBookView => {
+    const i = byId.get(id)!;
+    return { itemId: i.id, title: i.title, author: i.author, isbn: i.isbn, entryCount: counts.get(i.id) ?? 0, createdAt: i.createdAt };
+  };
+  return findDuplicates(items, dismissed).map((p) => ({ survivor: view(p.survivor), duplicate: view(p.duplicate), reason: p.reason }));
+}
+
+/** Live entries on a book that was merged away: they belong on the final live book of its chain (research R8). */
+export interface StragglerView {
+  /** The removed book that still holds live entries. */
+  duplicateId: string;
+  /** The live book at the end of its `merged_into` chain. */
+  survivorId: string;
+  events: { id: string; type: EventType; page: number | null; occurredAt: string; localDate: string }[];
+}
+
+export function stragglers(db: Database): StragglerView[] {
+  const out: StragglerView[] = [];
+  const holders = db.selectValues(
+    `SELECT i.id FROM items i
+     WHERE i.merged_into IS NOT NULL AND i.deleted_at IS NOT NULL
+       AND EXISTS (SELECT 1 FROM reading_events e WHERE e.item_id = i.id AND e.deleted_at IS NULL)
+     ORDER BY i.id`,
+  ).map(String);
+  for (const id of holders) {
+    const chain = mergeChainIds(db, id);
+    const survivorId = chain[chain.length - 1]!;
+    if (survivorId === id) continue;
+    if (db.selectValue('SELECT 1 FROM items WHERE id = ? AND deleted_at IS NULL', [survivorId]) === undefined) continue;
+    const events = db
+      .selectObjects('SELECT * FROM reading_events WHERE item_id = ? AND deleted_at IS NULL', [id])
+      .map(rowToEvent)
+      .map((e) => ({ id: e.id, type: e.type, page: e.page, occurredAt: e.occurredAt, localDate: e.localDate }));
+    out.push({ duplicateId: id, survivorId, events });
+  }
+  return out;
 }

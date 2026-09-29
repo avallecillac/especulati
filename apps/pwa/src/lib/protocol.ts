@@ -1,5 +1,5 @@
 import type { Command, Rejection, Result, StatsView } from '@readerlog/core';
-import type { BookCard, BookView, HomeView, LibraryView } from '@readerlog/db';
+import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
 /** UI ↔ DB worker messages (contracts/worker-api.md). */
@@ -12,6 +12,8 @@ export type Query =
   | { name: 'findByIsbn'; isbn: string }
   | { name: 'pendingDetails' }
   | { name: 'missingCovers' }
+  | { name: 'duplicates' }
+  | { name: 'stragglers' }
   | { name: 'cover'; itemId: string }
   | { name: 'setting'; key: 'google_books_api_key' };
 
@@ -31,6 +33,8 @@ export interface QueryResult {
   findByIsbn: BookCard | null;
   pendingDetails: { itemId: string; isbn: string }[];
   missingCovers: { itemId: string; coverUrl: string }[];
+  duplicates: DuplicatePairView[];
+  stragglers: StragglerView[];
   cover: Blob | null;
   setting: string | null;
 }
@@ -49,7 +53,8 @@ export type SyncOp =
   | { action: 'turnOn' }
   | { action: 'join'; code: string }
   | { action: 'showCode' }
-  | { action: 'leave' };
+  | { action: 'leave' }
+  | { action: 'reset' };
 
 export interface SyncCode {
   code: string;
@@ -64,6 +69,7 @@ export interface SyncResult {
   join: Result<{ duplicates: number }, SyncError>;
   showCode: SyncCode | null;
   leave: null;
+  reset: Result<SyncCode, SyncError>;
 }
 
 export type ClientError = Rejection | { kind: 'Storage'; message: string } | { kind: 'Busy' };

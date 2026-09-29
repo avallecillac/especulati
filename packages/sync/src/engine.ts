@@ -44,6 +44,8 @@ export interface SyncEngine {
   turnOn(): Promise<Result<{ code: string; qr: string }, SyncError>>;
   join(code: string): Promise<Result<{ duplicates: number }, SyncError>>;
   leave(): void;
+  /** A new space and code, every change pushed to it, then the old space deleted (research R7). */
+  reset(): Promise<Result<{ code: string; qr: string }, SyncError>>;
   showCode(): { code: string; qr: string } | null;
   run(reason: SyncReason, opts?: { pushOnly?: boolean }): Promise<SyncRunResult>;
 }
@@ -202,6 +204,18 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     }
   }
 
+  /** After a reset: the old space is deleted only once the new one holds everything. A failure is retried on later runs. */
+  async function deleteOldSpace(): Promise<void> {
+    const old = db.syncMeta().oldSpace;
+    if (old === null) return;
+    const r = await (await sessionFor(old)).client.deleteSpace();
+    // Already gone counts as done.
+    if (r.ok || r.kind === 'notFound' || r.kind === 'unauthorized') {
+      db.setSyncMeta({ oldSpace: null });
+      sessions.delete(old);
+    }
+  }
+
   async function runOnce(pushOnly: boolean): Promise<SyncRunResult> {
     const res: SyncRunResult = { pulled: 0, pushed: 0, changed: false, problem: null, backoffMs: null };
     const meta = db.syncMeta();
@@ -223,6 +237,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     if (failure) return fail(res, failure);
 
     failures = 0;
+    await deleteOldSpace();
     if (res.problem === 'newerVersion') setStatus({ problem: 'newerVersion' });
     else setStatus({ lastOkAt: new Date(deps.now()).toISOString() as Instant, problem: null });
     return res;
@@ -244,8 +259,8 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     return total;
   }
 
-  function begin(secret: Uint8Array): void {
-    db.setSyncMeta({ key: b64url(secret), pendingBatch: null, status: null, oldSpace: null });
+  function begin(secret: Uint8Array, oldSpace: string | null = null): void {
+    db.setSyncMeta({ key: b64url(secret), pendingBatch: null, status: null, oldSpace });
     db.resetPushState();
     failures = 0;
     stuck = new Set();
@@ -308,14 +323,32 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
       }
       begin(k.value);
       await run('manual');
-      // Duplicate detection (research R8) is wired in by the join flow task.
-      return ok({ duplicates: 0 });
+      return ok({ duplicates: db.duplicates().length });
     },
 
     leave() {
-      db.setSyncMeta({ key: null, cursor: 0, pendingBatch: null, status: null });
+      // Local rows stay. An owed DELETE of an old space is dropped with the rest: the code is forgotten.
+      db.setSyncMeta({ key: null, cursor: null, pendingBatch: null, status: null, oldSpace: null });
       failures = 0;
       stuck = new Set();
+    },
+
+    async reset() {
+      const oldKey = db.syncMeta().key;
+      if (oldKey === null) return err<SyncError>({ kind: 'notFound' });
+      const secret = newSyncSecret(deps.random);
+      const keys = await deriveKeys(secret);
+      const client = createRelayClient(deps.fetch, keys.spaceId, keys.authToken, deps.online);
+      const created = await client.createSpace();
+      if (!created.ok) {
+        return err<SyncError>(created.kind === 'offline' ? { kind: 'offline' } : { kind: 'relay', ...('status' in created ? { status: created.status } : {}) });
+      }
+      // `oldSpace` holds the old sync code: deleting a space needs its token, not just its id.
+      // begin() marks every change_log row unpushed, so this run uploads all of them; the old
+      // space is deleted at the end of the first fully successful run.
+      begin(secret, oldKey);
+      await run('manual');
+      return ok(codeFor(secret));
     },
 
     showCode() {

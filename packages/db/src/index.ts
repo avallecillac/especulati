@@ -6,7 +6,7 @@ import { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.t
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
-import { bookView, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
+import { bookView, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
@@ -53,6 +53,14 @@ export class ReaderlogDb {
 
   setMeta(key: string, value: string): void {
     writeMeta(this.raw, key, value);
+  }
+
+  duplicates(): DuplicatePairView[] {
+    return duplicatePairs(this.raw);
+  }
+
+  stragglers(): StragglerView[] {
+    return stragglers(this.raw);
   }
 
   home(): HomeView {
@@ -143,7 +151,7 @@ export class ReaderlogDb {
     return syncMeta(this.raw);
   }
 
-  setSyncMeta(patch: Partial<SyncMeta>): void {
+  setSyncMeta(patch: Partial<Omit<SyncMeta, 'cursor'>> & { cursor?: number | null }): void {
     setSyncMeta(this.raw, patch);
   }
 
@@ -179,4 +187,4 @@ export class ReaderlogDb {
     }
   }
 }
-export type { BookCard, BookEventView, BookView, HomeView, LibraryView } from './queries.ts';
+export type { BookCard, BookEventView, BookView, DuplicateBookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from './queries.ts';

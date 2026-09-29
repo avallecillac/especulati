@@ -125,6 +125,11 @@ async function runSync(d: ReaderlogDb, op: SyncOp): Promise<unknown> {
     case 'leave':
       e.leave();
       return null;
+    case 'reset': {
+      const r = await e.reset();
+      if (r.ok) channel.postMessage({ type: 'changed' });
+      return r;
+    }
   }
 }
 
@@ -165,6 +170,10 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.pendingDetails();
     case 'missingCovers':
       return d.missingCovers();
+    case 'duplicates':
+      return d.duplicates();
+    case 'stragglers':
+      return d.stragglers();
     case 'cover': {
       const c = d.getCover(q.itemId);
       return c ? new Blob([c.bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }) : null;

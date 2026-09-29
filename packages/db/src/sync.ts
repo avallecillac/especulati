@@ -20,7 +20,7 @@ export interface SyncMeta {
   cursor: number;
   pendingBatch: { batchId: string; maxSeq: number } | null;
   status: SyncStatus | null;
-  /** The old space id while its DELETE after a reset is still owed. */
+  /** The old space's sync code (base64url) while its DELETE after a reset is still owed: deleting needs the old token. */
   oldSpace: string | null;
 }
 
@@ -228,7 +228,7 @@ export function syncMeta(db: Database): SyncMeta {
 }
 
 /** `undefined` leaves a key alone; `null` removes it. */
-export function setSyncMeta(db: Database, patch: Partial<SyncMeta>): void {
+export function setSyncMeta(db: Database, patch: Partial<Omit<SyncMeta, 'cursor'>> & { cursor?: number | null }): void {
   const put = (key: string, value: string | null | undefined): void => {
     if (value === undefined) return;
     if (value === null) db.exec('DELETE FROM meta WHERE key = ?', { bind: [key] });
@@ -238,7 +238,7 @@ export function setSyncMeta(db: Database, patch: Partial<SyncMeta>): void {
   db.exec('SAVEPOINT set_sync_meta');
   try {
     put('sync_key', patch.key);
-    put('sync_cursor', patch.cursor === undefined ? undefined : String(patch.cursor));
+    put('sync_cursor', patch.cursor === undefined || patch.cursor === null ? patch.cursor : String(patch.cursor));
     put('pending_batch', json(patch.pendingBatch));
     put('sync_status', json(patch.status));
     put('sync_old_space', patch.oldSpace);

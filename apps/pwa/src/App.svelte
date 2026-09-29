@@ -15,6 +15,7 @@
   import BookDetail from './screens/BookDetail.svelte';
   import Stats from './screens/Stats.svelte';
   import Settings from './screens/Settings.svelte';
+  import Duplicates from './screens/Duplicates.svelte';
   import Sync from './screens/Sync.svelte';
 
   const tabs = [
@@ -102,6 +103,8 @@
       <Settings />
     {:else if router.route.name === 'sync'}
       <Sync />
+    {:else if router.route.name === 'duplicates'}
+      <Duplicates />
     {/if}
   </main>
 
@@ -119,7 +122,7 @@
 
   <nav class="tabs" aria-label="Main">
     {#each tabs as tab (tab.href)}
-      <a href={tab.href} aria-current={router.route.name === tab.match || (tab.match === 'settings' && router.route.name === 'sync') ? 'page' : undefined}>{tab.label}</a>
+      <a href={tab.href} aria-current={router.route.name === tab.match || (tab.match === 'settings' && (router.route.name === 'sync' || router.route.name === 'duplicates')) ? 'page' : undefined}>{tab.label}</a>
     {/each}
   </nav>
 </div>

@@ -10,11 +10,12 @@ export type Route =
   | { name: 'book'; id: string }
   | { name: 'stats' }
   | { name: 'settings' }
-  | { name: 'sync' };
+  | { name: 'sync' }
+  | { name: 'duplicates' };
 
 export function parseHash(hash: string): Route {
   const path = hash.replace(/^#/, '') || '/';
-  const [, head = '', arg = ''] = path.split('/');
+  const [, head = '', arg = '', arg2 = ''] = path.split('/');
   switch (head) {
     case '':
       return { name: 'home' };
@@ -31,7 +32,7 @@ export function parseHash(hash: string): Route {
     case 'stats':
       return { name: 'stats' };
     case 'settings':
-      return arg === 'sync' ? { name: 'sync' } : { name: 'settings' };
+      return arg === 'sync' ? (arg2 === 'duplicates' ? { name: 'duplicates' } : { name: 'sync' }) : { name: 'settings' };
     case 'book':
       return arg ? { name: 'book', id: decodeURIComponent(arg) } : { name: 'library' };
     case 'edit':

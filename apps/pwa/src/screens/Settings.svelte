@@ -2,6 +2,8 @@
   import type { StorageInfo } from '../lib/protocol.ts';
   import { onChanged, query } from '../lib/dbClient.ts';
   import { maskKey, removeGoogleKey, saveGoogleKey, settings } from '../lib/settings.svelte.ts';
+  import { syncState } from '../lib/sync.svelte.ts';
+  import { summaryLine } from '../lib/syncText.ts';
   import { testGoogleKey, type KeyTestResult } from '../catalog/googleKey.ts';
 
   let keyText = $state('');
@@ -41,6 +43,11 @@
   }
 
   let info = $state<StorageInfo | null>(null);
+  let now = $state(Date.now());
+  $effect(() => {
+    const t = setInterval(() => (now = Date.now()), 15_000);
+    return () => clearInterval(t);
+  });
 
   async function load() {
     const r = await query({ name: 'storage' });
@@ -80,6 +87,7 @@
 <section class="card">
   <h2>Sync</h2>
   <p class="muted">Keep your reading log on more than one device, end-to-end encrypted.</p>
+  {#if syncState.status}<p data-testid="settings-sync-status">{summaryLine(syncState.status, now)}</p>{/if}
   <a class="button" href="#/settings/sync">Sync</a>
 </section>
 

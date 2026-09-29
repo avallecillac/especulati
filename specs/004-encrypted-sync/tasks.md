@@ -365,7 +365,7 @@ the offline and conflict cases.
 
 ## Phase 5: User Story 3 - See whether sync is healthy (Priority: P2)
 
-- [ ] T019 [P] [US3] Write `e2e/sync-status.spec.ts`:
+- [X] T019 [P] [US3] Write `e2e/sync-status.spec.ts`:
   - 3 changes made offline show "3 changes waiting to sync";
   - after coming online and syncing, it shows "Last synced: just now" and "0 changes
     waiting";
@@ -373,7 +373,7 @@ the offline and conflict cases.
     increase;
   - a relay `404` for the space shows "This sync space no longer exists. Rejoin with a
     new code." and the app still works.
-- [ ] T020 [US3] Add the status view:
+- [X] T020 [US3] Add the status view:
   - the engine's `status()` returns
     `{ on, lastOkAt, pending: count(pushed = 0), problem, undecryptable }`;
   - `Sync.svelte` shows it, with plain-language messages per `SyncProblem`:
@@ -394,7 +394,7 @@ the offline and conflict cases.
 
 ## Phase 6: User Story 4 - Leave a space, or start over (Priority: P3)
 
-- [ ] T021 [P] [US4] Extend `packages/sync/test/engine.test.ts`:
+- [X] T021 [P] [US4] Extend `packages/sync/test/engine.test.ts`:
   - `leave()` removes `sync_key`, `sync_cursor`, `pending_batch` and `sync_status`,
     and keeps all rows;
   - `reset()` creates a new space, pushes **every** `change_log` row, then `DELETE`s
@@ -403,12 +403,12 @@ the offline and conflict cases.
   - a peer still on the old space gets `spaceGone`;
   - that peer rejoins with the new code: its local-only data merges in, and the other
     peers converge.
-- [ ] T022 [P] [US4] Write `e2e/sync-reset.spec.ts`:
+- [X] T022 [P] [US4] Write `e2e/sync-reset.spec.ts`:
   - **leave**: **Leave sync space** → confirm, and the device keeps its books. Changes
     on the other device no longer arrive.
   - **reset**: A → **Reset sync** → confirm shows a new code. B's status then says
     rejoin. B joins with the new code, and both show the union of their books.
-- [ ] T023 [US4] Implement `leave` and `reset` in the engine, and the confirm dialogs in
+- [X] T023 [US4] Implement `leave` and `reset` in the engine, and the confirm dialogs in
   `Sync.svelte`:
   - Leave: "This device will stop syncing. Its data stays here."
   - Reset: "Creates a new sync code and deletes the old space. Your other devices must
@@ -457,7 +457,7 @@ the offline and conflict cases.
 
   Uses deterministic ids computed in the test with `node:crypto` SHA-256, matching
   `ids.ts`.
-- [ ] T028 [US5] Build the UI and the sweep:
+- [X] T028 [US5] Build the UI and the sweep:
   - `duplicates` query (worker plus `packages/db/src/queries.ts`), per
     worker-api-004.md;
   - `apps/pwa/src/screens/Duplicates.svelte` (route `#/settings/sync/duplicates`):

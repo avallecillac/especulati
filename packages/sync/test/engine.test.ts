@@ -415,4 +415,105 @@ describe('engine: turnOn / join errors (US1)', () => {
     expect(r).toMatchObject({ ok: true, value: { duplicates: 0 } });
     expect(titles(b)).toEqual(['Dune']);
   });
+
+  it('join returns the number of duplicate pairs after the merge of both logs (US5)', async () => {
+    const relay = fakeRelay();
+    const a = makePeer(1, relay);
+    const b = makePeer(2, relay);
+    for (const [p, n] of [[a, 0x610001], [b, 0x610002]] as const) {
+      p.tick();
+      expect(p.db.dispatch({ kind: 'AddBook', itemId: uuid(n), title: 'Dune', isbn: '9780306406157', startNow: false, localDate: '2026-09-01' }, p.env).ok).toBe(true);
+    }
+    await a.engine.turnOn();
+    const r = await b.engine.join(a.engine.showCode()!.code);
+    expect(r).toMatchObject({ ok: true, value: { duplicates: 1 } });
+  });
+});
+
+describe('engine: leave and reset (US4)', () => {
+  const metaKeys = (p: Peer) =>
+    p.db.raw.selectValues(`SELECT key FROM meta WHERE key IN ('sync_key','sync_cursor','pending_batch','sync_status')`).map(String).sort();
+
+  it('leave() removes the sync meta and keeps every row; the device stops calling the relay', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    addBook(a, 'Dune');
+    await a.engine.run('write');
+    expect(metaKeys(a)).toContain('sync_key');
+    const changes = a.db.raw.selectValue('SELECT COUNT(*) FROM change_log');
+    a.engine.leave();
+    expect(metaKeys(a)).toEqual([]);
+    expect(a.engine.status()).toMatchObject({ on: false, lastOkAt: null, problem: null });
+    expect(titles(a)).toEqual(['Dune']);
+    expect(a.db.raw.selectValue('SELECT COUNT(*) FROM change_log')).toBe(changes);
+    relay.log.length = 0;
+    await a.engine.run('manual');
+    expect(relay.log).toEqual([]);
+  });
+
+  it('reset() makes a new space with every change_log row, then deletes the old one', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    const b = await joinSpace(relay, a, 2);
+    addBook(a, 'Dune');
+    addBook(b, 'Emma');
+    await b.engine.run('write');
+    await a.engine.run('visible'); // a now holds a received row too
+    const oldCode = a.engine.showCode()!.code;
+    relay.log.length = 0;
+    const r = await a.engine.reset();
+    expect(r.ok).toBe(true);
+    const newCode = a.engine.showCode()!.code;
+    expect(newCode).not.toBe(oldCode);
+    expect(r.ok && r.value.code).toBe(newCode);
+    // Order: create, push, then delete.
+    const kinds = relay.log.map((x) => x.method);
+    expect(kinds[0]).toBe('PUT');
+    expect(kinds.lastIndexOf('POST')).toBeLessThan(kinds.indexOf('DELETE'));
+    expect(a.db.syncMeta().oldSpace).toBeNull();
+    expect(a.db.pendingCount()).toBe(0);
+    // A third device joining with the new code gets the union.
+    const c = await joinSpace(relay, a, 3);
+    expect(titles(c).sort()).toEqual(['Dune', 'Emma']);
+  });
+
+  it('a failed DELETE keeps sync_old_space and the next run() retries it', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    relay.before = (req) => (req.method === 'DELETE' ? new Response('{"error":"x"}', { status: 503 }) : undefined);
+    const r = await a.engine.reset();
+    expect(r.ok).toBe(true);
+    expect(a.db.syncMeta().oldSpace).not.toBeNull();
+    relay.before = undefined;
+    relay.log.length = 0;
+    await a.engine.run('manual');
+    expect(relay.log.some((x) => x.method === 'DELETE')).toBe(true);
+    expect(a.db.syncMeta().oldSpace).toBeNull();
+    relay.log.length = 0;
+    await a.engine.run('manual');
+    expect(relay.log.some((x) => x.method === 'DELETE')).toBe(false);
+  });
+
+  it('a peer on the old space gets spaceGone; rejoining with the new code merges its local-only data', async () => {
+    const relay = fakeRelay();
+    const a = await startSpace(relay);
+    const b = await joinSpace(relay, a, 2);
+    addBook(a, 'Dune');
+    await a.engine.run('write');
+    await b.engine.run('visible');
+    addBook(b, 'Emma'); // local only: b never pushes it to the old space
+    await a.engine.reset();
+    const gone = await b.engine.run('manual');
+    expect(gone.problem).toBe('spaceGone');
+    expect(titles(b).sort()).toEqual(['Dune', 'Emma']);
+    // The old space really is gone: the old code no longer joins.
+    const stale = makePeer(9, relay);
+    expect(await stale.engine.join(b.engine.showCode()!.code)).toMatchObject({ ok: false, error: { kind: 'notFound' } });
+
+    expect((await b.engine.join(a.engine.showCode()!.code)).ok).toBe(true);
+    expect(b.engine.status().problem).toBeNull();
+    await a.engine.run('visible');
+    expect(titles(a).sort()).toEqual(['Dune', 'Emma']);
+    expect(titles(b).sort()).toEqual(['Dune', 'Emma']);
+  });
 });

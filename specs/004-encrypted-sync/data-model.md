@@ -42,7 +42,7 @@ CREATE TABLE sync_inbox (
 | `sync_cursor` | the last applied relay `seq` (integer string) |
 | `pending_batch` | JSON `{ batchId, maxSeq }` while a push is in flight |
 | `sync_status` | JSON `{ lastOkAt: Instant \| null, problem: SyncProblem \| null, undecryptable: number }` |
-| `sync_old_space` | the old space id, while its DELETE after a reset is still owed |
+| `sync_old_space` | the **old sync code** (base64url), while its DELETE after a reset is still owed. The DELETE needs the old auth token, which comes from the code. It is local only, and cleared once the DELETE succeeds or on Leave |
 
 `SyncProblem` is `'offline' | 'relay' | 'spaceGone' | 'unauthorized' | 'newerVersion' | 'corrupt'`.
 

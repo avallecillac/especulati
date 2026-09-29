@@ -185,7 +185,9 @@
   2. Push **every** `change_log` row, local and received, since replaying all of them
      reproduces the current state exactly under LWW.
   3. Only then `DELETE /api/v1/spaces/<old>` (FR-020).
-  4. If the delete fails, retry it on later syncs (`meta.sync_old_space`).
+  4. If the delete fails, retry it on later syncs. `meta.sync_old_space` holds the *old
+     sync code*, because the DELETE needs its auth token. It is cleared on success or on
+     Leave.
 - **Data from a deleted space** can only return through a device the user rejoins
   explicitly (FR-022).
 
