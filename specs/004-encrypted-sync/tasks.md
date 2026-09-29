@@ -494,7 +494,7 @@ the offline and conflict cases.
   - `docs/architecture.md` §5 and §7, and `CLAUDE.md` Commands and Layout
     (`packages/sync`, `apps/relay`, `functions/`);
   - confirm the quickstart's Cloudflare setup steps against the implementation.
-- [ ] T031 Run the full validation (main session):
+- [X] T031 Run the full validation (main session):
   - `pnpm typecheck && pnpm lint && pnpm test && pnpm e2e`, plus `--repeat-each=2` on
     the sync specs;
   - quickstart scenarios 1–20;

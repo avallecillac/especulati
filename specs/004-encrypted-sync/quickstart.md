@@ -61,4 +61,26 @@ pnpm e2e    # two browser contexts + routed in-memory relay (research R10)
 
 ## Validation results
 
-*Filled in after `/speckit-implement`.*
+### 2026-09-29, dev container, Chromium 141 headless, version 0.4.0
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; dependency-cruiser finds no violations. The new rules `relay-is-opaque` and `sync-no-apps` are enforced |
+| `pnpm test` | ✅ 436 tests, 54 files, across the core, db, sync, relay and pwa projects |
+| `pnpm test:convergence` (SC-003) | ✅ 1,000 seeded runs, 2 to 5 peers with clocks skewed by up to ±1 h, shuffled and duplicated delivery, merges and dismissals, then quiesce: identical dumps every time. A mutation check (every field wins) failed at seed 2 |
+| `pnpm e2e` | ✅ 73/73; the sync specs pass **34/34** with `--repeat-each=2` |
+| SC-001: join in ≤ 5 steps | ✅ 4 steps, from sync-pair.spec |
+| SC-002: seen within 10 s after bringing to the front or tapping Sync now | ✅ sync-flow.spec |
+| SC-004: 10k-op first sync < 60 s | ✅ push 0.45 s, join and pull 4.7 s (Node, in-memory relay) |
+| SC-005: relay rows hold no plaintext | ✅ privacy.test: title, author, ISBN, page, dates, op, row and device ids are absent raw and base64-encoded; covers, meta and the Google key never enter a batch |
+| SC-006: offline and relay down | ✅ sync-flow.spec (503) and sync-status.spec |
+| SC-007 / FR-023: free tier | ✅ a simulated day for 3 devices uses 896 requests (0.9%), 2,735 D1 reads (0.05%) and 1,147 D1 writes (1.1%) |
+| Scenarios 1–20 | ✅ all automated. Covers for synced books (scenario from FR-016) are covered by the db `missingCovers` test only; there is no e2e for the download path |
+| Adversarial review (main session) | Fixed during review: <ul><li>an op's device now comes from its HLC (reset re-push);</li><li>HLC overflow guard;</li><li>merge copy ids made content-addressed (multi-path sweep doubling);</li><li>identical entries collapse instead of blocking a merge;</li><li>per-client rate limit on `PUT /spaces`;</li><li>`sync_old_space` stores the old code, because deleting needs its token</li></ul> |
+| Manual device checks (above) | ⏳ Pending: needs the one-time Cloudflare D1 setup, then the iPhone and the Mac |
+
+**Known limits (accepted for the MVP):**
+- There is no background polling. An idle open device gets changes when it's brought to
+  the front, or when **Sync now** is tapped.
+- The relay sees batch sizes and times.
+- Two genuinely different entries identical to the millisecond merge into one.
