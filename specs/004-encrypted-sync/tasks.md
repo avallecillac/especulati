@@ -129,7 +129,7 @@ run loop, and convergence.
     the next minute;
   - `Cache-Control: no-store` on every response;
   - error bodies never echo input.
-- [ ] T006 [P] Write `packages/sync/test/code.test.ts`,
+- [X] T006 [P] Write `packages/sync/test/code.test.ts`,
   `packages/sync/test/keys.test.ts` and `packages/sync/test/envelope.test.ts`:
   - **The code format**:
     - `formatSyncCode(k)` is 56 characters of Crockford base32 in groups of 4 joined
@@ -190,7 +190,7 @@ run loop, and convergence.
 
   Also add `navigateFallbackDenylist: [/^\/api\//]` to the workbox options in
   `apps/pwa/vite.config.ts`. T005 must pass.
-- [ ] T010 Implement `packages/sync/src/code.ts`, `keys.ts` and `envelope.ts` per
+- [X] T010 Implement `packages/sync/src/code.ts`, `keys.ts` and `envelope.ts` per
   contracts/sync-client.md and research R2–R4:
   - HKDF-SHA-256 with salt `"readerlog-sync-v1"` and info `"space-id"`, `"auth"` and
     `"enc"`;
