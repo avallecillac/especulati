@@ -88,6 +88,20 @@ describe('findByIsbn and pendingDetails', () => {
   });
 });
 
+describe('missingCovers (FR-016)', () => {
+  it('lists live books with a cover_url and no cached cover', () => {
+    const t = openTestDb();
+    add(t, 1, { coverUrl: 'https://example.test/1.jpg' });
+    add(t, 2, { coverUrl: 'https://example.test/2.jpg' });
+    add(t, 3);
+    add(t, 4, { coverUrl: 'https://example.test/4.jpg' });
+    t.db.putCover(uuid(2), bytes(1), 100, 150, '2026-09-01T00:00:00.000Z');
+    t.tick();
+    t.db.dispatch({ kind: 'RemoveBook', itemId: uuid(4) }, t.env);
+    expect(t.db.missingCovers()).toEqual([{ itemId: uuid(1), coverUrl: 'https://example.test/1.jpg' }]);
+  });
+});
+
 describe('coverStats (FR-010 budget visibility)', () => {
   it('counts stored covers and their bytes; deleteCover brings it back to zero', () => {
     const t = openTestDb();

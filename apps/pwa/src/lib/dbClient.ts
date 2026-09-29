@@ -28,6 +28,9 @@ function send(req: WithoutId<Request>): Promise<Response> {
   });
 }
 
+const writeHooks = new Set<() => void>();
+const syncHooks = new Set<(op: SyncOp, changed: boolean) => void>();
+
 const notify = () => listeners.forEach((l) => l());
 
 // Other tabs' commits arrive over the channel; refresh when this tab is visible again.
@@ -50,6 +53,7 @@ export async function dispatch(cmd: Command): Promise<Result<DispatchOutcome, Cl
   const res = await send({ kind: 'dispatch', cmd });
   if (res.ok) {
     notify();
+    writeHooks.forEach((h) => h());
     return { ok: true, value: res.result as DispatchOutcome };
   }
   return { ok: false, error: res.error };
@@ -88,7 +92,20 @@ export async function sync<A extends SyncOp['action']>(
   const changed =
     op.action === 'join' || op.action === 'turnOn' || (op.action === 'run' && (value as SyncResult['run']).changed);
   if (changed) notify();
+  syncHooks.forEach((h) => h(op, changed));
   return { ok: true, value };
+}
+
+/** Called after every successful dispatch (sync's debounced `write` trigger). Returns an unsubscribe fn. */
+export function onWrite(cb: () => void): () => void {
+  writeHooks.add(cb);
+  return () => writeHooks.delete(cb);
+}
+
+/** Called after every sync op that reached the worker. `changed`: remote ops were applied. */
+export function onSyncOp(cb: (op: SyncOp, changed: boolean) => void): () => void {
+  syncHooks.add(cb);
+  return () => syncHooks.delete(cb);
 }
 
 /** Ask every screen to reload, e.g. after regaining the DB from another window. */

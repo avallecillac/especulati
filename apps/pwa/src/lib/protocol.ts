@@ -11,6 +11,7 @@ export type Query =
   | { name: 'storage' }
   | { name: 'findByIsbn'; isbn: string }
   | { name: 'pendingDetails' }
+  | { name: 'missingCovers' }
   | { name: 'cover'; itemId: string }
   | { name: 'setting'; key: 'google_books_api_key' };
 
@@ -29,6 +30,7 @@ export interface QueryResult {
   storage: StorageInfo;
   findByIsbn: BookCard | null;
   pendingDetails: { itemId: string; isbn: string }[];
+  missingCovers: { itemId: string; coverUrl: string }[];
   cover: Blob | null;
   setting: string | null;
 }

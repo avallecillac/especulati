@@ -330,7 +330,7 @@ books.
 **Independent Test**: with paired contexts, log on A and it appears on B. Also cover
 the offline and conflict cases.
 
-- [ ] T017 [P] [US2] Write `e2e/sync-flow.spec.ts`:
+- [X] T017 [P] [US2] Write `e2e/sync-flow.spec.ts`:
   - **log and receive**: log a page on A (A pushes on the `write` trigger). Then B shows
     it within 10 s, with no reload, after each of:
     - bringing B to the front (`visibilitychange`);
@@ -342,7 +342,7 @@ the offline and conflict cases.
   - **remove**: removing a book on A removes it on B;
   - **relay down**: with the relay routed to `503`, add a book and log a page. No error
     dialog is shown, only the sync status (SC-006).
-- [ ] T018 [US2] Implement the triggers, the sync button and refresh:
+- [X] T018 [US2] Implement the triggers, the sync button and refresh:
   - `apps/pwa/src/lib/sync.svelte.ts` sends `start` after DB-ready, `visible` on
     `visibilitychange`, `online`, and `write` 3 s after the last successful `dispatch`
     (hook into `dbClient.dispatch`, debounced). There is no background polling (spec

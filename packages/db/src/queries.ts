@@ -135,3 +135,15 @@ export function pendingDetails(db: Database): { itemId: string; isbn: string }[]
     )
     .map((r) => ({ itemId: text(r['id'], 'id'), isbn: text(r['isbn'], 'isbn') }));
 }
+
+/** Live books with a cover address and no cached cover: a synced book whose cover this device has not fetched yet (FR-016). */
+export function missingCovers(db: Database): { itemId: string; coverUrl: string }[] {
+  return db
+    .selectObjects(
+      `SELECT i.id, i.cover_url FROM items i
+       WHERE i.type = 'book' AND i.deleted_at IS NULL AND i.cover_url IS NOT NULL AND i.cover_url <> ''
+         AND NOT EXISTS (SELECT 1 FROM covers c WHERE c.item_id = i.id)
+       ORDER BY i.created_at`,
+    )
+    .map((r) => ({ itemId: text(r['id'], 'id'), coverUrl: text(r['cover_url'], 'cover_url') }));
+}

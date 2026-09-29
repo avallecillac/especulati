@@ -163,6 +163,8 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.findByIsbn(q.isbn);
     case 'pendingDetails':
       return d.pendingDetails();
+    case 'missingCovers':
+      return d.missingCovers();
     case 'cover': {
       const c = d.getCover(q.itemId);
       return c ? new Blob([c.bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }) : null;

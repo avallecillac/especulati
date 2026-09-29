@@ -6,7 +6,7 @@ import { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.t
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
-import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
+import { bookView, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
@@ -77,6 +77,10 @@ export class ReaderlogDb {
 
   pendingDetails(): { itemId: string; isbn: string }[] {
     return pendingDetails(this.raw);
+  }
+
+  missingCovers(): { itemId: string; coverUrl: string }[] {
+    return missingCovers(this.raw);
   }
 
   /** Cover cache: local only, never in change_log (research R5). */
