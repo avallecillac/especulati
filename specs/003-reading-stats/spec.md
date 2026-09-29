@@ -13,7 +13,9 @@
 - Q: Does an `abandoned` event count as a reading day? → A: Only when it carries a
   page. Abandoning gains an optional "stopped at page" field (FR-022).
 - Q: How many pages does the first logged page of a read-through count for? → A: The
-  full page number if the read-through began with a `started` event, otherwise 0.
+  full page number if a `started` event precedes it in the read-through, otherwise 0.
+  (Refined during implementation: a backdated page-less entry before the start must not
+  zero the first page.)
 
 **Input**: User description: "003 reading stats: on-device statistics derived from the
 reading-event log. Reading days per year and a calendar heatmap, current and longest
@@ -211,9 +213,10 @@ then check days-to-finish, the average, and the abandon rate per genre.
   events (including the page entered when abandoning) in event order (by `local_date`, then recorded time). Each entry adds its page
   minus the highest page logged earlier in the same read-through, or 0 if that is
   negative. The first page-bearing entry of a read-through adds:
-  its full page number (counting from page 0) when the read-through began with a
-  `started` event, or 0 when it did not (the book was picked up part-way, so the entry
-  only sets a starting point).
+  its full page number (counting from page 0) when a `started` event comes before it
+  in the same read-through, or 0 when none does (the book was picked up part-way, so
+  the entry only sets a starting point). A backdated entry with no page, logged before
+  the start, does not change this.
   Pages are credited to the entry's `local_date`.
 
 **Reading days, heatmap and streaks (US1)**

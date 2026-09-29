@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import sqlite3InitModule, { type SAHPoolUtil, type Sqlite3Static } from '@sqlite.org/sqlite-wasm';
 import { ReaderlogDb, type DispatchEnv } from '@readerlog/db';
-import type { Instant } from '@readerlog/core';
+import { parseLocalDate, type Instant } from '@readerlog/core';
 import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo } from '../lib/protocol.ts';
 
 /**
@@ -105,6 +105,11 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.library();
     case 'book':
       return d.book(q.itemId);
+    case 'stats': {
+      const today = parseLocalDate(q.today);
+      if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);
+      return d.stats(q.year, today.value);
+    }
     case 'findByIsbn':
       return d.findByIsbn(q.isbn);
     case 'pendingDetails':

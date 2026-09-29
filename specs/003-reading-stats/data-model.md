@@ -34,7 +34,7 @@ One per segment of a book's ordered events (research R3):
 | start | LocalDate | the first event's `local_date` |
 | end | LocalDate \| null | the closing event's `local_date`; null while open |
 | outcome | `'finished' \| 'abandoned' \| 'open'` | |
-| began | boolean | the first event is `started` |
+| began | boolean | a `started` event comes before the first page-bearing event (or exists, if there are no pages) |
 | credits | `{ date: LocalDate; pages: number }[]` | one per page-bearing event |
 | daysToFinish | number \| null | `dayNumber(end) − dayNumber(start) + 1` if finished |
 

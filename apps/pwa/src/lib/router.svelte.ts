@@ -8,6 +8,7 @@ export type Route =
   | { name: 'edit'; id: string }
   | { name: 'library' }
   | { name: 'book'; id: string }
+  | { name: 'stats' }
   | { name: 'settings' };
 
 export function parseHash(hash: string): Route {
@@ -26,6 +27,8 @@ export function parseHash(hash: string): Route {
       return { name: 'isbn' };
     case 'library':
       return { name: 'library' };
+    case 'stats':
+      return { name: 'stats' };
     case 'settings':
       return { name: 'settings' };
     case 'book':

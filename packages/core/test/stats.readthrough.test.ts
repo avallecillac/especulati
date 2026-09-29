@@ -84,7 +84,19 @@ describe('readThroughs: page credit (R3)', () => {
     expect(rt[1]!.credits.map((x) => x.pages)).toEqual([0, 30]);
   });
 
-  it('a backdated event sorting before started opens the read-through, so began is false', () => {
+  it('a backdated page-less entry before started does not stop the first page counting in full', () => {
+    const rt = readThroughs([
+      ev('started', '2026-06-15'),
+      ev('progress', '2026-06-14', null, { occurredAt: '2026-06-15T10:00:00.000Z' as ReadingEvent['occurredAt'] }),
+      ev('progress', '2026-06-15', 20, { occurredAt: '2026-06-15T11:00:00.000Z' as ReadingEvent['occurredAt'] }),
+    ]);
+    expect(rt).toHaveLength(1);
+    expect(rt[0]!.start).toBe('2026-06-14');
+    expect(rt[0]!.began).toBe(true);
+    expect(rt[0]!.credits).toEqual([{ date: '2026-06-15', pages: 20 }]);
+  });
+
+  it('a backdated page entry sorting before started opens the read-through; its page is only a baseline', () => {
     const rt = readThroughs([
       ev('started', '2026-03-05'),
       ev('progress', '2026-03-01', 40, { occurredAt: '2026-03-06T10:00:00.000Z' as ReadingEvent['occurredAt'] }),

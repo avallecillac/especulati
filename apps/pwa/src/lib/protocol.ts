@@ -1,4 +1,4 @@
-import type { Command, Rejection } from '@readerlog/core';
+import type { Command, Rejection, StatsView } from '@readerlog/core';
 import type { BookCard, BookView, HomeView, LibraryView } from '@readerlog/db';
 
 /** UI ↔ DB worker messages (contracts/worker-api.md). */
@@ -6,6 +6,7 @@ export type Query =
   | { name: 'home' }
   | { name: 'library' }
   | { name: 'book'; itemId: string }
+  | { name: 'stats'; year: number; today: string }
   | { name: 'storage' }
   | { name: 'findByIsbn'; isbn: string }
   | { name: 'pendingDetails' }
@@ -23,6 +24,7 @@ export interface QueryResult {
   home: HomeView;
   library: LibraryView;
   book: BookView | null;
+  stats: StatsView;
   storage: StorageInfo;
   findByIsbn: BookCard | null;
   pendingDetails: { itemId: string; isbn: string }[];

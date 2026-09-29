@@ -1,15 +1,16 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type Command, type DeviceId, type Instant, type Rejection, type Result } from '@readerlog/core';
+import { decide, err, ok, type Command, type DeviceId, type Instant, type LocalDate, type Rejection, type Result, type StatsView } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
+import { statsView } from './stats.ts';
 import { bookView, findByIsbn, homeView, pendingDetails, libraryView, type BookCard, type BookView, type HomeView, type LibraryView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot } from './snapshot.ts';
-export { loadStatsBooks } from './stats.ts';
+export { loadStatsBooks, statsView } from './stats.ts';
 
 /** Everything impure the write path needs, injected by the shell (or a test). */
 export interface DispatchEnv {
@@ -61,6 +62,10 @@ export class ReaderlogDb {
 
   book(itemId: string): BookView | null {
     return bookView(this.raw, itemId);
+  }
+
+  stats(year: number, today: LocalDate): StatsView {
+    return statsView(this.raw, year, today);
   }
 
   findByIsbn(isbn: string): BookCard | null {

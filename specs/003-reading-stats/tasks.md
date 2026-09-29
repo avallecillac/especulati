@@ -125,7 +125,7 @@ Stats should show the right count, the right marked days, and the right streaks.
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Write `packages/core/test/stats.streaks.test.ts` for
+- [X] T006 [P] [US1] Write `packages/core/test/stats.streaks.test.ts` for
   `currentStreak(days, today)` and `longestStreak(days)` (research R6):
   - today plus the 2 days before gives 3;
   - yesterday and the day before, but not today, gives 2 (still alive);
@@ -135,7 +135,7 @@ Stats should show the right count, the right marked days, and the right streaks.
   - Dec 30 → Jan 2 gives a length of 4 with the correct start and end;
   - of two equal longest runs, the **most recent** wins;
   - an empty set gives `null`.
-- [ ] T007 [P] [US1] Write `packages/core/test/stats.view.test.ts` (US1 part) for
+- [X] T007 [P] [US1] Write `packages/core/test/stats.view.test.ts` (US1 part) for
   `computeStats(books, { year, today })`:
   - **`heatmap`**: 365 entries for 2025 and 366 for 2024, dated Jan 1 to Dec 31, with
     the right level and pages on reading days;
@@ -147,7 +147,7 @@ Stats should show the right count, the right marked days, and the right streaks.
   - **invariants 1, 2, 4 and 7** in contracts/stats.md, with input orders shuffled
     (a deterministic shuffle with a fixed seed written in the test, not
     `Math.random`).
-- [ ] T008 [P] [US1] Write `e2e/stats.spec.ts` (US1 part):
+- [X] T008 [P] [US1] Write `e2e/stats.spec.ts` (US1 part):
   - **empty DB**: the Stats tab shows "0" reading days and the hint text, not an error
     (FR-019);
   - **backdated day**: with the clock at 2026-06-15, add a book, log a page today, and
@@ -158,12 +158,15 @@ Stats should show the right count, the right marked days, and the right streaks.
     - The 06-14 cell says "read, no pages logged".
   - **refresh**: log another page, then open Stats **without reloading**. The count
     updates (FR-020, SC-003).
-  - **year picker**: pick 2025, and it shows 0 reading days.
+  - **year picker**: pick 2025, and it shows 0 reading days. *As built:* the picker
+    only lists years with data plus the current year, so the test seeds 2025-12-31 and
+    2026-01-01/02, then checks the options are 2026 and 2025, and that 2025 shows 1
+    reading day.
   - **one tap**: the Stats tab link is visible from Home (SC-004).
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] In `packages/core/src/stats.ts`, implement:
+- [X] T009 [US1] In `packages/core/src/stats.ts`, implement:
   - `currentStreak` and `longestStreak`, returning
     `Streak = { start: LocalDate; end: LocalDate; length: number }`;
   - `computeStats(books, { year, today })`, returning
@@ -171,14 +174,14 @@ Stats should show the right count, the right marked days, and the right streaks.
 
   The remaining `StatsView` and `YearSummary` fields are added in T013 and T024.
   T006 and T007 must pass.
-- [ ] T010 [US1] Add stats to the db and worker:
+- [X] T010 [US1] Add stats to the db and worker:
   - `packages/db/src/stats.ts`: `statsView(db, year, today) = computeStats(loadStatsBooks(db), { year, today })`;
   - a `ReaderlogDb.stats(year, today)` method;
   - `apps/pwa/src/lib/protocol.ts`: the query
     `{ name: 'stats'; year: number; today: string }`, with result `StatsView`;
   - `apps/pwa/src/worker/db.worker.ts`: handle it. Parse `today` with
     `parseLocalDate`; a bad value gives `{ kind: 'Storage', message }`.
-- [ ] T011 [US1] Build the Stats screen:
+- [X] T011 [US1] Build the Stats screen:
   - `apps/pwa/src/screens/Heatmap.svelte`:
     - a CSS grid of 7 rows (Mon–Sun) by week columns, with month labels;
     - one cell per `heatmap` entry, whose class is its level (0–4), coloured from CSS

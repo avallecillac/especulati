@@ -41,7 +41,7 @@ export interface ReadThrough {
   readonly start: LocalDate;
   readonly end: LocalDate | null;
   readonly outcome: 'finished' | 'abandoned' | 'open';
-  /** The read-through's first event is `started`. */
+  /** A `started` event comes before the read-through's first page (or, with no page, exists at all). */
   readonly began: boolean;
   /** One per page-bearing event, in order; `pages` may be 0. */
   readonly credits: readonly { readonly date: LocalDate; readonly pages: number }[];
@@ -55,8 +55,10 @@ export function readThroughs(events: readonly ReadingEvent[]): ReadThrough[] {
 
   for (const e of eventOrder(events)) {
     if (cur === null) {
-      cur = { itemId: e.itemId, start: e.localDate, began: e.type === 'started', credits: [], high: 0, seenPage: false };
+      cur = { itemId: e.itemId, start: e.localDate, began: false, credits: [], high: 0, seenPage: false };
     }
+    // Only a start logged before the first page makes that page count from 0 (FR-006).
+    if (e.type === 'started' && !cur.seenPage) cur.began = true;
     if (e.page !== null) {
       if (!cur.seenPage && !cur.began) cur.high = e.page;
       cur.credits.push({ date: e.localDate, pages: Math.max(0, e.page - cur.high) });
@@ -106,4 +108,101 @@ export function heatLevel(isReadingDay: boolean, pages: number): 0 | 1 | 2 | 3 |
   if (pages < 20) return 2;
   if (pages < 50) return 3;
   return 4;
+}
+
+export interface Streak {
+  readonly start: LocalDate;
+  readonly end: LocalDate;
+  readonly length: number;
+}
+
+/** Runs of consecutive day numbers in ascending order. */
+function runs(nums: readonly number[]): Streak[] {
+  const out: Streak[] = [];
+  let start = 0;
+  for (let i = 1; i <= nums.length; i++) {
+    if (i === nums.length || nums[i]! !== nums[i - 1]! + 1) {
+      out.push({ start: fromDayNumber(nums[start]!), end: fromDayNumber(nums[i - 1]!), length: i - start });
+      start = i;
+    }
+  }
+  return out;
+}
+
+const sortedNums = (days: ReadonlySet<LocalDate>): number[] => [...days].map(dayNumber).sort((a, b) => a - b);
+
+/**
+ * Run ending today if today is a reading day, else ending yesterday; `null` if neither is.
+ * Days after `today` are ignored (research R6).
+ */
+export function currentStreak(days: ReadonlySet<LocalDate>, today: LocalDate): Streak | null {
+  const t = dayNumber(today);
+  const nums = sortedNums(days).filter((n) => n <= t);
+  const last = nums.at(-1);
+  if (last === undefined || last < t - 1) return null;
+  return runs(nums).at(-1) ?? null;
+}
+
+/** Longest run over all days; on a tie the most recent run wins. */
+export function longestStreak(days: ReadonlySet<LocalDate>): Streak | null {
+  let best: Streak | null = null;
+  for (const r of runs(sortedNums(days))) {
+    if (best === null || r.length >= best.length) best = r;
+  }
+  return best;
+}
+
+export interface YearSummary {
+  readonly year: number;
+  readonly readingDays: number;
+}
+
+export interface HeatCell {
+  readonly date: string;
+  readonly level: 0 | 1 | 2 | 3 | 4;
+  readonly pages: number;
+}
+
+export interface StatsView {
+  readonly year: number;
+  /** Years with at least one reading day, plus today's year; descending. */
+  readonly years: number[];
+  readonly summary: YearSummary;
+  readonly heatmap: HeatCell[];
+  readonly current: Streak | null;
+  readonly longest: Streak | null;
+  readonly hasAnyEvents: boolean;
+}
+
+/** Everything the Stats screen shows, from books only. Pure: `today` is a parameter. */
+export function computeStats(books: readonly StatsBook[], opts: { year: number; today: LocalDate }): StatsView {
+  const { year, today } = opts;
+  const days = readingDays(books);
+  const yearOf = (d: LocalDate) => Number(d.slice(0, 4));
+
+  const yearSet = new Set<number>([yearOf(today)]);
+  for (const d of days.keys()) yearSet.add(yearOf(d));
+
+  const jan1 = dayNumber(`${String(year).padStart(4, '0')}-01-01` as LocalDate);
+  const nextJan1 = dayNumber(`${String(year + 1).padStart(4, '0')}-01-01` as LocalDate);
+  const heatmap: HeatCell[] = [];
+  let readingDaysInYear = 0;
+  for (let n = jan1; n < nextJan1; n++) {
+    const date = fromDayNumber(n);
+    const pages = days.get(date);
+    const isDay = pages !== undefined;
+    if (isDay) readingDaysInYear++;
+    heatmap.push({ date, level: heatLevel(isDay, pages ?? 0), pages: pages ?? 0 });
+  }
+
+  const keys = new Set(days.keys());
+  return {
+    year,
+    years: [...yearSet].sort((a, b) => b - a),
+    summary: { year, readingDays: readingDaysInYear },
+    heatmap,
+    current: currentStreak(keys, today),
+    longest: longestStreak(keys),
+    hasAnyEvents: books.some((b) => b.events.some((e) => e.deletedAt === null)),
+  };
 }

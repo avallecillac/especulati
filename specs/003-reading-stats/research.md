@@ -43,7 +43,8 @@
   amended in R4). Walk them:
   1. A read-through opens at the first event, or at the first event after a
      `finished` or `abandoned`. It closes at the next `finished` or `abandoned`.
-  2. `began` = the first event of the read-through is `started`.
+  2. `began` = a `started` event comes before the read-through's first page-bearing
+     event, or the read-through has a `started` and no pages.
   3. For each event with a page: `credit = max(0, page − high)`, where `high` is the
      highest page seen so far in this read-through. For the first page-bearing event,
      `high` is 0 if `began`, else the page itself (credit 0, FR-006). Then
@@ -52,9 +53,10 @@
 - **Rationale**: this matches the spec's scenarios exactly, including corrections to a
   lower page (credit 0, nothing subtracted) and re-reads (a new read-through restarts
   `high`).
-- **Edge**: a backdated event can land before `started` in order. It then opens the
-  read-through, so `began` is false. That is the honest reading of the log, and a
-  fixture pins it.
+- **Edge**: a backdated event can land before `started` in order, and it then opens
+  the read-through. If it has no page, the start still comes before the first page, so
+  that page counts in full. If it has a page, that page is the baseline (credit 0).
+  Fixtures pin both cases.
 
 ## R4. Abandoning at a page (FR-022)
 

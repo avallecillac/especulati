@@ -1,5 +1,5 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import type { Genre, ItemId, PageCount, ReadingEvent, StatsBook } from '@readerlog/core';
+import { computeStats, type Genre, type ItemId, type LocalDate, type PageCount, type ReadingEvent, type StatsBook, type StatsView } from '@readerlog/core';
 import { intOrNull, rowToEvent, text, textOrNull } from './snapshot.ts';
 
 /**
@@ -33,4 +33,9 @@ export function loadStatsBooks(db: Database): StatsBook[] {
     if (r['id'] !== null) b.events.push(rowToEvent(r));
   }
   return [...books.values()];
+}
+
+/** The Stats screen's data: all books from one query, then pure maths in core. */
+export function statsView(db: Database, year: number, today: LocalDate): StatsView {
+  return computeStats(loadStatsBooks(db), { year, today });
 }

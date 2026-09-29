@@ -12,12 +12,14 @@
   import EnterIsbn from './screens/EnterIsbn.svelte';
   import Library from './screens/Library.svelte';
   import BookDetail from './screens/BookDetail.svelte';
+  import Stats from './screens/Stats.svelte';
   import Settings from './screens/Settings.svelte';
 
   const tabs = [
     { href: '#/', label: 'Home', match: 'home' },
     { href: '#/library', label: 'Library', match: 'library' },
     { href: '#/add', label: 'Add', match: 'add' },
+    { href: '#/stats', label: 'Stats', match: 'stats' },
     { href: '#/settings', label: 'Settings', match: 'settings' },
   ] as const;
 
@@ -85,6 +87,8 @@
       <Library />
     {:else if router.route.name === 'book'}
       {#key router.route.id}<BookDetail id={router.route.id} />{/key}
+    {:else if router.route.name === 'stats'}
+      <Stats />
     {:else if router.route.name === 'settings'}
       <Settings />
     {/if}

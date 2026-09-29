@@ -32,3 +32,20 @@ export async function openLogSheet(page: Page) {
 
 /** The local date of the current book's latest entry, from its <time datetime>. */
 export const lastReadDate = (page: Page) => currentCard(page).locator('time').getAttribute('datetime');
+
+/**
+ * Log a reading entry dated `isoDate` through the UI by moving the (already installed) fake
+ * clock to that day first. `pageNo` logs that page; otherwise it taps "Read today".
+ */
+export async function logOnDay(page: Page, isoDate: string, opts: { page?: number } = {}): Promise<void> {
+  await page.clock.setFixedTime(new Date(`${isoDate}T17:00:00Z`));
+  await page.goto('/#/');
+  const sheet = await openLogSheet(page);
+  if (opts.page !== undefined) {
+    await sheet.getByLabel('Page', { exact: true }).fill(String(opts.page));
+    await sheet.getByRole('button', { name: 'Save' }).click();
+  } else {
+    await sheet.getByRole('button', { name: 'Read today' }).click();
+  }
+  await expect(sheet).toBeHidden();
+}
