@@ -6,7 +6,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint . && depcruise packages apps/pwa/src --config .dependency-cruiser.cjs",
+    "lint": "eslint . && depcruise packages apps/pwa/src apps/relay/src --config .dependency-cruiser.cjs",
     "test": "vitest run",
     "e2e": "pnpm --filter e2e test"
   },

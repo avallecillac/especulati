@@ -1,0 +1,10 @@
+{
+  "name": "@readerlog/relay",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc --noEmit -p ." },
+  "devDependencies": {
+    "@sqlite.org/sqlite-wasm": "3.53.4-build1"
+  }
+}

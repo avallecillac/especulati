@@ -40,7 +40,7 @@ Crypto, merge and relay tasks get an extra adversarial review by the main sessio
 
 ## Phase 1: Setup
 
-- [ ] T001 Wire up the new packages:
+- [X] T001 Wire up the new packages:
   - create `packages/sync` (`package.json` `@readerlog/sync`, depending on
     `@readerlog/core` and `@readerlog/db`; `tsconfig.json` extending
     `tsconfig.base.json` with `"lib": ["ES2022", "DOM"]` for WebCrypto types; `src/index.ts`);

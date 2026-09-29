@@ -13,7 +13,9 @@
   "dependencies": {
     "@readerlog/core": "workspace:*",
     "@readerlog/db": "workspace:*",
+    "@readerlog/sync": "workspace:*",
     "@sqlite.org/sqlite-wasm": "3.53.4-build1",
+    "qrcode-generator": "2.0.4",
     "zxing-wasm": "3.1.4"
   },
   "devDependencies": {

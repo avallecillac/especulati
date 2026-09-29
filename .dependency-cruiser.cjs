@@ -14,6 +14,19 @@ module.exports = {
       from: { path: '^packages/db' },
       to: { path: '^apps/' },
     },
+    {
+      name: 'relay-is-opaque',
+      comment: 'The relay never sees plaintext or shared logic (constitution: zero-knowledge relay).',
+      severity: 'error',
+      from: { path: '^apps/relay' },
+      to: { path: '^packages/' },
+    },
+    {
+      name: 'sync-no-apps',
+      severity: 'error',
+      from: { path: '^packages/sync' },
+      to: { path: '^apps/' },
+    },
     { name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
   ],
   options: {

@@ -35,9 +35,15 @@ importers:
       '@readerlog/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@readerlog/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       '@sqlite.org/sqlite-wasm':
         specifier: 3.53.4-build1
         version: 3.53.4-build1
+      qrcode-generator:
+        specifier: 2.0.4
+        version: 2.0.4
       zxing-wasm:
         specifier: 3.1.4
         version: 3.1.4(@types/emscripten@1.41.6)
@@ -64,6 +70,12 @@ importers:
         specifier: ^7.4.0
         version: 7.4.1
 
+  apps/relay:
+    devDependencies:
+      '@sqlite.org/sqlite-wasm':
+        specifier: 3.53.4-build1
+        version: 3.53.4-build1
+
   e2e:
     devDependencies:
       '@playwright/test':
@@ -83,6 +95,15 @@ importers:
       '@sqlite.org/sqlite-wasm':
         specifier: 3.53.4-build1
         version: 3.53.4-build1
+
+  packages/sync:
+    dependencies:
+      '@readerlog/core':
+        specifier: workspace:*
+        version: link:../core
+      '@readerlog/db':
+        specifier: workspace:*
+        version: link:../db
 
 packages:
 
@@ -2054,6 +2075,9 @@ packages:
   qified@0.10.1:
     resolution: {integrity: sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==}
     engines: {node: '>=20'}
+
+  qrcode-generator@2.0.4:
+    resolution: {integrity: sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==}
 
   readdirp@4.1.2:
     resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
@@ -4652,6 +4676,8 @@ snapshots:
   qified@0.10.1:
     dependencies:
       hookified: 2.2.0
+
+  qrcode-generator@2.0.4: {}
 
   readdirp@4.1.2: {}
 
