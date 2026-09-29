@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+
 export default defineConfig({
+  // Shown in Settings, so you can tell which deployed build is running.
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     svelte(),
     VitePWA({
