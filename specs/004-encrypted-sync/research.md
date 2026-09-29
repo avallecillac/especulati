@@ -13,6 +13,14 @@
   - Same origin means no CORS, and no relay URL to configure per build.
   - Free allowance: 100k requests/day, D1 5M row reads/day, 100k row writes/day, 5 GB.
     One user syncing a few hundred times a day uses well under 1% (SC-007).
+  - **Estimate** for 3 devices, each with about 220 runs a day (opens, foregrounds,
+    writes, taps):
+    - about 2 requests per run, so about 1,300 requests a day (1.3% of the allowance);
+    - pulls read only new batches, so under 5k row reads a day;
+    - about 300 batch inserts plus rate-counter upserts, so under 2k row writes a day
+      (2%).
+
+    T012 measures this.
 - **One-time manual setup** (quickstart):
   1. Create a D1 database `readerlog-relay`.
   2. Run `apps/relay/schema.sql` in its console.
@@ -81,7 +89,8 @@
   - Plaintext is
     `{ v: 1, device: <deviceId>, ops: [{ op, hlc, tbl, row, fields }] }`, as UTF-8 JSON,
     compressed with `CompressionStream('gzip')`. It's supported on iOS 16.4+ and
-    Chrome; if missing, the batch goes uncompressed with a flag in the header.
+    Chrome. If it's missing, the batch goes uncompressed. The **first plaintext byte**
+    is a flag: 1 means gzip, 0 means raw.
   - Sealing: AES-GCM with a random 12-byte IV, and AAD =
     `"readerlog/v1/" + spaceId + "/" + batchId`.
   - Envelope sent to the relay: `{ batchId, iv, ct }`, base64url.

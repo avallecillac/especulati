@@ -225,7 +225,12 @@ run loop, and convergence.
       rejoin;
     - a batch that fails to decrypt is skipped, `undecryptable` goes up, and the cursor
       advances;
-    - `'version'` stops the cursor and gives `'newerVersion'`.
+    - `'version'` stops the cursor and gives `'newerVersion'`;
+    - a relay `5xx` or a timeout gives `'relay'` and a backoff, with nothing changed.
+  - **Push only** (FR-025): `run(reason, { pushOnly: true })` pushes pending batches and
+    makes **no** `GET …/batches` request. The fake relay counts requests.
+  - **Stuck inbox** (U1): after a run, `status().inboxStuck` is the number of
+    `sync_inbox` rows older than one full pull, meaning their row never arrived.
   - **`changed: true`** only when remote ops were applied.
   - **Backoff delays** (30 s, 2 min, 10 min) are returned in the run result, rather
     than timers.
@@ -247,7 +252,12 @@ run loop, and convergence.
   - print the seed on failure;
   - also add a 10k-op perf case (SC-004): one peer with about 10,000 ops pushes to an
     empty space, and a second peer joins and pulls. Both finish in under 60 s in Node,
-    and the time is logged.
+    and the time is logged;
+  - log the relay's request count and D1 row reads and writes (counted in the test
+    store) for a simulated day of 3 devices: 50 opens, 50 foregrounds, 100 local writes
+    and 20 sync-button taps each. Assert it stays under 10% of the free allowance
+    (100k requests, 5M row reads and 100k row writes a day), per research R1 (FR-023,
+    SC-007).
 
 **Checkpoint**: merge, relay, crypto and engine are all proven headless. The main
 session does an adversarial review of T007–T012 before committing.
@@ -272,6 +282,8 @@ shows A's books.
     - A QR image (`role="img"`, name "Sync code QR") and a text code matching
       `/^([0-9A-Z]{4}-){13}[0-9A-Z]{4}$/` are shown, with the "save this code" advice.
   - **Join**: B → **Join** → paste the code. Within 10 s, B's Library shows A's 2 books.
+    - Count the clicks and fills on B from Settings to joined, and assert 5 or fewer
+      (SC-001).
   - **Typos**: a code with one changed character shows "That code has a typo" and
     changes nothing; a code for an unknown space shows "No sync space found for this
     code".
@@ -369,7 +381,8 @@ the offline and conflict cases.
     - `spaceGone` / `unauthorized`: "This sync space no longer exists. Rejoin with a
       new code.";
     - `newerVersion`: "Another device uses a newer Readerlog — update this one";
-    - `corrupt`: "N changes couldn't be read and were skipped";
+    - `corrupt`: "N changes couldn't be read and were skipped". This also counts
+      `inboxStuck` changes, which are waiting on data that never arrived;
   - a relative time for `lastOkAt`;
   - the **Sync now** button;
   - a one-line status on the main Settings screen.
@@ -437,7 +450,9 @@ the offline and conflict cases.
   with `MergeBooks` and `DismissDuplicate` steps, and a **straggler** scenario:
   - peer A merges X into S while peer B logs an entry on X;
   - after sync, a sweep dispatch on any peer moves the entry onto S;
-  - all peers end with each entry exactly once on S (FR-029).
+  - all peers end with each entry exactly once on S (FR-029);
+  - **a chain**: X is merged into S, and then S into T. A straggler entry on X ends on
+    T, because the sweep follows `merged_into` to the final live book.
 
   Uses deterministic ids computed in the test with `node:crypto` SHA-256, matching
   `ids.ts`.

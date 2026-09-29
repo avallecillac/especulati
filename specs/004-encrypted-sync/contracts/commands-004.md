@@ -18,7 +18,7 @@ all their events, loaded by `loadBooksSnapshot(db, ids)`.
 | a malformed id | `InvalidInput { field }` |
 | either book is missing, or removed, **unless** this is a sweep: the duplicate is removed with `merged_into = survivorId` | `NotFound` |
 | `survivorId === duplicateId` | `InvalidInput { field: 'duplicateId' }` |
-| the survivor isn't the smaller `(created_at, id)` | `InvalidInput { field: 'survivorId', reason: 'not earliest' }` |
+| the survivor isn't the smaller `(created_at, id)`. This applies to a regular merge only, not a sweep | `InvalidInput { field: 'survivorId', reason: 'not earliest' }` |
 | `copies.from` isn't exactly the duplicate's live event ids | `InvalidInput { field: 'copies' }` |
 | a `to` is malformed or equals an existing event id of the survivor | `InvalidInput { field: 'copies' }` |
 
@@ -34,6 +34,10 @@ all their events, loaded by `loadBooksSnapshot(db, ids)`.
    across both, keep the survivor's null.
 4. On the duplicate item: set `deleted_at = now` and `merged_into = survivorId`. A sweep
    emits steps 1–2 only.
+
+**Sweep target.** The shell follows `merged_into` from the book holding the straggler
+until it reaches a live book, and uses that as `survivorId`. Validation accepts a sweep
+when the duplicate's chain leads to the survivor.
 
 **Invariants** (`packages/core/test/decide.mergeBooks.test.ts`, plus a property test):
 

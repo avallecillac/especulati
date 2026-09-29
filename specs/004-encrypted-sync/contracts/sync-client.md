@@ -90,10 +90,10 @@ function createSyncEngine(deps: SyncDeps): {
   leave(): void;
   reset(): Promise<Result<{ code: string; qr: string }, SyncError>>;
   showCode(): { code: string; qr: string } | null;
-  run(reason: 'start' | 'visible' | 'online' | 'write' | 'manual'): Promise<SyncRunResult>;
+  run(reason: 'start' | 'visible' | 'online' | 'write' | 'manual', opts?: { pushOnly?: boolean }): Promise<SyncRunResult>;   // pushOnly: capture-only peers (FR-025)
 };
 type SyncError = { kind: 'format' | 'checksum' | 'notFound' | 'offline' | 'relay'; status?: number };
-interface SyncStatusView { on: boolean; lastOkAt: string | null; pending: number; problem: SyncProblem | null; undecryptable: number }
+interface SyncStatusView { on: boolean; lastOkAt: string | null; pending: number; problem: SyncProblem | null; undecryptable: number; inboxStuck: number }
 interface SyncRunResult { pulled: number; pushed: number; changed: boolean }
 ```
 

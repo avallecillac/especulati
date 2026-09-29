@@ -293,4 +293,4 @@ Streaks and reading days count books only. Article stats have their own section.
 | 003 | reading-stats | Book stats + heatmap/streaks; separate article stats |
 | 004 | encrypted-sync | Relay, pairing (QR/code), push/pull, LWW merge, convergence tests |
 | 005 | article-capture | iOS Shortcut + `/capture`, Chrome extension |
-| 006 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space |
+| 006 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals` and `items.merged_into` (constitution II) |
