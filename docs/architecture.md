@@ -180,6 +180,13 @@ The spec's indexes are kept (`reading_events(item_id, local_date)`,
 - **When sync runs:** on app open, on `visibilitychange`, after writes (debounced),
   and when `online` fires. A device that is offline keeps working fully.
 - **Chrome extension:** a push-only peer that creates article items.
+- **As designed in 004** (`specs/004-encrypted-sync/`):
+  - The relay runs as Cloudflare **Pages Functions** on the same origin
+    (`/api/v1`), with D1. It stores opaque encrypted **batches** of ops, keyed by a
+    random batch id.
+  - Ops that arrive before their row exists wait in a local `sync_inbox`.
+  - After joining, likely duplicate books can be merged. The earliest-added copy
+    survives, and entries are copied onto it with deterministic ids.
 
 ## 8. Capture flows
 
