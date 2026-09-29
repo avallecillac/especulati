@@ -20,13 +20,15 @@ all their events, loaded by `loadBooksSnapshot(db, ids)`.
 | `survivorId === duplicateId` | `InvalidInput { field: 'duplicateId' }` |
 | the survivor isn't the smaller `(created_at, id)`. This applies to a regular merge only, not a sweep | `InvalidInput { field: 'survivorId', reason: 'not earliest' }` |
 | `copies.from` isn't exactly the duplicate's live event ids | `InvalidInput { field: 'copies' }` |
-| a `to` is malformed or equals an existing event id of the survivor | `InvalidInput { field: 'copies' }` |
+| a `to` is malformed, repeated within `copies`, or equals an existing event id of a **different** book | `InvalidInput { field: 'copies' }` |
 
 **Changes emitted, in order:**
 
 1. For each copy: insert a `reading_events` row with id `to`, `item_id = survivorId`,
    and the source event's `event_type`, `page`, `occurred_at` and `local_date`, with no
    `deleted_at`.
+   **If `to` already exists on the survivor** (another device already copied the same
+   entry), skip the insert. Its content matches by construction.
 2. For each copy: set the source event's `deleted_at = now`.
 3. On the survivor: set each of `author`, `total_pages`, `genre`, `isbn` and `cover_url`
    that is null there and not null on the duplicate (the FillDetails rule; nothing
@@ -64,6 +66,8 @@ when the duplicate's chain leads to the survivor.
 
 ```ts
 function uuidFromHash(label: string): Promise<string>;   // SHA-256 → first 16 bytes → set version 4 / variant bits → lowercase UUID
-const mergeCopyId = (survivorId, eventId) => uuidFromHash(`readerlog-merge-v1|${survivorId}|${eventId}`);
+// Content-addressed (v2): the same entry copied onto the same book by any path gets the same id.
+const mergeCopyId = (survivorId, e) =>
+  uuidFromHash(`readerlog-merge-v2|${survivorId}|${e.type}|${e.page ?? ''}|${e.occurredAt}|${e.localDate}`);
 const dismissalId  = (a, b) => uuidFromHash(`readerlog-dismiss-v1|${min(a,b)}|${max(a,b)}`);
 ```

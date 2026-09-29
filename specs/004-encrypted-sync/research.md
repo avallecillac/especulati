@@ -207,9 +207,17 @@
     `cover_url` from the duplicate, following the FillDetails rule.
   - It tombstones the duplicate.
 - **Deterministic copy ids (FR-029)**: the shell derives
-  `to = uuidFromHash(SHA-256("readerlog-merge-v1|" + survivorId + "|" + from))`, a
-  v4-shaped UUID. Two devices merging the same pair emit the **same** inserts, which
-  field LWW and the event union collapse to one.
+  `to = uuidFromHash(SHA-256("readerlog-merge-v2|" + survivorId + "|" + type + "|" + page + "|" + occurred_at + "|" + local_date))`,
+  a v4-shaped UUID. The id is **content-addressed**, not path-addressed. Two devices
+  merging the same pair emit the **same** inserts, which field LWW and the event union
+  collapse to one. The same holds when devices reach the final book by different paths.
+  - Example: A sweeps X→T directly, while B, not yet knowing S→T, sweeps X→S and later
+    S→T. Both produce the same id on T.
+  - An insert whose `to` already exists on the survivor is skipped.
+  - Two genuinely different entries identical in type, page, day and millisecond would
+    merge into one. That's accepted as negligible.
+  - v1, which derived the id from `survivorId + from`, was replaced during
+    implementation review because of this multi-path case.
   - `decide` checks that each `to` is a valid UUID. It doesn't recompute the hash,
     because core has no crypto.
 - **Stragglers**: device B may log an entry on the duplicate after A merged it but
