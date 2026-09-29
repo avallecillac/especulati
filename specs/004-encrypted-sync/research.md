@@ -61,7 +61,7 @@
 ## R3. The sync code the user sees
 
 - **Decision**:
-  - **Text code**: the 32 bytes plus a 2-byte checksum (the first 2 bytes of
+  - **Text code**: the 32 bytes plus a 3-byte checksum (the first 3 bytes of
     `SHA-256(K)`), in Crockford base32. That's 56 characters, shown in groups of 4
     separated by `-`.
   - Parsing:

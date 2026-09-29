@@ -4,7 +4,7 @@
 
 ```ts
 function newSyncSecret(random: (n: number) => Uint8Array): Uint8Array;           // 32 bytes
-function formatSyncCode(k: Uint8Array): string;      // Crockford base32 of k‖sha256(k)[0..2], 56 chars, "XXXX-XXXX-…"
+function formatSyncCode(k: Uint8Array): string;      // Crockford base32 of k‖sha256(k)[0..3] (35 bytes = 280 bits = exactly 56 chars, no padding), "XXXX-XXXX-…"
 function parseSyncCode(s: string): Result<Uint8Array, 'format' | 'checksum'>;     // tolerant: case, O→0, I/L→1, spaces, '-'
 function qrPayload(k: Uint8Array): string;           // "readerlog:sync:1:<56 chars>"
 function parseQrPayload(s: string): Result<Uint8Array, 'format' | 'checksum'>;
