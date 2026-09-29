@@ -34,6 +34,9 @@ before implementing it.
   `page.clock.setFixedTime(...)` and reload, then log through the UI. Put a
   `logOnDay(page, isoDate, opts)` helper in `e2e/helpers.ts`.
 
+**Status (2026-09-29):** Phase 1 and US1 (the MVP) are shipped. **US2, US3, US4 and
+Polish (T012–T027) are parked** while 004 (encrypted sync) goes ahead.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 ---
