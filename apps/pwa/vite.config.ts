@@ -16,7 +16,15 @@ export default defineConfig({
       strategies: 'generateSW',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,wasm,svg,png,webmanifest}'],
+        // Latin font subsets are precached; Latin Extended loads on demand and is cached then (006 research R1).
+        globPatterns: ['**/*.{js,css,html,wasm,svg,png,webmanifest}', 'fonts/*-latin-wght-*.woff2'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/fonts/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'readerlog-fonts', expiration: { maxEntries: 16 } },
+          },
+        ],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api\//],
