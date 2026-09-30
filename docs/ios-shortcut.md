@@ -45,8 +45,12 @@ order:
    - `at`: **Text**, `At`
 7. **Base64 Encode** the *Dictionary* (encode, not decode). Line breaks are fine.
 8. **URL Encode** the Base64 text.
-9. **Open URLs** with the text `https://<your-readerlog-address>/#/capture?d=` followed by
-   the URL-encoded text from step 8.
+9. **Text**. Type `https://<your-readerlog-address>/#/capture?d=`, then, with the cursor
+   right after `d=`, insert the output of step 8 as a variable. Don't type its name:
+   tap **Select Variable** in the bar above the keyboard (or long-press → **Insert
+   Variable**), then tap **URL Encoded Text** in step 8. It appears as a blue pill, with
+   no space before it.
+10. **Open URLs**, with the **Text** from step 9 as its input.
 
 Then open the Shortcut's settings (the **i** button) and turn on **Show in Share Sheet**,
 with **Share Sheet Types** set to **URLs** only.
@@ -66,6 +70,11 @@ If the address is already in your log, Readerlog asks whether to **Log again** o
 - **The link opens in Safari.** Chrome isn't the default browser (setup step 1).
 - **"Finish setup: join your sync space".** Chrome on the iPhone isn't paired yet. The
   article was saved there, and it is sent once you join (setup step 2).
+- **"Open URLs failed because Shortcuts couldn't convert from Rich Text to URL".** The
+  address was typed straight into *Open URLs*, or the step 8 output wasn't inserted as a
+  variable. Build the address in a **Text** action (step 9) and pass that Text to *Open
+  URLs* (step 10). To check it, put a **Show Result** before *Open URLs*: it should read
+  `https://…/#/capture?d=eyJ…` on one line.
 - **"This capture link is damaged".** Nothing was saved. Check that step 7 is *Base64
   Encode* and step 8 is *URL Encode*, then use **Add article** to log it by hand.
 - **No reading time (—).** Shortcuts couldn't count the words. Paywalled pages give only a
