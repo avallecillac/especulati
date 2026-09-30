@@ -8,7 +8,7 @@ const impureInCore = [
 const shellGlobals = ['window', 'document', 'self', 'fetch', 'navigator', 'localStorage', 'indexedDB', 'setTimeout', 'setInterval'];
 
 export default tseslint.config(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/test-results/**', '**/playwright-report/**', '**/*.svelte', '.specify/**', '.claude/**'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/dist-e2e/**', '**/test-results/**', '**/playwright-report/**', '**/*.svelte', '.specify/**', '.claude/**'] },
   {
     files: ['**/*.ts'],
     extends: [tseslint.configs.recommendedTypeChecked],

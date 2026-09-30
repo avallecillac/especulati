@@ -40,7 +40,7 @@ before implementing it.
 
 ## Phase 1: Setup
 
-- [ ] T001 Scaffold the extension:
+- [X] T001 Scaffold the extension:
   - create `apps/extension`:
     - `package.json` `@readerlog/extension`, with dependencies `@mozilla/readability`
       (pin the current 0.x version) and the workspace packages `@readerlog/core` and

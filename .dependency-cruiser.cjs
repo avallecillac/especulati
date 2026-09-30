@@ -27,6 +27,20 @@ module.exports = {
       from: { path: '^packages/sync' },
       to: { path: '^apps/' },
     },
+    {
+      name: 'extension-no-pwa-no-db',
+      comment: 'The extension bundle must not contain SQLite or the PWA (feature 005).',
+      severity: 'error',
+      from: { path: '^apps/extension' },
+      to: { path: '^packages/db|^apps/pwa' },
+    },
+    {
+      name: 'capture-peer-no-db',
+      comment: 'The capture peer and shared push stay free of packages/db (feature 005).',
+      severity: 'error',
+      from: { path: '^packages/sync/src/(capturePeer|push)\\.ts' },
+      to: { path: '^packages/db' },
+    },
     { name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
   ],
   options: {

@@ -12,3 +12,4 @@ playwright-report/
 *.swp
 .vscode/
 .idea/
+dist-e2e/
