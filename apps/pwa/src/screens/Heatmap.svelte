@@ -58,19 +58,15 @@
 <style>
   .scroll { overflow-x: auto; padding-bottom: 6px; }
   .grid {
-    --l0: #ebe7de; --l1: #c6ddd3; --l2: #97c4b2; --l3: #55937e; --l4: #2f5d50;
     display: flex; gap: 3px; width: max-content;
-  }
-  @media (prefers-color-scheme: dark) {
-    .grid { --l0: #2a2723; --l1: #274037; --l2: #35634f; --l3: #4f8f77; --l4: #8fd0b9; }
   }
   .week { display: grid; grid-template-rows: 14px repeat(7, 12px); gap: 3px; }
   .month { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: visible; line-height: 14px; }
   .cell { width: 12px; height: 12px; border-radius: 2px; }
   .pad { visibility: hidden; }
-  .l0 { background: var(--l0); }
-  .l1 { background: var(--l1); }
-  .l2 { background: var(--l2); }
-  .l3 { background: var(--l3); }
-  .l4 { background: var(--l4); }
+  .l0 { background: var(--heat-0); }
+  .l1 { background: var(--heat-1); }
+  .l2 { background: var(--heat-2); }
+  .l3 { background: var(--heat-3); }
+  .l4 { background: var(--heat-4); }
 </style>

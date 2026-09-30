@@ -23,21 +23,21 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 
 ## Phase 1: Foundation (blocks everything)
 
-- [ ] T001 Vendor fonts:
+- [X] T001 Vendor fonts:
   - copy the EB Garamond and Cormorant variable woff2 files (latin and latin-ext,
     normal and italic) from `@fontsource-variable/*@5.3.0` into
     `apps/pwa/public/fonts/`, with `OFL.txt`;
   - add `woff2` to the workbox `globPatterns`;
   - preload `eb-garamond-latin-wght-normal.woff2` in `index.html`.
-- [ ] T002 [P] Tests first, next to the code (`apps/pwa/src/**/*.test.ts`, which is the pwa Vitest include):
+- [X] T002 [P] Tests first, next to the code (`apps/pwa/src/**/*.test.ts`, which is the pwa Vitest include):
   - `theme-tokens.test.ts`: every `src/theme/<id>.css` sets exactly the token list; the
     registry's `swatch` and `themeColor` equal the CSS values;
   - `theme-contrast.test.ts`: the pairs in the contract;
   - `theme-guard.test.ts`: no literal colours outside `src/theme`, apart from the
     allow-list;
   - `appearance.test.ts`: `resolve()`;
-  - `nav.test.ts`: `parent()` and `depth()` for every `Route`.
-- [ ] T003 Theme system:
+  - `nav.test.ts`: `parent()` and `depth()` for every `Route` (written with T005, since `nav.ts` is Phase 2).
+- [X] T003 Theme system:
   - `src/theme/base.css`: `@font-face`, type scale, spacing, motion, and the shared
     `.smallcaps` and `.running-head` styles;
   - `src/theme/macondo.css` and `src/theme/patriarca.css` (palettes from research R3);

@@ -1,6 +1,7 @@
 /* Macondo: paper, verdigris and ochre, after Rivera's watercolour palette (research R3). */
 :root[data-theme='macondo'] {
   --scheme: light;
+  color-scheme: light;
   --paper: #f3ecdd;
   --leaf: #fbf7ee;
   --ink: #2a2419;

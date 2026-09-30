@@ -1,6 +1,7 @@
 /* Patriarca: night, oxblood and faded gold, after El otoño del patriarca (research R3). */
 :root[data-theme='patriarca'] {
   --scheme: dark;
+  color-scheme: dark;
   --paper: #15100e;
   --leaf: #211916;
   --ink: #efe3cc;

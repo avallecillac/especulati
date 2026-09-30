@@ -1,0 +1,48 @@
+/* Structural constants shared by every theme (006 contracts/theme-tokens.md). No colours here. */
+:root {
+  --gutter: 16px;
+  --tap: 44px;
+  --radius: 14px;
+
+  --text-xs: 0.78rem;
+  --text-sm: 0.9rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-title: 2.25rem;
+
+  --dur-fast: 80ms;
+  --dur: 200ms;
+  --dur-slow: 350ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* TEMPORARY aliases so screens written against the old names keep working (006 phase 1). */
+  --bg: var(--paper);
+  --surface: var(--leaf);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --line: var(--rule);
+  --accent-text: var(--on-accent);
+
+  font-family: var(--font-text);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+body {
+  font-family: var(--font-text);
+  font-size: 18px;
+  line-height: 1.45;
+  background: var(--paper) var(--texture);
+  color: var(--ink);
+}
+
+.smallcaps { text-transform: uppercase; font-size: 0.78em; letter-spacing: 0.12em; }
+
+.running-head {
+  font-family: var(--font-text);
+  text-transform: uppercase;
+  font-size: 0.78em;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+}
