@@ -15,6 +15,8 @@ pnpm test             # Vitest: core, db, sync, relay, pwa (Node, in-memory SQLi
 pnpm test:convergence # the full 1,000-run sync convergence test (SC-003; about 2 min)
 pnpm e2e              # Playwright on Chromium against the production build
 pnpm --filter pwa dev # local dev server
+pnpm --filter @readerlog/extension build      # release extension → apps/extension/dist (fails on host_permissions or test hooks)
+pnpm --filter @readerlog/extension build:e2e  # test build with localhost access → dist-e2e (e2e only, never ship)
 ```
 
 ## Layout and rules
@@ -33,6 +35,13 @@ pnpm --filter pwa dev # local dev server
   `{ batchId, iv, ct }` only, and must not import `packages/*` (dependency-cruiser
   enforces this). `functions/api/[[path]].ts` is the Pages Functions adapter (D1 binding
   `RELAY_DB`).
+- `apps/extension`: the Chrome/Brave MV3 extension. It must not import `packages/db` or
+  `apps/pwa`. It writes through core `decide()` + `stampOps`, and pushes through
+  `packages/sync/src/capturePeer.ts`, which never pulls. The extractor returns only
+  `{ url, title, author, words }`; article text is never stored or sent. Test hooks exist
+  only in the `EXT_E2E` build.
+- Articles are `items` with `type = 'article'`, and have no events. Book queries and
+  stats stay books-only.
 - **Remote changes** (merged from other devices) skip `decide()` under the constitution
   v1.1.0 exception: `parseRemoteOp`'s allow-list, then `applyRemoteOps`, all-or-nothing.
   Local writes, including `MergeBooks`, still go through `decide()`.

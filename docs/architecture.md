@@ -74,7 +74,7 @@ packages/core   pure TS: branded types, decide(), HLC, merge rules, interchange 
 packages/db     SQLite schema + migrations, repositories, stats SQL (browser worker + Node tests)
 packages/sync   HKDF keys, AES-GCM envelopes, relay client, push/pull loop
 apps/pwa        Svelte UI, DB worker, service worker, barcode scanner, /capture route
-apps/extension  Chrome MV3 extension
+apps/extension  Chrome/Brave MV3 extension: Readability extractor, toast, push-only capture peer (no SQLite)
 apps/relay      zero-knowledge relay handler (+ functions/ = Cloudflare Pages Functions adapter, D1)
 shortcuts/      iOS Shortcut + JS snippet + install guide
 e2e/            Playwright scenarios

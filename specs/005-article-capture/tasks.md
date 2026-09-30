@@ -337,7 +337,7 @@ It saves, and a reload doesn't duplicate it.
   5,000 articles: the first page of `articles()` under 20 ms, `loadArticles` under
   100 ms, and `findArticleByUrl` under 5 ms (research R10b; the original 50 ms for the
   full list was replaced with paging).
-- [ ] T025 Update the docs (main session): `docs/architecture.md` (the extension and
+- [X] T025 Update the docs (main session): `docs/architecture.md` (the extension and
   capture peer, and the Articles UI), `CLAUDE.md` (the `apps/extension` rules and the
   build command), and the README (extension install).
 - [ ] T026 Run the full validation (main session):
