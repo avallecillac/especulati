@@ -16,13 +16,13 @@ async function pair(a: Page, b: Page): Promise<string> {
   await b.getByLabel('Sync code').fill(code);
   await b.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(b.getByRole('button', { name: 'Show code' })).toBeVisible({ timeout: 10_000 });
-  await b.getByRole('link', { name: 'Library' }).click();
+  await b.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(b.getByRole('link', { name: 'Dune' })).toBeVisible({ timeout: 10_000 });
   return code;
 }
 
 const titlesIn = async (page: Page) => {
-  await page.getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
   return page.getByRole('link').filter({ hasText: /^(Dune|Emma|Ulysses)/ }).allInnerTexts();
 };
@@ -39,7 +39,7 @@ test('leave: the device keeps its books and stops syncing', async ({ twoDevices,
   await expect(a.page.getByRole('button', { name: 'Turn on sync' })).toBeVisible();
   await expect(a.page.getByRole('button', { name: 'Sync now' })).toHaveCount(0); // top bar button is gone too
 
-  await a.page.getByRole('link', { name: 'Library' }).click();
+  await a.page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(a.page.getByRole('link', { name: 'Dune' })).toBeVisible();
 
   // A's later changes never reach B, and A makes no relay calls.
@@ -50,7 +50,7 @@ test('leave: the device keeps its books and stops syncing', async ({ twoDevices,
   await b.page.getByRole('link', { name: 'Home', exact: true }).click();
   await b.page.getByRole('button', { name: 'Sync now' }).click();
   await expect(b.page.getByRole('button', { name: 'Sync now' })).toBeEnabled();
-  await b.page.getByRole('link', { name: 'Library' }).click();
+  await b.page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(b.page.getByRole('link', { name: 'Dune' })).toBeVisible();
   await expect(b.page.getByRole('link', { name: 'Emma' })).toHaveCount(0);
 });

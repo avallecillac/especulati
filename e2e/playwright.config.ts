@@ -14,6 +14,8 @@ export default defineConfig({
     // Deterministic local dates that cross a UTC day boundary (research R6).
     timezoneId: 'America/New_York',
     locale: 'en-US',
+    // Existing specs shouldn't click through view transitions; shell.spec.ts opts back in.
+    contextOptions: { reducedMotion: 'reduce' },
   },
   projects: [
     {

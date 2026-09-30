@@ -52,13 +52,13 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 
 ## Phase 2: US1, native shell (P1)
 
-- [ ] T004 [P] [US1] Write `e2e/shell.spec.ts` (quickstart scenarios 6–9). Set
+- [X] T004 [P] [US1] Write `e2e/shell.spec.ts` (quickstart scenarios 6–9). Set
   `reducedMotion: 'reduce'` in `playwright.config.ts` `use`. Scenario 9 overrides it
   with `test.use`.
-- [ ] T005 [US1] `src/lib/nav.ts` (`parent` and `depth`, per contracts/ui-shell.md),
+- [X] T005 [US1] `src/lib/nav.ts` (`parent` and `depth`, per contracts/ui-shell.md),
   plus the view-transition wrapper in `router.svelte.ts`: set the direction class on
   `<html>`, and skip the transition under Reduce Motion or when the API is missing.
-- [ ] T006 [US1] `src/shell/TopBar.svelte`:
+- [X] T006 [US1] `src/shell/TopBar.svelte`:
   - the compact title from `data-title`, driven by an IntersectionObserver on the
     screen's `h1`;
   - the back link;
@@ -66,7 +66,7 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 
   `src/shell/TabBar.svelte`: icons (original line SVG), labels unchanged, and a
   translucent blur with a solid fallback.
-- [ ] T007 [US1] CSS for the native feel:
+- [X] T007 [US1] CSS for the native feel:
   - grouped inset lists (`ul.plain`, `.card`) with chevrons on rows that navigate;
   - press feedback;
   - sheets with a grabber and the `sheet-open` scroll lock;
@@ -74,7 +74,7 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
   - inputs of 17 px or more;
   - safe areas;
   - `overscroll-behavior`.
-- [ ] T008 [US1] FR-022: the Settings Sync card button becomes "Sync settings". Update
+- [X] T008 [US1] FR-022: the Settings Sync card button becomes "Sync settings". Update
   the e2e specs that click it.
 
 ## Phase 3: US2, edition look (P1)

@@ -73,6 +73,7 @@ async function newDevice(browser: Browser, relay: RelayFixture): Promise<Device>
     serviceWorkers: 'allow',
     timezoneId: 'America/New_York',
     locale: 'en-US',
+    reducedMotion: 'reduce',
   });
   await relay.install(context);
   const page = await context.newPage();

@@ -7,7 +7,7 @@ const ISBN = '9780441172719';
 /** Add "Dune" (optionally with a page count), give it the ISBN, and log one page. */
 async function addDune(page: Page, opts: { pages?: number; logged: number }): Promise<void> {
   await addBook(page, { title: 'Dune', ...(opts.pages ? { pages: opts.pages } : {}) });
-  await page.getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
   await page.getByRole('link', { name: 'Dune' }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
   await page.getByLabel('ISBN').fill(ISBN);
@@ -47,7 +47,7 @@ async function syncNow(page: Page): Promise<void> {
 }
 
 const libraryDunes = async (page: Page) => {
-  await page.getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
   return page.getByRole('link', { name: /^Dune/ });
 };

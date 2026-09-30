@@ -1,21 +1,8 @@
+import { flushSync } from 'svelte';
+import { depth, type Route } from './nav.ts';
+
 /** Minimal hash router (research R3): five screens don't justify a dependency. */
-export type Route =
-  | { name: 'home' }
-  | { name: 'add' }
-  | { name: 'scan' }
-  | { name: 'search' }
-  | { name: 'isbn' }
-  | { name: 'edit'; id: string }
-  | { name: 'library' }
-  | { name: 'book'; id: string }
-  | { name: 'stats' }
-  | { name: 'settings' }
-  | { name: 'sync' }
-  | { name: 'duplicates' }
-  | { name: 'articles' }
-  | { name: 'article'; id: string }
-  /** `d` is the raw text after `d=` (still URL-encoded); decodeCapture handles it. */
-  | { name: 'capture'; d: string };
+export type { Route };
 
 export function parseHash(hash: string): Route {
   const full = hash.replace(/^#/, '') || '/';
@@ -55,10 +42,44 @@ export function parseHash(hash: string): Route {
   }
 }
 
-export const router = $state<{ route: Route }>({ route: parseHash(location.hash) });
+export const router = $state<{ route: Route; /** The hash we came from in this session (null on first load). */ previousHash: string | null }>({
+  route: parseHash(location.hash),
+  previousHash: null,
+});
+
+let currentHash = location.hash;
+
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Apply a route change, with a push/pop view transition when the depth changes (006 ui-shell.md). */
+function applyRoute(next: Route): void {
+  const prev = router.route;
+  const apply = () => {
+    router.route = next;
+    flushSync();
+  };
+  const d = depth(next) - depth(prev);
+  if (reducedMotion()) {
+    apply();
+    // Reduce Motion: a short fade instead of the slide.
+    if (prev.name !== next.name) document.querySelector('main')?.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 150 });
+    return;
+  }
+  if (d === 0 || typeof document.startViewTransition !== 'function') {
+    apply();
+    return;
+  }
+  const root = document.documentElement;
+  root.classList.add(d > 0 ? 'vt-push' : 'vt-pop');
+  const done = () => root.classList.remove('vt-push', 'vt-pop');
+  const t = document.startViewTransition(apply);
+  void t.finished.then(done, done);
+}
 
 window.addEventListener('hashchange', () => {
-  router.route = parseHash(location.hash);
+  router.previousHash = currentHash;
+  currentHash = location.hash;
+  applyRoute(parseHash(location.hash));
 });
 
 export function navigate(path: string): void {

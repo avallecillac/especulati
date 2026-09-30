@@ -88,7 +88,7 @@
   <h2>Sync</h2>
   <p class="muted">Keep your reading log on more than one device, end-to-end encrypted.</p>
   {#if syncState.status}<p data-testid="settings-sync-status">{summaryLine(syncState.status, now)}</p>{/if}
-  <a class="button" href="#/settings/sync">Sync</a>
+  <a class="button" href="#/settings/sync">Sync settings</a>
   <p class="muted"><a href="https://github.com/avallecillac/reader-log/blob/main/docs/ios-shortcut.md" target="_blank" rel="noopener noreferrer">Log articles from your iPhone</a></p>
 </section>
 

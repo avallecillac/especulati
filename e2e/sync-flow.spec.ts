@@ -78,9 +78,9 @@ test('offline entries, one dated Yesterday, arrive with their original dates', a
     await expect(currentCard(b.page).getByText('p. 30 / 300')).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 
-  await a.page.getByRole('link', { name: 'Library' }).click();
+  await a.page.getByRole('link', { name: 'Library', exact: true }).click();
   await a.page.getByRole('link', { name: 'Dune' }).click();
-  await b.page.getByRole('link', { name: 'Library' }).click();
+  await b.page.getByRole('link', { name: 'Library', exact: true }).click();
   await b.page.getByRole('link', { name: 'Dune' }).click();
   const onA = await historyDates(a.page);
   expect(onA).toHaveLength(4);
@@ -98,7 +98,7 @@ test('concurrent edits made offline merge: both devices show both', async ({ two
     [a.page, async () => a.page.getByLabel('Title').fill('Dune Messiah')],
     [b.page, async () => b.page.getByLabel('Total pages').fill('350')],
   ] as const) {
-    await p.getByRole('link', { name: 'Library' }).click();
+    await p.getByRole('link', { name: 'Library', exact: true }).click();
     await p.getByRole('link', { name: 'Dune' }).click();
     await p.getByRole('button', { name: 'Edit' }).click();
     await edit();
@@ -122,7 +122,7 @@ test('removing a book on A removes it on B', async ({ twoDevices }) => {
   const { a, b } = twoDevices;
   await pair(a.page, b.page);
 
-  await a.page.getByRole('link', { name: 'Library' }).click();
+  await a.page.getByRole('link', { name: 'Library', exact: true }).click();
   await a.page.getByRole('link', { name: 'Dune' }).click();
   await a.page.getByRole('button', { name: 'Remove book' }).click();
   await a.page.getByRole('alertdialog', { name: 'Remove this book?' }).getByRole('button', { name: 'Remove' }).click();
@@ -132,7 +132,7 @@ test('removing a book on A removes it on B', async ({ twoDevices }) => {
     await tapSync(b.page);
     await expect(currentCard(b.page)).toBeHidden({ timeout: 1000 });
   }).toPass({ timeout: 15_000 });
-  await b.page.getByRole('link', { name: 'Library' }).click();
+  await b.page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(b.page.getByRole('link', { name: 'Dune' })).toHaveCount(0);
 });
 

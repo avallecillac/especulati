@@ -3,6 +3,8 @@
 ## Screen chrome
 
 - Every routed screen renders exactly one `<h1>`: its large title.
+- Scroll lock under sheets uses `html:has(.sheet-backdrop) { overflow: hidden }`, which
+  covers every sheet and confirm with no JS.
 - The top bar (`header.bar`) carries `data-title="<h1 text>"` and gets `data-compact`
   when the `<h1>` scrolls out of view. The compact title is CSS-generated content
   only.
@@ -18,6 +20,7 @@
 | `sync` | Settings → `#/settings` |
 | `duplicates` | Sync → `#/settings/sync` |
 | `capture` | Library → `#/library` |
+| `articles` | none: it is the Library tab's Articles view, depth 0 |
 
 - The back control is a link, `<a class="back" href=…>‹ Parent</a>`, with the
   accessible name "Back to <Parent>". When the previous history entry is that
@@ -29,6 +32,8 @@
   `sync` and `capture` are 1; `edit` and `duplicates` are 2.
 - Going to a greater depth pushes (the new screen slides in from the right). Going to a
   smaller depth pops. Equal depth doesn't animate.
+- e2e: `contextOptions: { reducedMotion: 'reduce' }` is set in the config and in every
+  custom context (relay and extension fixtures), so specs don't click through a transition.
 - Only with `prefers-reduced-motion: no-preference` and `document.startViewTransition`
   available. Otherwise a 150 ms fade on `main`, or nothing.
 

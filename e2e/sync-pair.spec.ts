@@ -8,7 +8,7 @@ const CODE = /^([0-9A-Z]{4}-){13}[0-9A-Z]{4}$/;
 /** Settings → Sync → Turn on sync. Returns the text code shown. */
 async function turnOn(page: Page): Promise<string> {
   await openApp(page, '#/settings');
-  await page.getByRole('link', { name: 'Sync' }).click();
+  await page.getByRole('link', { name: 'Sync settings' }).click();
   await page.getByRole('button', { name: 'Turn on sync' }).click();
   await expect(page.getByRole('img', { name: 'Sync code QR' })).toBeVisible();
   const code = (await page.getByTestId('sync-code').textContent()) ?? '';
@@ -32,7 +32,7 @@ test('turn on, then join by pasting the code: B shows the books of A within 10 s
   // B: count every click and fill from Settings to joined.
   let steps = 0;
   await openApp(b.page, '#/settings');
-  await b.page.getByRole('link', { name: 'Sync' }).click();
+  await b.page.getByRole('link', { name: 'Sync settings' }).click();
   steps++;
   await b.page.getByRole('button', { name: 'Join', exact: true }).click();
   steps++;

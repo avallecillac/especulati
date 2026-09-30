@@ -53,6 +53,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
       args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`],
       timezoneId: 'America/New_York',
       locale: 'en-US',
+      reducedMotion: 'reduce',
     });
     await relay.install(context);
     const html = readFileSync(`${FIXTURES}${ARTICLE.file}`, 'utf8');
@@ -101,7 +102,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
 
   /** A normal PWA context on the same relay, with sync turned on. */
   pwa: async ({ browser, relay }, use) => {
-    const context = await browser.newContext({ baseURL: APP_ORIGIN, serviceWorkers: 'allow', timezoneId: 'America/New_York', locale: 'en-US' });
+    const context = await browser.newContext({ baseURL: APP_ORIGIN, serviceWorkers: 'allow', timezoneId: 'America/New_York', locale: 'en-US', reducedMotion: 'reduce' });
     await relay.install(context);
     const page = await context.newPage();
     await use(page);
@@ -112,7 +113,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
 /** Settings, Sync, Turn on sync. Returns the code. */
 export async function turnOnSync(page: Page): Promise<string> {
   await openApp(page, '#/settings');
-  await page.getByRole('link', { name: 'Sync' }).click();
+  await page.getByRole('link', { name: 'Sync settings' }).click();
   await page.getByRole('button', { name: 'Turn on sync' }).click();
   await expect(page.getByRole('img', { name: 'Sync code QR' })).toBeVisible();
   return ((await page.getByTestId('sync-code').textContent()) ?? '').trim();

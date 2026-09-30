@@ -1,4 +1,4 @@
-import type { Database } from '@sqlite.org/sqlite-wasm';
+import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import { articleStats, computeStats, type ArticleStatInput, type ArticleStats, type WordCount, type Genre, type ItemId, type LocalDate, type PageCount, type EventId, type EventType, type Instant, type Page, type ReadingEvent, type StatsBook, type StatsView } from '@readerlog/core';
 import { selectLiveArticleArrays } from './queries.ts';
 import { intOrNull, text, textOrNull } from './snapshot.ts';
@@ -21,7 +21,7 @@ export function loadStatsBooks(db: Database): StatsBook[] {
   );
   return rows.map((r): StatsBook => {
     const id = text(r[0], 'book_id') as ItemId;
-    const packed = JSON.parse(text(r[3], 'events')) as unknown[][];
+    const packed = JSON.parse(text(r[3], 'events')) as SqlValue[][];
     return {
       itemId: id,
       genre: textOrNull(r[1], 'genre') as Genre | null,
