@@ -201,6 +201,26 @@
   `loadArticles(db)` query, separate from the books-only loader. So SC-005 holds by
   construction, and a test asserts it.
 
+## R10b. Article list performance (found in T024, main-session decision)
+
+- **Measured** with 5,000 articles in Node on SQLite-WASM:
+  - `SELECT *` into objects: 159 ms;
+  - named columns into objects: 120 ms;
+  - named columns into arrays: 72 ms;
+  - `count(*)`: 0.6 ms.
+  - The plan is `SEARCH … USING INDEX idx_items_type_read`, with only a small temp
+    B-tree for the tie-break. **The cost is copying rows across the WASM boundary**, not
+    the query, so an index would not help.
+- **Decision**:
+  - `articles({ limit = 100, before?: { readOn, createdAt, id } })` uses keyset paging
+    in the same order, and the Articles view shows **Show more**. The first page is
+    O(limit) at any library size.
+  - `loadArticles` (stats) selects only the columns it needs, with `selectArrays`.
+- **Budgets** (T024):
+  - the first page of `articles()` under 20 ms;
+  - `loadArticles` for 5,000 articles under 100 ms;
+  - `findArticleByUrl` under 5 ms.
+
 ## R11. New dependencies and packages
 
 - **Runtime**: `@mozilla/readability` (extension only).

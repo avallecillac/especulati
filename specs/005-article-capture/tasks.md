@@ -333,9 +333,10 @@ It saves, and a reload doesn't duplicate it.
   article ("Zanzibar Quokka Essay", URL `https://quokka.example/essay-7351`) never
   appears in relay rows, raw or base64-encoded, and the decrypted batch holds only the
   FR-001 fields.
-- [ ] T024 [P] Add a performance check: `packages/db/test/perf.test.ts` gets an
-  `articles()` case with 5,000 articles (under 50 ms) and a `findArticleByUrl` case
-  (under 5 ms).
+- [ ] T024 [P] Add a performance check: `packages/db/test/perf.test.ts` gets cases with
+  5,000 articles: the first page of `articles()` under 20 ms, `loadArticles` under
+  100 ms, and `findArticleByUrl` under 5 ms (research R10b; the original 50 ms for the
+  full list was replaced with paging).
 - [ ] T025 Update the docs (main session): `docs/architecture.md` (the extension and
   capture peer, and the Articles UI), `CLAUDE.md` (the `apps/extension` rules and the
   build command), and the README (extension install).
