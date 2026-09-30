@@ -158,7 +158,16 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
     case 'library':
       return d.library();
     case 'articles':
-      return d.articles();
+      return d.articles({ ...(q.limit !== undefined ? { limit: q.limit } : {}), ...(q.before ? { before: q.before } : {}) });
+    case 'article':
+      return d.article(q.itemId);
+    case 'findArticleByUrl':
+      return d.findArticleByUrl(q.url);
+    case 'articleStats': {
+      const today = parseLocalDate(q.today);
+      if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);
+      return d.articleStats(q.year, today.value);
+    }
     case 'book':
       return d.book(q.itemId);
     case 'stats': {

@@ -11,6 +11,7 @@ A personal, local-first app for logging books and web articles and seeing readin
 
 - [Architecture](docs/architecture.md): the current design. The original native-iOS
   spec is kept at [docs/architecture-v1-native-ios.md](docs/architecture-v1-native-ios.md).
+- [Log articles from your iPhone](docs/ios-shortcut.md): building the Shortcut and pairing Chrome.
 - [Constitution](.specify/memory/constitution.md): the project's non-negotiable rules.
 - [Specs](specs/): one folder per feature, written with
   [spec-kit](https://github.com/github/spec-kit).

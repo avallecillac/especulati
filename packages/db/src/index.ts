@@ -1,19 +1,19 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type Rejection, type Result, type StatsView } from '@readerlog/core';
+import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Rejection, type Result, type StatsView } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
-import { statsView } from './stats.ts';
+import { articleStatsView, statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
-import { article, articles, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
+import { article, articles, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type ArticleCursor, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
 export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
-export { loadStatsBooks, statsView } from './stats.ts';
+export { articleStatsView, loadArticles, loadStatsBooks, statsView } from './stats.ts';
 
 /** Everything impure the write path needs, injected by the shell (or a test). */
 export interface DispatchEnv {
@@ -79,8 +79,12 @@ export class ReaderlogDb {
     return statsView(this.raw, year, today);
   }
 
-  articles(): Article[] {
-    return articles(this.raw);
+  articleStats(year: number, today: LocalDate): ArticleStats {
+    return articleStatsView(this.raw, year, today);
+  }
+
+  articles(opts?: { limit?: number; before?: ArticleCursor }): Article[] {
+    return articles(this.raw, opts);
   }
 
   article(itemId: string): Article | null {
@@ -200,4 +204,5 @@ export class ReaderlogDb {
   }
 }
 export { rowToArticle } from './queries.ts';
+export type { ArticleCursor } from './queries.ts';
 export type { BookCard, BookEventView, BookView, DuplicateBookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from './queries.ts';

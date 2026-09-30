@@ -11,10 +11,17 @@ export type Route =
   | { name: 'stats' }
   | { name: 'settings' }
   | { name: 'sync' }
-  | { name: 'duplicates' };
+  | { name: 'duplicates' }
+  | { name: 'articles' }
+  | { name: 'article'; id: string }
+  /** `d` is the raw text after `d=` (still URL-encoded); decodeCapture handles it. */
+  | { name: 'capture'; d: string };
 
 export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#/, '') || '/';
+  const full = hash.replace(/^#/, '') || '/';
+  const q = full.indexOf('?');
+  const path = q === -1 ? full : full.slice(0, q);
+  const query = q === -1 ? '' : full.slice(q + 1);
   const [, head = '', arg = '', arg2 = ''] = path.split('/');
   switch (head) {
     case '':
@@ -27,6 +34,12 @@ export function parseHash(hash: string): Route {
       return { name: 'search' };
     case 'isbn':
       return { name: 'isbn' };
+    case 'capture':
+      return { name: 'capture', d: /(?:^|&)d=([^&]*)/.exec(query)?.[1] ?? '' };
+    case 'articles':
+      return { name: 'articles' };
+    case 'article':
+      return arg ? { name: 'article', id: decodeURIComponent(arg) } : { name: 'articles' };
     case 'library':
       return { name: 'library' };
     case 'stats':

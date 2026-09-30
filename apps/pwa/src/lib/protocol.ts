@@ -1,4 +1,4 @@
-import type { Article, Command, Rejection, Result, StatsView } from '@readerlog/core';
+import type { Article, ArticleStats, Command, Rejection, Result, StatsView } from '@readerlog/core';
 import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
@@ -6,7 +6,11 @@ import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@read
 export type Query =
   | { name: 'home' }
   | { name: 'library' }
-  | { name: 'articles' }
+  /** One keyset page: `before` is the last row of the previous page (research R10b). */
+  | { name: 'articles'; limit?: number; before?: { readOn: string; createdAt: string; id: string } }
+  | { name: 'article'; itemId: string }
+  | { name: 'findArticleByUrl'; url: string }
+  | { name: 'articleStats'; year: number; today: string }
   | { name: 'book'; itemId: string }
   | { name: 'stats'; year: number; today: string }
   | { name: 'storage' }
@@ -29,6 +33,9 @@ export interface QueryResult {
   home: HomeView;
   library: LibraryView;
   articles: Article[];
+  article: Article | null;
+  findArticleByUrl: Article[];
+  articleStats: ArticleStats;
   book: BookView | null;
   stats: StatsView;
   storage: StorageInfo;

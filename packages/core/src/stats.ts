@@ -220,7 +220,10 @@ export interface ArticleStats {
 
 
 /** Article stats (data-model "Derived: ArticleStats"). Pure: `today` is a parameter; the week starts on Monday. */
-export function articleStats(articles: readonly Article[], opts: { year: number; today: LocalDate }): ArticleStats {
+/** The only Article fields article stats read, so loaders can skip the rest. */
+export type ArticleStatInput = Pick<Article, 'domain' | 'wordCount' | 'readOn' | 'deletedAt'>;
+
+export function articleStats(articles: readonly ArticleStatInput[], opts: { year: number; today: LocalDate }): ArticleStats {
   const { year, today } = opts;
   const t = dayNumber(today);
   // Day 0 (1970-01-01) was a Thursday, so (n + 3) % 7 is 0 on Mondays.

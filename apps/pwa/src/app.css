@@ -84,7 +84,7 @@ button:disabled { opacity: 0.5; }
 .article-title { overflow-wrap: anywhere; }
 
 label { display: block; margin: 14px 0 6px; font-weight: 600; }
-input[type='text'], input[type='number'] {
+input[type='text'], input[type='number'], input[type='url'], input[type='date'] {
   width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: 10px;
   border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit;
 }

@@ -17,6 +17,8 @@
   import Settings from './screens/Settings.svelte';
   import Duplicates from './screens/Duplicates.svelte';
   import Sync from './screens/Sync.svelte';
+  import Article from './screens/Article.svelte';
+  import Capture from './screens/Capture.svelte';
 
   const tabs = [
     { href: '#/', label: 'Home', match: 'home' },
@@ -97,6 +99,12 @@
       <Library />
     {:else if router.route.name === 'book'}
       {#key router.route.id}<BookDetail id={router.route.id} />{/key}
+    {:else if router.route.name === 'articles'}
+      <Library initialTab="articles" />
+    {:else if router.route.name === 'article'}
+      {#key router.route.id}<Article id={router.route.id} />{/key}
+    {:else if router.route.name === 'capture'}
+      {#key router.route.d}<Capture d={router.route.d} />{/key}
     {:else if router.route.name === 'stats'}
       <Stats />
     {:else if router.route.name === 'settings'}
@@ -122,7 +130,7 @@
 
   <nav class="tabs" aria-label="Main">
     {#each tabs as tab (tab.href)}
-      <a href={tab.href} aria-current={router.route.name === tab.match || (tab.match === 'settings' && (router.route.name === 'sync' || router.route.name === 'duplicates')) ? 'page' : undefined}>{tab.label}</a>
+      <a href={tab.href} aria-current={router.route.name === tab.match || (tab.match === 'library' && (router.route.name === 'articles' || router.route.name === 'article')) || (tab.match === 'settings' && (router.route.name === 'sync' || router.route.name === 'duplicates')) ? 'page' : undefined}>{tab.label}</a>
     {/each}
   </nav>
 </div>

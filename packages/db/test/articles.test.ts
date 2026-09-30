@@ -39,6 +39,28 @@ describe('article read model', () => {
     expect(typeof list[1]!.createdAt).toBe('string');
   });
 
+  it('articles() pages by keyset: limit, then before = the last row, same order, no gaps or repeats', () => {
+    const t = openTestDb();
+    // Ties on read_on, and on created_at (no tick between these two), exercise every branch of the cursor.
+    for (let i = 1; i <= 7; i++) addArticle(t, i, { readOn: i % 2 ? '2026-09-10' : '2026-09-11' });
+    t.tick();
+    t.db.dispatch({ kind: 'RemoveArticle', itemId: uuid(3) }, t.env);
+    const all = t.db.articles({ limit: 100 });
+    expect(all).toHaveLength(6);
+    const seen: string[] = [];
+    let before: { readOn: string; createdAt: string; id: string } | undefined;
+    for (;;) {
+      const page = t.db.articles({ limit: 4 - (before ? 1 : 0), ...(before ? { before } : {}) });
+      seen.push(...page.map((a) => a.id));
+      if (page.length < (before ? 3 : 4)) break;
+      const last = page[page.length - 1]!;
+      before = { readOn: last.readOn, createdAt: last.createdAt, id: last.id };
+    }
+    expect(seen).toEqual(all.map((a) => a.id));
+    expect(t.db.articles({ limit: 2 })).toHaveLength(2);
+    expect(t.db.articles()).toHaveLength(6);
+  });
+
   it('articles() ignores books', () => {
     const t = openTestDb();
     t.db.dispatch({ kind: 'AddBook', itemId: uuid(9), title: 'Dune', startNow: false, localDate: '2026-09-01' }, t.env);

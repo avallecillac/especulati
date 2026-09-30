@@ -1,18 +1,22 @@
 <script lang="ts">
-  import type { StatsView } from '@readerlog/core';
+  import type { ArticleStats, StatsView } from '@readerlog/core';
   import { onChanged, query } from '../lib/dbClient.ts';
   import { todayLocal } from '../lib/clock.ts';
   import { reportError } from '../lib/errors.ts';
-  import { longDate } from '../lib/dates.ts';
+  import { longDate, monthAbbr } from '../lib/dates.ts';
   import Heatmap from './Heatmap.svelte';
 
   let year = $state(Number(todayLocal().slice(0, 4)));
   let view = $state<StatsView | null>(null);
+  let articles = $state<ArticleStats | null>(null);
 
   async function load() {
-    const r = await query({ name: 'stats', year, today: todayLocal() });
+    const today = todayLocal();
+    const [r, a] = await Promise.all([query({ name: 'stats', year, today }), query({ name: 'articleStats', year, today })]);
     if (r.ok) view = r.value;
     else reportError(r.error);
+    if (a.ok) articles = a.value;
+    else reportError(a.error);
   }
 
   $effect(() => {
@@ -20,6 +24,7 @@
     return onChanged(() => void load());
   });
 
+  const hoursMinutes = (minutes: number) => `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
   const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 </script>
 
@@ -46,6 +51,29 @@
   {/if}
 {/if}
 
+{#if view && articles}
+  {@const a = articles}
+  <section class="card" aria-labelledby="article-stats-title">
+    <h2 id="article-stats-title">Articles</h2>
+    <p>This week: <span data-testid="articles-week">{a.thisWeek}</span></p>
+    <p>This month: <span data-testid="articles-month">{a.thisMonth}</span></p>
+    <p>Reading time in {view.year}: <span data-testid="articles-time">{hoursMinutes(a.minutes)}</span></p>
+    <ul class="plain months" aria-label="Articles per month">
+      {#each a.months as m (m.month)}
+        <li><span class="muted">{monthAbbr(m.month)}</span> <span data-testid={`articles-month-${m.month}`}>{m.count}</span></li>
+      {/each}
+    </ul>
+    {#if a.topSites.length > 0}
+      <h3>Top sites</h3>
+      <ol aria-label="Top sites">
+        {#each a.topSites as s (s.domain)}<li>{s.domain} ({s.count})</li>{/each}
+      </ol>
+    {/if}
+  </section>
+{/if}
+
 <style>
+  .months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px 8px; }
+  .months li { display: block; padding: 0; border: 0; }
   .headline { font-size: 1.2rem; color: var(--text); text-transform: none; letter-spacing: 0; margin-top: 0; }
 </style>

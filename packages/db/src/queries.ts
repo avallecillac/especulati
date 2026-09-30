@@ -234,10 +234,51 @@ export function rowToArticle(r: Record<string, SqlValue>): Article {
 
 const LIVE_ARTICLES = `FROM items WHERE type = 'article' AND deleted_at IS NULL`;
 const NEWEST_FIRST = 'ORDER BY read_on DESC, created_at DESC, id';
+/** Only the `Article` columns: copying whole rows across the WASM boundary dominates the cost (research R10b). */
+const ARTICLE_COLS = 'id, title, author, url, domain, word_count, read_on, metadata_status, created_at, deleted_at';
 
-/** Live articles, newest read first. */
-export function articles(db: Database): Article[] {
-  return db.selectObjects(`SELECT * ${LIVE_ARTICLES} ${NEWEST_FIRST}`).map(rowToArticle);
+/** The keyset cursor: the last row of the previous page. */
+export interface ArticleCursor {
+  readOn: string;
+  createdAt: string;
+  id: string;
+}
+
+export const ARTICLE_PAGE = 100;
+
+/** An `ARTICLE_COLS` row (as an array) as the core `Article`. */
+export function articleFromArray(r: readonly SqlValue[]): Article {
+  return {
+    id: text(r[0], 'id') as ItemId,
+    title: text(r[1], 'title') as NonEmptyTitle,
+    author: textOrNull(r[2], 'author') as Author | null,
+    url: text(r[3], 'url') as NormalizedUrl,
+    domain: text(r[4], 'domain'),
+    wordCount: intOrNull(r[5], 'word_count') as WordCount | null,
+    readOn: text(r[6], 'read_on') as LocalDate,
+    detailsStatus: detailsStatusFromDb(text(r[7], 'metadata_status')),
+    createdAt: text(r[8], 'created_at') as Instant,
+    deletedAt: textOrNull(r[9], 'deleted_at') as Instant | null,
+  };
+}
+
+/** Every live article with only the columns given, as arrays (stats need few of them). */
+export function selectLiveArticleArrays(db: Database, cols: string): SqlValue[][] {
+  return db.selectArrays(`SELECT ${cols} ${LIVE_ARTICLES}`);
+}
+
+/**
+ * Live articles, newest read first, one keyset page at a time: `before` is the last row of the
+ * previous page (research R10b). Order: read_on desc, created_at desc, id.
+ */
+export function articles(db: Database, opts: { limit?: number; before?: ArticleCursor } = {}): Article[] {
+  const limit = Math.max(1, Math.floor(opts.limit ?? ARTICLE_PAGE));
+  const b = opts.before;
+  const after = b
+    ? ' AND (read_on < ? OR (read_on = ? AND created_at < ?) OR (read_on = ? AND created_at = ? AND id > ?))'
+    : '';
+  const bind = b ? [b.readOn, b.readOn, b.createdAt, b.readOn, b.createdAt, b.id, limit] : [limit];
+  return db.selectArrays(`SELECT ${ARTICLE_COLS} ${LIVE_ARTICLES}${after} ${NEWEST_FIRST} LIMIT ?`, bind).map(articleFromArray);
 }
 
 /** One live article, or null (unknown, removed, or a book). */
@@ -248,5 +289,5 @@ export function article(db: Database, itemId: string): Article | null {
 
 /** Live articles with this normalized address, newest first (FR-008). */
 export function findArticleByUrl(db: Database, url: string): Article[] {
-  return db.selectObjects(`SELECT * ${LIVE_ARTICLES} AND url = ? ${NEWEST_FIRST}`, [url]).map(rowToArticle);
+  return db.selectArrays(`SELECT ${ARTICLE_COLS} ${LIVE_ARTICLES} AND url = ? ${NEWEST_FIRST}`, [url]).map(articleFromArray);
 }

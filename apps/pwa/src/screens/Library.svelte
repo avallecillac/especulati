@@ -7,8 +7,10 @@
   import DetailsBadge from './DetailsBadge.svelte';
   import Articles from './Articles.svelte';
 
+  let { initialTab = 'books' }: { initialTab?: 'books' | 'articles' } = $props();
   let view = $state<LibraryView | null>(null);
-  let tab = $state<'books' | 'articles'>('books');
+  // svelte-ignore state_referenced_locally
+  let tab = $state<'books' | 'articles'>(initialTab);
 
   async function load() {
     const r = await query({ name: 'library' });

@@ -247,7 +247,7 @@ and pushes it immediately.
 **Independent Test**: open a capture link built like the Shortcut's in a PWA context.
 It saves, and a reload doesn't duplicate it.
 
-- [ ] T015 [P] [US2] Write `apps/pwa/src/lib/capture.test.ts` for `decodeCapture(d)`:
+- [X] T015 [P] [US2] Write `apps/pwa/src/lib/capture.test.ts` for `decodeCapture(d)`:
   - standard Base64 with `+/`, padding and line breaks, URL-encoded, is accepted;
   - base64url is accepted;
   - `words` of `"1234"` gives 1234, and 0, -3, 100001 and "abc" give null;
@@ -256,7 +256,7 @@ It saves, and a reload doesn't duplicate it.
   - the title is trimmed and cut to 500 characters, and an empty title falls back to
     the site;
   - the author is cut to 200 characters.
-- [ ] T016 [P] [US2] Write `e2e/capture-link.spec.ts`, with a helper that builds
+- [X] T016 [P] [US2] Write `e2e/capture-link.spec.ts`, with a helper that builds
   links the way the Shortcut does:
   - **a valid link** shows "Logged: <title> · <site> · ~N min", and Library → Articles
     lists it, dated today;
@@ -271,7 +271,7 @@ It saves, and a reload doesn't duplicate it.
   - **with sync off**, it's saved, and a "Finish setup" join prompt is shown;
   - **offline** (US2·3, SC-006): with the context offline, the capture saves locally.
     After going online and a sync, the other context has it.
-- [ ] T017 [US2] Implement the capture screen:
+- [X] T017 [US2] Implement the capture screen:
   - `apps/pwa/src/lib/capture.ts`: `decodeCapture`, and the capture id through
     `uuidFromHash`;
   - `apps/pwa/src/screens/Capture.svelte` for the route `#/capture?d=…`, following the
@@ -280,7 +280,7 @@ It saves, and a reload doesn't duplicate it.
   - an immediate `runSync('manual')` when sync is on.
 
   T015 and T016 must pass.
-- [ ] T018 [US2] Write `docs/ios-shortcut.md`: step-by-step Shortcut creation matching
+- [X] T018 [US2] Write `docs/ios-shortcut.md`: step-by-step Shortcut creation matching
   research R2, the exact action names, the Base64 and URL-encoding steps, "Show in
   Share Sheet" for URLs, setting Chrome as the default browser, pairing Readerlog in
   Chrome (research R1), and troubleshooting (paywall previews, a lost pairing after
@@ -291,7 +291,7 @@ It saves, and a reload doesn't duplicate it.
 
 ## Phase 5: User Story 3 - See and manage the articles I've read (Priority: P2)
 
-- [ ] T019 [P] [US3] Extend `e2e/articles.spec.ts`:
+- [X] T019 [P] [US3] Extend `e2e/articles.spec.ts`:
   - open an article, edit the title, author and date read, and see the change;
   - **Open page** has `target=_blank` and `rel="noopener noreferrer"`;
   - **Remove** asks for confirmation, and the article is gone;
@@ -299,7 +299,7 @@ It saves, and a reload doesn't duplicate it.
     saving the details show "Details not fetched" and "—" for time;
   - adding a URL already logged warns "Already logged on …";
   - edits sync to a second context.
-- [ ] T020 [US3] Implement `apps/pwa/src/screens/Article.svelte` (`#/article/:id`:
+- [X] T020 [US3] Implement `apps/pwa/src/screens/Article.svelte` (`#/article/:id`:
   view, edit, open, remove) and **Add article** in `Articles.svelte`, dispatching
   `AddArticle` with `detailsStatus: 'notFound'` and a random id. T019 must pass.
 
@@ -317,7 +317,7 @@ It saves, and a reload doesn't duplicate it.
   - `months` has 12 entries for the selected year;
   - removed articles are excluded;
   - a week spanning a year boundary is handled.
-- [ ] T022 [US4] Implement `articleStats` in `packages/core/src/stats.ts`, and
+- [X] T022 [US4] Implement `articleStats` in `packages/core/src/stats.ts`, and
   `loadArticles` plus `articleStatsView(db, year, today)` in `packages/db/src/stats.ts`
   (**separate** from `loadStatsBooks`). Add the `articleStats` worker query and an
   **Articles** section in `apps/pwa/src/screens/Stats.svelte`: this week, this month,
@@ -333,7 +333,7 @@ It saves, and a reload doesn't duplicate it.
   article ("Zanzibar Quokka Essay", URL `https://quokka.example/essay-7351`) never
   appears in relay rows, raw or base64-encoded, and the decrypted batch holds only the
   FR-001 fields.
-- [ ] T024 [P] Add a performance check: `packages/db/test/perf.test.ts` gets cases with
+- [X] T024 [P] Add a performance check: `packages/db/test/perf.test.ts` gets cases with
   5,000 articles: the first page of `articles()` under 20 ms, `loadArticles` under
   100 ms, and `findArticleByUrl` under 5 ms (research R10b; the original 50 ms for the
   full list was replaced with paging).
