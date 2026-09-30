@@ -11,7 +11,7 @@ test('time zone change while travelling: old entries keep their dates, new ones 
   const profile = mkdtempSync(join(tmpdir(), 'readerlog-tz-'));
   const executablePath = process.env['PLAYWRIGHT_BROWSERS_PATH'] ? '/opt/pw-browsers/chromium' : undefined;
   const open = (timezoneId: string): Promise<BrowserContext> =>
-    chromium.launchPersistentContext(profile, { baseURL: baseURL!, timezoneId, locale: 'en-US', ...(executablePath ? { executablePath } : {}) });
+    chromium.launchPersistentContext(profile, { baseURL: baseURL!, timezoneId, locale: 'en-US', reducedMotion: 'reduce', ...(executablePath ? { executablePath } : {}) });
 
   try {
     const ny = await open('America/New_York');
@@ -39,7 +39,9 @@ test('time zone change while travelling: old entries keep their dates, new ones 
     await sheet.getByRole('button', { name: 'Save' }).click();
     await expect(currentCard(p2).getByText('p. 25 / 300')).toBeVisible();
     await currentCard(p2).getByRole('link', { name: 'Travel book' }).click();
-    const dates = await p2.getByRole('list', { name: 'History' }).locator('time').evaluateAll((els) => els.map((e) => e.getAttribute('datetime')));
+    const times = p2.getByRole('list', { name: 'History' }).locator('time');
+    await expect(times).toHaveCount(2); // the history loads after navigation
+    const dates = await times.evaluateAll((els) => els.map((e) => e.getAttribute('datetime')));
     expect(dates).toEqual(['2026-06-02', '2026-06-01']);
     await tokyo.close();
   } finally {
