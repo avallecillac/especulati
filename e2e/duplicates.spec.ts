@@ -74,7 +74,7 @@ test('Review lists the pair side by side; Merge leaves one Dune with all entries
   await pair.getByRole('button', { name: 'Merge' }).click();
   await expect(b.page.getByText('No duplicate books found.')).toBeVisible();
 
-  expect(await (await libraryDunes(b.page)).count()).toBe(1);
+  await expect(await libraryDunes(b.page)).toHaveCount(1);
   await (await libraryDunes(b.page)).first().click();
   await expect(b.page.getByText('p. 100 / 412')).toBeVisible();
   expect(await historyCount(b.page)).toBe(4);
@@ -105,7 +105,7 @@ test('Keep both: the pair is not offered again, on either device', async ({ twoD
     await syncNow(a.page);
     await expect(a.page.getByText('No duplicate books found.')).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 20_000 });
-  expect(await (await libraryDunes(a.page)).count()).toBe(2);
+  await expect(await libraryDunes(a.page)).toHaveCount(2);
 });
 
 test('the same merge on both devices before they sync leaves one Dune with each entry once', async ({ twoDevices }) => {
