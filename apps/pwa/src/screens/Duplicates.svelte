@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DuplicateBookView, DuplicatePairView } from '@readerlog/db';
   import { dispatch, onChanged, query } from '../lib/dbClient.ts';
+  import { todayLocal } from '../lib/clock.ts';
   import { longDate } from '../lib/dates.ts';
   import { reportError } from '../lib/errors.ts';
   import { plural } from '../lib/format.ts';
@@ -31,7 +32,7 @@
     const duplicateId = pair.duplicate.itemId;
     busy = true;
     try {
-      const book = await query({ name: 'book', itemId: duplicateId });
+      const book = await query({ name: 'book', itemId: duplicateId, today: todayLocal() });
       if (!book.ok || !book.value) return void (await load());
       const copies = await Promise.all(
         book.value.events.map(async (e) => ({ from: e.id, to: await mergeCopyId(survivorId, e) })),

@@ -70,3 +70,27 @@ test.describe('US1: reading days, heatmap and streaks', () => {
     await expect(page.getByRole('heading', { name: '1 reading day in 2025' })).toBeVisible();
   });
 });
+
+test.describe('US2: books finished and pages', () => {
+  test('a finished 100-page book over two days shows books, pages, pages per day and the month row', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-06-15T13:00:00Z') });
+    await openApp(page);
+    await addBook(page, { title: 'Short', pages: 100 });
+    await logOnDay(page, '2026-06-15', { page: 40 });
+
+    await logOnDay(page, '2026-06-16', { page: 100 });
+    await page.getByRole('alertdialog', { name: 'Mark as finished?' }).getByRole('button', { name: 'Mark finished' }).click();
+    await expect(page.getByText('No book in progress')).toBeVisible();
+
+    await statsTab(page).click();
+    await expect(page.getByRole('heading', { name: '2 reading days in 2026' })).toBeVisible();
+    await expect(page.getByTestId('books-finished')).toHaveText('1');
+    await expect(page.getByTestId('pages-read')).toHaveText('100');
+    await expect(page.getByTestId('pages-per-day')).toHaveText('50');
+    const june = page.getByRole('table', { name: 'Books and pages per month' }).getByRole('row', { name: /^Jun/ });
+    await expect(june.getByRole('cell')).toHaveText(['1', '100']);
+
+    await page.getByRole('button', { name: 'All time' }).click();
+    await expect(page.getByRole('table', { name: 'All time' }).getByRole('row', { name: /^2026/ }).getByRole('cell')).toHaveText(['2', '1', '100']);
+  });
+});

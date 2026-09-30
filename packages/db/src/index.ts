@@ -71,8 +71,8 @@ export class ReaderlogDb {
     return libraryView(this.raw);
   }
 
-  book(itemId: string): BookView | null {
-    return bookView(this.raw, itemId);
+  book(itemId: string, today: LocalDate): BookView | null {
+    return bookView(this.raw, itemId, today);
   }
 
   stats(year: number, today: LocalDate): StatsView {

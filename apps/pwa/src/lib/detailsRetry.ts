@@ -3,6 +3,7 @@ import { lookupIsbn } from '../catalog/isbnLookup.ts';
 import { fetchCover } from '../catalog/cover.ts';
 import { authorsLabel } from '../catalog/merge.ts';
 import { settings } from './settings.svelte.ts';
+import { todayLocal } from './clock.ts';
 import { dispatch, query, storeCover } from './dbClient.ts';
 
 const CONCURRENCY = 2;
@@ -25,7 +26,7 @@ async function retryOne(itemId: string, isbn: string): Promise<boolean> {
   if (outcome.kind !== 'found') return true;
 
   const d = outcome.details;
-  const book = await query({ name: 'book', itemId });
+  const book = await query({ name: 'book', itemId, today: todayLocal() });
   const hadCover = book.ok && book.value !== null && book.value.card.hasCover;
   const r = await dispatch({
     kind: 'FillDetails',

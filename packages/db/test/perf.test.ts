@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '@readerlog/core';
-import { openTestDb, uuid } from './helpers.ts';
+import { openTestDb, TODAY, uuid } from './helpers.ts';
 import { loadArticles } from '../src/stats.ts';
 
 /** Constitution: measure before optimizing. A decade of heavy reading: 100 books, 5,000 events. */
@@ -31,7 +31,7 @@ describe('query performance at scale (SC-002 / T066)', () => {
     };
     const home = time(() => t.db.home());
     const library = time(() => t.db.library());
-    const book = time(() => t.db.book(uuid(50)));
+    const book = time(() => t.db.book(uuid(50), TODAY));
     const dispatch = time(() => run({ kind: 'LogEvent', itemId: uuid(1), eventId: uuid(9_000_000 + ev++), type: 'progress', page: null, localDate: '2026-09-27' }));
     console.log(`home ${home.toFixed(1)} ms · library ${library.toFixed(1)} ms · book ${book.toFixed(1)} ms · dispatch ${dispatch.toFixed(1)} ms`);
     for (const ms of [home, library, book, dispatch]) expect(ms).toBeLessThan(100);

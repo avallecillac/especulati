@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeStats, readingDays, type EventType, type Page, type ReadingEvent, type StatsBook } from '../src/index.ts';
+import { computeStats, readingDays, yearSummary, type EventType, type Page, type ReadingEvent, type StatsBook } from '../src/index.ts';
 import { day, event, itemId } from './fixtures.ts';
 
 const ev = (type: EventType, date: string, page: number | null = null, extra: Partial<ReadingEvent> = {}): ReadingEvent =>
@@ -73,8 +73,8 @@ describe('computeStats: years and summary', () => {
     const books = [sb(1, [ev('progress', '2025-12-30'), ev('progress', '2025-12-31'), ev('progress', '2026-01-01'), ev('progress', '2026-01-02')])];
     const v25 = computeStats(books, { year: 2025, today: TODAY });
     const v26 = computeStats(books, { year: 2026, today: TODAY });
-    expect(v25.summary).toEqual({ year: 2025, readingDays: 2 });
-    expect(v26.summary).toEqual({ year: 2026, readingDays: 2 });
+    expect(v25.summary).toMatchObject({ year: 2025, readingDays: 2 });
+    expect(v26.summary).toMatchObject({ year: 2026, readingDays: 2 });
     expect(v26.longest).toEqual({ start: '2025-12-30', end: '2026-01-02', length: 4 });
   });
 
@@ -129,5 +129,94 @@ describe('computeStats: invariants', () => {
     expect(v.current).toBeNull();
     expect(v.longest).toBeNull();
     expect(v.hasAnyEvents).toBe(true);
+  });
+});
+
+describe('yearSummary and allTime (US2)', () => {
+  const opts = { year: 2026, today: TODAY };
+
+  it('counts books finished per month', () => {
+    const books = [
+      sb(1, [ev('started', '2026-03-01'), ev('finished', '2026-03-05')]),
+      sb(2, [ev('started', '2026-03-02'), ev('finished', '2026-03-20')]),
+      sb(3, [ev('started', '2026-04-01'), ev('finished', '2026-04-09')]),
+    ];
+    const s = yearSummary(books, 2026);
+    expect(s.months).toHaveLength(12);
+    expect(s.months.map((m) => m.month)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(s.months[2]!.booksFinished).toBe(2);
+    expect(s.months[3]!.booksFinished).toBe(1);
+    expect(s.months[0]!.booksFinished).toBe(0);
+    expect(s.booksFinished).toBe(3);
+  });
+
+  it('a re-read finished in the same year counts twice', () => {
+    const books = [sb(1, [ev('started', '2026-01-01'), ev('finished', '2026-01-10'), ev('started', '2026-02-01'), ev('finished', '2026-02-10')])];
+    const s = yearSummary(books, 2026);
+    expect(s.booksFinished).toBe(2);
+    expect(s.months[0]!.booksFinished).toBe(1);
+    expect(s.months[1]!.booksFinished).toBe(1);
+  });
+
+  it('pages 40, 90, 150 with started give month pages 150', () => {
+    const books = [sb(1, [ev('started', '2026-03-01'), ev('progress', '2026-03-02', 40), ev('progress', '2026-03-03', 90), ev('progress', '2026-03-04', 150)])];
+    const s = yearSummary(books, 2026);
+    expect(s.months[2]!.pages).toBe(150);
+    expect(s.pages).toBe(150);
+  });
+
+  it('300 pages over 10 reading days gives 30 pages per reading day', () => {
+    const events = [ev('started', '2026-03-01'), ev('progress', '2026-03-02', 100), ev('progress', '2026-03-03', 200), ev('progress', '2026-03-04', 300)];
+    for (let d = 5; d <= 10; d++) events.push(ev('progress', `2026-03-${String(d).padStart(2, '0')}`));
+    const s = yearSummary([sb(1, events)], 2026);
+    expect(s.readingDays).toBe(10);
+    expect(s.pages).toBe(300);
+    expect(s.pagesPerReadingDay).toBe(30);
+  });
+
+  it('pages per reading day is rounded to a whole number, and null with no reading days', () => {
+    const books = [sb(1, [ev('started', '2026-03-01'), ev('progress', '2026-03-02', 100), ev('progress', '2026-03-03')])];
+    expect(yearSummary(books, 2026).pagesPerReadingDay).toBe(33);
+    expect(yearSummary([], 2026).pagesPerReadingDay).toBeNull();
+    expect(yearSummary(books, 2025).pagesPerReadingDay).toBeNull();
+  });
+
+  it('removed events and removed books do not count (invariant 6)', () => {
+    const live = sb(1, [ev('started', '2026-03-01'), ev('progress', '2026-03-02', 100), ev('finished', '2026-03-03')]);
+    expect(yearSummary([live], 2026)).toMatchObject({ booksFinished: 1, pages: 100 });
+    const withRemovedEvents = sb(1, live.events.map((e) => (e.type === 'finished' || e.page !== null ? { ...e, deletedAt: '2026-03-04T00:00:00.000Z' as ReadingEvent['deletedAt'] } : e)));
+    expect(yearSummary([withRemovedEvents], 2026)).toMatchObject({ booksFinished: 0, pages: 0, readingDays: 1 });
+    // A removed book is never loaded, so it is simply absent.
+    expect(yearSummary([], 2026)).toMatchObject({ booksFinished: 0, pages: 0, readingDays: 0 });
+  });
+
+  it('a year boundary: Dec 31 pages go to that year, Jan 1 to the next', () => {
+    const books = [sb(1, [ev('started', '2025-12-30'), ev('progress', '2025-12-31', 40), ev('progress', '2026-01-01', 100), ev('finished', '2026-01-01')])];
+    const y25 = yearSummary(books, 2025);
+    const y26 = yearSummary(books, 2026);
+    expect(y25).toMatchObject({ pages: 40, booksFinished: 0, readingDays: 2 });
+    expect(y26).toMatchObject({ pages: 60, booksFinished: 1, readingDays: 1 });
+    expect(y25.months[11]!.pages).toBe(40);
+    expect(y26.months[0]!.pages).toBe(60);
+  });
+
+  it('allTime has one row per year with a reading day, newest first, and sums match (invariant 3)', () => {
+    const books = [
+      sb(1, [ev('started', '2025-12-30'), ev('progress', '2025-12-31', 40), ev('progress', '2026-01-01', 100), ev('finished', '2026-01-02')]),
+      sb(2, [ev('started', '2023-05-01'), ev('progress', '2023-05-02', 70)]),
+    ];
+    const v = computeStats(books, opts);
+    expect(v.allTime).toEqual([
+      { year: 2026, readingDays: 2, booksFinished: 1, pages: 60 },
+      { year: 2025, readingDays: 2, booksFinished: 0, pages: 40 },
+      { year: 2023, readingDays: 2, booksFinished: 0, pages: 70 },
+    ]);
+    const credits = [...readingDays(books).values()].reduce((a, b) => a + b, 0);
+    expect(v.allTime.reduce((a, r) => a + r.pages, 0)).toBe(credits);
+    expect(v.summary.months.reduce((a, m) => a + m.pages, 0)).toBe(v.summary.pages);
+  });
+
+  it('allTime is empty with no reading days', () => {
+    expect(computeStats([], opts).allTime).toEqual([]);
   });
 });

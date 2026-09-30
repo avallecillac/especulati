@@ -220,7 +220,7 @@ month's counts and the average.
 
 ### Tests for User Story 2
 
-- [ ] T012 [P] [US2] Extend `packages/core/test/stats.view.test.ts` for
+- [X] T012 [P] [US2] Extend `packages/core/test/stats.view.test.ts` for
   `yearSummary(books, year)` and `allTime`:
   - 2 books finished in March and 1 in April give `months[2].booksFinished = 2` and
     `months[3].booksFinished = 1`;
@@ -234,7 +234,7 @@ month's counts and the average.
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Implement in `packages/core/src/stats.ts`:
+- [X] T013 [US2] Implement in `packages/core/src/stats.ts`:
   - `yearSummary`, adding `booksFinished`, `pages`, `pagesPerReadingDay` (rounded to a
     whole number, or `null`) and `months: { month: 1..12; booksFinished; pages }[]`
     (always 12 entries);
@@ -242,7 +242,7 @@ month's counts and the average.
     ordered by year descending.
 
   T012 must pass.
-- [ ] T014 [US2] In `apps/pwa/src/screens/Stats.svelte`, add:
+- [X] T014 [US2] In `apps/pwa/src/screens/Stats.svelte`, add:
   - for the selected year, "Books finished: N", "Pages read: N" and "Pages per reading
     day: N" (or "—");
   - a 12-row month table (Month | Books | Pages);
@@ -266,7 +266,7 @@ check the pace, the days left and the date.
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Write `packages/core/test/stats.pace.test.ts` for
+- [X] T015 [P] [US3] Write `packages/core/test/stats.pace.test.ts` for
   `pace(book, today)` (research R7):
   - **the spec example**: a 300-page book, a read-through started 20 days ago, 140
     pages credited in the last 14 days and last page 160 give `pagesPerDay: 10`,
@@ -281,7 +281,7 @@ check the pace, the days left and the date.
   - `lastPage === totalPages` gives a `null` estimate;
   - a finished, abandoned or queued book gives `null`;
   - rounding: `daysLeft` is rounded up.
-- [ ] T016 [P] [US3] Write `e2e/book-pace.spec.ts`:
+- [X] T016 [P] [US3] Write `e2e/book-pace.spec.ts`:
   - a 300-page book, started with the clock on day 1;
   - log page 20 on day 1 and page 40 on day 2, then open the book on day 2;
   - the screen shows "20 pages/day" and "about 13 days left" with the finish date;
@@ -289,12 +289,12 @@ check the pace, the days left and the date.
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Implement `pace` in `packages/core/src/stats.ts`, returning
+- [X] T017 [US3] Implement `pace` in `packages/core/src/stats.ts`, returning
   `Pace = { pagesPerDay: number; daysLeft: number | null; finishDate: LocalDate | null } | null`.
   `pagesPerDay` is rounded to 1 decimal place for display only, and the estimate uses
   the unrounded value.
   T015 must pass.
-- [ ] T018 [US3] Pass `today` to the book query:
+- [X] T018 [US3] Pass `today` to the book query:
   - `packages/db/src/queries.ts`: `bookView` / `ReaderlogDb.book(itemId, today)`
     returns `pace: Pace | null`.
   - Update `packages/db/test/perf.test.ts` and the other `book(...)` callers to pass a

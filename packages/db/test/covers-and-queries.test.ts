@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '@readerlog/core';
-import { openTestDb, uuid, type TestDb } from './helpers.ts';
+import { openTestDb, TODAY, uuid, type TestDb } from './helpers.ts';
 
 const ISBN_A = '9780306406157';
 const ISBN_B = '9780140328721';
@@ -53,15 +53,15 @@ describe('BookCard 002 fields', () => {
     const c2 = cards.find((c) => c.itemId === uuid(2))!;
     expect(c1).toMatchObject({ isbn: ISBN_A, detailsStatus: 'notFound', hasCover: false });
     expect(c2).toMatchObject({ isbn: null, detailsStatus: 'complete', hasCover: true });
-    expect(t.db.book(uuid(2))?.card.hasCover).toBe(true);
+    expect(t.db.book(uuid(2), TODAY)?.card.hasCover).toBe(true);
   });
 
   it('maps ok to complete and pending to pending', () => {
     const t = openTestDb();
     add(t, 1, { isbn: ISBN_A, detailsStatus: 'pending' });
-    expect(t.db.book(uuid(1))?.card.detailsStatus).toBe('pending');
+    expect(t.db.book(uuid(1), TODAY)?.card.detailsStatus).toBe('pending');
     setStatus(t, 1, 'ok');
-    expect(t.db.book(uuid(1))?.card.detailsStatus).toBe('complete');
+    expect(t.db.book(uuid(1), TODAY)?.card.detailsStatus).toBe('complete');
   });
 });
 

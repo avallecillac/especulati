@@ -5,7 +5,8 @@
   import { dispatch, onChanged, query } from '../lib/dbClient.ts';
   import { todayLocal } from '../lib/clock.ts';
   import { reportError } from '../lib/errors.ts';
-  import { STATUS_LABEL, progressLabel } from '../lib/format.ts';
+  import { STATUS_LABEL, plural, progressLabel } from '../lib/format.ts';
+  import { shortDate } from '../lib/dates.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
   import { toastSaved, undoEvent } from '../lib/actions.ts';
@@ -24,7 +25,7 @@
   let removingEvent = $state<BookEventView | null>(null);
 
   async function load() {
-    const r = await query({ name: 'book', itemId: id });
+    const r = await query({ name: 'book', itemId: id, today: todayLocal() });
     if (r.ok) view = r.value;
     else reportError(r.error);
   }
@@ -74,6 +75,12 @@
       {#if c.author}<p class="muted">{c.author}</p>{/if}
       {#if c.isbn}<p class="muted">ISBN {c.isbn}</p>{/if}
       <p>{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
+      {#if view.pace}
+        {@const p = view.pace}
+        <p class="muted" data-testid="pace">
+          {#if p.pagesPerDay === 0}No recent pace{:else}{p.pagesPerDay} pages/day{#if p.daysLeft !== null && p.finishDate} · about {plural(p.daysLeft, 'day')} left (around {shortDate(p.finishDate)}){/if}{/if}
+        </p>
+      {/if}
     </div>
   </div>
 
