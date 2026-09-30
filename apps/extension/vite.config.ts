@@ -27,6 +27,7 @@ function manifestPlugin(): Plugin {
 export default defineConfig({
   root: import.meta.dirname,
   base: './',
+  define: { __E2E__: JSON.stringify(e2e) },
   plugins: entry ? [] : [manifestPlugin()],
   build: {
     target: 'es2022',

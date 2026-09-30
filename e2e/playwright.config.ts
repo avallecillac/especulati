@@ -25,7 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm --filter pwa build && pnpm --filter pwa preview --port 4173 --strictPort',
+    command: 'pnpm --filter @readerlog/extension build:e2e && pnpm --filter pwa build && pnpm --filter pwa preview --port 4173 --strictPort',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env['CI'],
     timeout: 180_000,

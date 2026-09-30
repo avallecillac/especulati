@@ -1,0 +1,105 @@
+{
+  "host": "articles.example.test",
+  "pages": {
+    "01-news-en.html": {
+      "title": "City Council Approves New Bike Lanes",
+      "author": "Morgan Hale",
+      "words": 650
+    },
+    "02-news-es.html": {
+      "title": "El ayuntamiento aprueba nuevos carriles bici",
+      "author": "Lucía Ferrer",
+      "words": 700
+    },
+    "03-blog-comments-en.html": {
+      "title": "Notes From A Slow Year",
+      "author": "Priya Nair",
+      "words": 900
+    },
+    "04-blog-comments-es.html": {
+      "title": "Apuntes de un año lento",
+      "author": "Andrés Molina",
+      "words": 850
+    },
+    "05-jsonld-en.html": {
+      "title": "Why Small Tools Last",
+      "author": "Grace Whitfield",
+      "words": 500
+    },
+    "06-jsonld-es.html": {
+      "title": "Por qué duran las herramientas pequeñas",
+      "author": "Inés Carrasco",
+      "words": 520
+    },
+    "07-meta-author-en.html": {
+      "title": "A Field Guide To Quiet Cafes",
+      "author": "Dana Okafor",
+      "words": 800
+    },
+    "08-meta-author-es.html": {
+      "title": "Guía de campo de cafeterías tranquilas",
+      "author": "Rafael Ortega",
+      "words": 780
+    },
+    "09-og-title-en.html": {
+      "title": "Three Ways To Learn A Language Faster",
+      "author": null,
+      "words": 600
+    },
+    "10-og-title-es.html": {
+      "title": "Tres formas de aprender un idioma más rápido",
+      "author": null,
+      "words": 620
+    },
+    "11-no-title-en.html": {
+      "title": "articles.example.test",
+      "author": null,
+      "words": 450
+    },
+    "12-no-title-es.html": {
+      "title": "articles.example.test",
+      "author": null,
+      "words": 480
+    },
+    "13-long-en.html": {
+      "title": "The Complete Almanac",
+      "author": "Sam Reyes",
+      "words": 100000
+    },
+    "14-product-grid-en.html": {
+      "title": "Shop All Kitchen Gadgets",
+      "author": null,
+      "words": null
+    },
+    "15-product-grid-es.html": {
+      "title": "Comprar todos los utensilios de cocina",
+      "author": null,
+      "words": null
+    },
+    "16-tech-en.html": {
+      "title": "Understanding Event Loops Without Tears",
+      "author": "Chen Wei",
+      "words": 1100
+    },
+    "17-essay-es.html": {
+      "title": "Elogio de la lentitud",
+      "author": "Marta Quintero",
+      "words": 1000
+    },
+    "18-title-suffix-en.html": {
+      "title": "The Quiet Return Of Paper Maps",
+      "author": "Lee Marlow",
+      "words": 550
+    },
+    "19-title-suffix-es.html": {
+      "title": "El regreso silencioso de los mapas de papel",
+      "author": "Noelia Vidal",
+      "words": 560
+    },
+    "20-short-en.html": {
+      "title": "A Short Note On Bread",
+      "author": "Jo Lindqvist",
+      "words": 130
+    }
+  }
+}

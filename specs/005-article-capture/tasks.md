@@ -164,7 +164,7 @@ The PWA context (on the same routed relay) lists it after **Sync now**.
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Write `packages/sync/test/capturePeer.test.ts` against the fake
+- [X] T010 [P] [US1] Write `packages/sync/test/capturePeer.test.ts` against the fake
   relay from `packages/sync/test/harness.ts`:
   - **`pair`**:
     - a bad code gives `format` or `checksum`;
@@ -182,7 +182,7 @@ The PWA context (on the same routed relay) lists it after **Sync now**.
   - **`undo`** emits `RemoveArticle`, and the PWA peer sees it removed.
   - **Idempotency**: two captures with the same `url` and `at` give the same
     `itemId`, and the second is a no-op.
-- [ ] T011 [P] [US1] Write the extractor fixtures and tests:
+- [X] T011 [P] [US1] Write the extractor fixtures and tests:
   - 20 HTML files in `apps/extension/test/fixtures/`, in English and Spanish. Include
     news with nav and footer, a blog with comments, a JSON-LD byline, `meta
     name=author`, `og:title` only, no title, a long page (> 100,000 words, to check
@@ -193,7 +193,7 @@ The PWA context (on the same routed relay) lists it after **Sync now**.
   - `e2e/extract.spec.ts` loads each fixture into a page, injects the built
     `extract.js`, and asserts the title is exact for all 20 and words are within 15%
     for at least 18 (SC-003).
-- [ ] T012 [P] [US1] Write `e2e/fixtures/extension.ts` (a persistent-context fixture
+- [X] T012 [P] [US1] Write `e2e/fixtures/extension.ts` (a persistent-context fixture
   with `--disable-extensions-except` and `--load-extension=apps/extension/dist-e2e`
   (the test build), plus
   the service-worker handle) and `e2e/extension-capture.spec.ts`:
@@ -212,13 +212,13 @@ The PWA context (on the same routed relay) lists it after **Sync now**.
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement `packages/sync/src/capturePeer.ts` per contracts/extension.md.
+- [X] T013 [US1] Implement `packages/sync/src/capturePeer.ts` per contracts/extension.md.
   It uses `push.ts`, `code.ts`, `keys.ts`, `envelope.ts`, `relayClient.ts`, and core's
   `decide`, `stampOps` and `normalizeUrl`, **with no db import**. `itemId =
   uuidFromHash("readerlog-capture-v1|"+url+"|"+at)`. Move `uuidFromHash` from
   `apps/pwa/src/lib/ids.ts` into `packages/sync/src/ids.ts` and re-export it from the
   pwa module. T010 must pass.
-- [ ] T014 [US1] Implement the extension:
+- [X] T014 [US1] Implement the extension:
   - `apps/extension/src/extract.ts`: Readability, the title and author fallbacks,
     `Intl.Segmenter` word counting, the 100,000 cap, and `null` when nothing is found;
   - `store.ts`: a `CaptureStore` over `chrome.storage.local`;
