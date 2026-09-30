@@ -33,7 +33,7 @@ pnpm --filter extension build   # produces apps/extension/dist
 
 **Mac (Chrome or Brave).** Brave is checked by hand only; e2e runs on Chromium.
 
-1. Run `pnpm --filter extension build`.
+1. Run `pnpm --filter @readerlog/extension build`.
 2. Open `chrome://extensions` (or `brave://extensions`), turn on **Developer mode**,
    choose **Load unpacked**, and pick `apps/extension/dist`.
 3. Open the extension's **Options**. Enter your Readerlog address, paste the sync code
@@ -72,7 +72,8 @@ pnpm --filter extension build   # produces apps/extension/dist
 | SC-006: offline capture on both paths | ✅ the extension (badge, then flush) and the capture link (offline, then online and sync) |
 | Performance (R10b) | ✅ with 5,000 articles: first `articles()` page 3 ms, `loadArticles` 35 ms, `findArticleByUrl` 2 ms |
 | Scenarios 1–15 | ✅ all automated, apart from Brave, the Show more UI (covered at the db level) and the non-http(s) badge, which can't be triggered headlessly |
-| Manual device checks (above) | ⏳ Pending: load the extension on the Mac, pair Readerlog in Chrome on the iPhone, and build the Shortcut |
+| Manual check: iPhone (Chrome) | ✅ 2026-09-30, production: Readerlog in Chrome paired as its own device, the Shortcut captures from the share sheet, and the article shows in Readerlog. Two Shortcut settings were missing from the guide and are now in `docs/ios-shortcut.md`: Base64 Encode must have **Line Breaks: None** (a line break cut the link after 76 characters), and Format Date needs **Include ISO 8601 Time**. The damaged-link screen now names the wrong value |
+| Manual check: Mac extension (Chrome/Brave) | ⏳ Pending |
 
 **Decisions made during review:**
 - The toast doesn't wait for the relay.
