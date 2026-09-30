@@ -246,9 +246,17 @@ Details: `specs/002-isbn-scan-metadata/`.
   collects the URL, title, author, and a readability-style word count from the
   live DOM, so it also works on paywalled or logged-in pages. The article is
   saved with `read_on = today` in the Mac's local timezone.
-- **iPhone (Safari share sheet → Readerlog Shortcut):** JavaScript runs on the
-  page to collect the same metadata. The Shortcut then opens
-  `https://<app>/capture#<base64url JSON>`, and the PWA saves it immediately.
+- **iPhone (Chrome share sheet → Readerlog Shortcut), feature 005:**
+  - Chrome on iOS shares only the URL. The Shortcut fetches the page's readable
+    version itself and opens `https://<app>/#/capture?d=<base64 JSON>` in **Chrome**,
+    the default browser.
+  - iOS home-screen apps have isolated storage and can't receive links, so
+    **Readerlog in Chrome on the iPhone is paired as its own sync device**. It saves
+    the capture and pushes it at once, and the home-screen app receives it on its next
+    sync.
+  - Safari is not supported.
+- **Mac (Chrome or Brave extension), feature 005:** a push-only sync peer with no
+  SQLite. It never pulls the log.
 - Sharing an article counts as reading it; there is no queue.
 - A URL typed in by hand keeps only its domain, because a browser can't fetch
   arbitrary pages due to CORS. Its status is `metadata_status = 'failed'`.
