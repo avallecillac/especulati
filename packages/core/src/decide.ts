@@ -1,6 +1,8 @@
 import { err, ok, type Result } from './result.ts';
 import type { BooksSnapshot, BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
 import { deriveStatus, detailsStatusToDb, maxLoggedPage, type BookStatus, type EventType, type ReadingEvent } from './book.ts';
+import { parseWordCount } from './article.ts';
+import { normalizeUrl, siteOf } from './url.ts';
 import {
   parseAuthor, parseCoverUrl, parseEventId, parseGenre, parseIsbn, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
   type CoverUrl, type Instant, type Isbn13, type ParseError,
@@ -215,7 +217,85 @@ function fillDetails(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind
 }
 
 function removeBook(snapshot: BookSnapshot | null, now: Instant): Decided {
-  if (!snapshot) return err({ kind: 'NotFound' });
+  if (!snapshot || snapshot.item.type !== 'book') return err({ kind: 'NotFound' });
+  if (snapshot.item.deletedAt !== null) return decided([]);
+  return decided([{ tbl: 'items', rowId: snapshot.item.id, fields: { deleted_at: now } }]);
+}
+
+const readOnRejection = (e: ParseError): Rejection => ({ kind: 'InvalidInput', field: 'readOn', reason: e.reason });
+const wordCountRejection = (e: ParseError): Rejection => ({ kind: 'InvalidInput', field: 'wordCount', reason: e.reason });
+
+/** Contract: contracts/capture.md "AddArticle". Articles have no events. */
+function addArticle(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'AddArticle' }>, now: Instant): Decided {
+  const id = need(parseItemId(cmd.itemId));
+  if (!id.ok) return id;
+  if (snapshot) return err({ kind: 'AlreadyExists' });
+  const title = need(parseTitle(cmd.title), titleRejection);
+  if (!title.ok) return title;
+  const url = need(normalizeUrl(cmd.url), () => ({ kind: 'InvalidUrl' }));
+  if (!url.ok) return url;
+  const author = need(parseAuthor(cmd.author));
+  if (!author.ok) return author;
+  let wordCount: number | null = null;
+  if (cmd.wordCount !== undefined && cmd.wordCount !== null) {
+    const w = need(parseWordCount(cmd.wordCount), wordCountRejection);
+    if (!w.ok) return w;
+    wordCount = w.value;
+  }
+  const readOn = need(parseLocalDate(cmd.readOn), readOnRejection);
+  if (!readOn.ok) return readOn;
+  if (cmd.detailsStatus !== 'complete' && cmd.detailsStatus !== 'notFound')
+    return err({ kind: 'InvalidInput', field: 'detailsStatus', reason: 'must be complete or notFound' });
+
+  return decided([
+    {
+      tbl: 'items',
+      rowId: id.value,
+      fields: {
+        type: 'article',
+        title: title.value,
+        author: author.value,
+        url: url.value,
+        domain: siteOf(url.value),
+        word_count: wordCount,
+        read_on: readOn.value,
+        metadata_status: detailsStatusToDb(cmd.detailsStatus),
+        created_at: now,
+      },
+    },
+  ]);
+}
+
+/** A live (non-removed) article of the snapshot, or NotFound. */
+function liveArticle(snapshot: BookSnapshot | null): Result<BookSnapshot, Rejection> {
+  return snapshot && snapshot.item.deletedAt === null && snapshot.item.type === 'article' ? ok(snapshot) : err({ kind: 'NotFound' });
+}
+
+function editArticle(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'EditArticle' }>): Decided {
+  const found = liveArticle(snapshot);
+  if (!found.ok) return found;
+  const { item } = found.value;
+  const fields: Record<string, FieldValue> = {};
+  if (cmd.title !== undefined) {
+    const title = need(parseTitle(cmd.title), titleRejection);
+    if (!title.ok) return title;
+    if (title.value !== item.title) fields['title'] = title.value;
+  }
+  if (cmd.author !== undefined) {
+    const author = need(parseAuthor(cmd.author));
+    if (!author.ok) return author;
+    if (author.value !== item.author) fields['author'] = author.value;
+  }
+  if (cmd.readOn !== undefined) {
+    const readOn = need(parseLocalDate(cmd.readOn), readOnRejection);
+    if (!readOn.ok) return readOn;
+    if (readOn.value !== item.readOn) fields['read_on'] = readOn.value;
+  }
+  return decided(Object.keys(fields).length > 0 ? [{ tbl: 'items', rowId: item.id, fields }] : []);
+}
+
+function removeArticle(snapshot: BookSnapshot | null, now: Instant): Decided {
+  if (!snapshot || snapshot.item.type !== 'article') return err({ kind: 'NotFound' });
   if (snapshot.item.deletedAt !== null) return decided([]);
   return decided([{ tbl: 'items', rowId: snapshot.item.id, fields: { deleted_at: now } }]);
 }
@@ -351,5 +431,11 @@ function decideOne(snapshot: BookSnapshot | null, cmd: Exclude<Command, { kind: 
       return removeBook(snapshot, now);
     case 'RemoveEvent':
       return removeEvent(snapshot, cmd, now);
+    case 'AddArticle':
+      return addArticle(snapshot, cmd, now);
+    case 'EditArticle':
+      return editArticle(snapshot, cmd);
+    case 'RemoveArticle':
+      return removeArticle(snapshot, now);
   }
 }

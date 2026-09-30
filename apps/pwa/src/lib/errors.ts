@@ -20,8 +20,10 @@ export function errorMessage(e: ClientError): string {
       return `Can't mark a ${e.from} book as ${e.type}.`;
     case 'InvalidIsbn':
       return "That isn't a valid ISBN — check the digits.";
+    case 'InvalidUrl':
+      return "That isn't a valid web address (http or https).";
     case 'NotFound':
-      return 'That book or entry no longer exists.';
+      return 'That book, article or entry no longer exists.';
     case 'AlreadyExists':
       return 'That was already saved.';
     case 'InvalidInput':

@@ -1,12 +1,12 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Rejection, type Result, type StatsView } from '@readerlog/core';
+import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type Rejection, type Result, type StatsView } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
-import { bookView, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
+import { article, articles, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
@@ -77,6 +77,18 @@ export class ReaderlogDb {
 
   stats(year: number, today: LocalDate): StatsView {
     return statsView(this.raw, year, today);
+  }
+
+  articles(): Article[] {
+    return articles(this.raw);
+  }
+
+  article(itemId: string): Article | null {
+    return article(this.raw, itemId);
+  }
+
+  findArticleByUrl(url: string): Article[] {
+    return findArticleByUrl(this.raw, url);
   }
 
   findByIsbn(isbn: string): BookCard | null {
@@ -187,4 +199,5 @@ export class ReaderlogDb {
     }
   }
 }
+export { rowToArticle } from './queries.ts';
 export type { BookCard, BookEventView, BookView, DuplicateBookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from './queries.ts';

@@ -1,3 +1,4 @@
+import type { NormalizedUrl } from './url.ts';
 import type { Author, CoverUrl, EventId, Genre, Isbn13, Instant, ItemId, LocalDate, NonEmptyTitle, Page, PageCount } from './types.ts';
 
 export type ItemType = 'book' | 'article';
@@ -34,6 +35,11 @@ export interface Item {
   readonly deletedAt: Instant | null;
   /** Set on a book merged away by MergeBooks (004 R8); follow it to the surviving book. */
   readonly mergedInto: ItemId | null;
+  /** Article-only columns (005); null on books. */
+  readonly url: NormalizedUrl | null;
+  readonly domain: string | null;
+  readonly wordCount: number | null;
+  readonly readOn: LocalDate | null;
 }
 
 export interface ReadingEvent {

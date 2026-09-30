@@ -157,6 +157,8 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.home();
     case 'library':
       return d.library();
+    case 'articles':
+      return d.articles();
     case 'book':
       return d.book(q.itemId);
     case 'stats': {

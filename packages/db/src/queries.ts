@@ -1,7 +1,9 @@
-import type { BookStatus, DetailsStatus, EventType } from '@readerlog/core';
+import type { SqlValue } from '@sqlite.org/sqlite-wasm';
+import type { Article, Author, BookStatus, DetailsStatus, EventType, Instant, ItemId, LocalDate, NonEmptyTitle, NormalizedUrl, WordCount } from '@readerlog/core';
+import { detailsStatusFromDb } from '@readerlog/core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import { deriveStatus, eventOrder, findDuplicates, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
-import { loadBookSnapshot, mergeChainIds, rowToEvent, rowToItem, text } from './snapshot.ts';
+import { intOrNull, loadBookSnapshot, mergeChainIds, rowToEvent, rowToItem, text, textOrNull } from './snapshot.ts';
 
 /** Read models returned to the UI (contracts/worker-api.md). Plain JSON: nulls, no brands. */
 export interface BookCard {
@@ -212,4 +214,39 @@ export function stragglers(db: Database): StragglerView[] {
     out.push({ duplicateId: id, survivorId, events });
   }
   return out;
+}
+
+/** An `items` row of type 'article' as the core `Article` (005 data-model). */
+export function rowToArticle(r: Record<string, SqlValue>): Article {
+  return {
+    id: text(r['id'], 'id') as ItemId,
+    title: text(r['title'], 'title') as NonEmptyTitle,
+    author: textOrNull(r['author'], 'author') as Author | null,
+    url: text(r['url'], 'url') as NormalizedUrl,
+    domain: text(r['domain'], 'domain'),
+    wordCount: intOrNull(r['word_count'], 'word_count') as WordCount | null,
+    readOn: text(r['read_on'], 'read_on') as LocalDate,
+    detailsStatus: detailsStatusFromDb(text(r['metadata_status'], 'metadata_status')),
+    createdAt: text(r['created_at'], 'created_at') as Instant,
+    deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
+  };
+}
+
+const LIVE_ARTICLES = `FROM items WHERE type = 'article' AND deleted_at IS NULL`;
+const NEWEST_FIRST = 'ORDER BY read_on DESC, created_at DESC, id';
+
+/** Live articles, newest read first. */
+export function articles(db: Database): Article[] {
+  return db.selectObjects(`SELECT * ${LIVE_ARTICLES} ${NEWEST_FIRST}`).map(rowToArticle);
+}
+
+/** One live article, or null (unknown, removed, or a book). */
+export function article(db: Database, itemId: string): Article | null {
+  const row = db.selectObject(`SELECT * ${LIVE_ARTICLES} AND id = ?`, [itemId]);
+  return row ? rowToArticle(row) : null;
+}
+
+/** Live articles with this normalized address, newest first (FR-008). */
+export function findArticleByUrl(db: Database, url: string): Article[] {
+  return db.selectObjects(`SELECT * ${LIVE_ARTICLES} AND url = ? ${NEWEST_FIRST}`, [url]).map(rowToArticle);
 }

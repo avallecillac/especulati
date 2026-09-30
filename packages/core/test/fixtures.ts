@@ -26,6 +26,10 @@ export function book(p: Partial<Item> = {}): Item {
     createdAt: instant('2026-09-01T10:00:00.000Z'),
     deletedAt: null,
     mergedInto: null,
+    url: null,
+    domain: null,
+    wordCount: null,
+    readOn: null,
     ...p,
   };
 }
@@ -64,6 +68,10 @@ export function applyToSnapshot(s: BookSnapshot | null, changes: readonly Change
         ...('metadata_status' in f ? { detailsStatus: detailsStatusFromDb(f['metadata_status'] as string) } : {}),
         ...('created_at' in f ? { createdAt: f['created_at'] as Item['createdAt'] } : {}),
         ...('deleted_at' in f ? { deletedAt: f['deleted_at'] as Item['deletedAt'] } : {}),
+        ...('url' in f ? { url: f['url'] as Item['url'] } : {}),
+        ...('domain' in f ? { domain: f['domain'] as Item['domain'] } : {}),
+        ...('word_count' in f ? { wordCount: f['word_count'] as Item['wordCount'] } : {}),
+        ...('read_on' in f ? { readOn: f['read_on'] as Item['readOn'] } : {}),
         ...('merged_into' in f ? { mergedInto: f['merged_into'] as Item['mergedInto'] } : {}),
       };
       cur = { item, events: cur?.events ?? [] };

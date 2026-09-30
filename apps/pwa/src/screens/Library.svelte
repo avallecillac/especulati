@@ -5,8 +5,10 @@
   import { reportError } from '../lib/errors.ts';
   import Cover from './Cover.svelte';
   import DetailsBadge from './DetailsBadge.svelte';
+  import Articles from './Articles.svelte';
 
   let view = $state<LibraryView | null>(null);
+  let tab = $state<'books' | 'articles'>('books');
 
   async function load() {
     const r = await query({ name: 'library' });
@@ -29,7 +31,15 @@
 
 <h1>Library</h1>
 
-{#if view}
+<div class="segmented" role="tablist" aria-label="Library">
+  <button role="tab" id="tab-books" aria-selected={tab === 'books'} aria-controls="panel-library" onclick={() => (tab = 'books')}>Books</button>
+  <button role="tab" id="tab-articles" aria-selected={tab === 'articles'} aria-controls="panel-library" onclick={() => (tab = 'articles')}>Articles</button>
+</div>
+
+<div id="panel-library" role="tabpanel" aria-labelledby={tab === 'books' ? 'tab-books' : 'tab-articles'}>
+{#if tab === 'articles'}
+  <Articles />
+{:else if view}
   {@const v = view}
   {#if groups.every(([key]) => v[key].length === 0)}
     <p class="muted">No books yet. <a href="#/add">Add one</a>.</p>
@@ -53,3 +63,4 @@
     {/if}
   {/each}
 {/if}
+</div>

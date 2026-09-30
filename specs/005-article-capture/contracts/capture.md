@@ -55,7 +55,7 @@ https://<app>/#/capture?d=<URL-encoded Base64 of the JSON payload>
 function normalizeUrl(input: string): Result<NormalizedUrl, ParseError>;   // research R6
 function siteOf(url: NormalizedUrl): string;
 function stampOps(changes: readonly Change[], s: { hlc: Hlc | null; deviceId: DeviceId; wallMs: number; newOpId: () => string }):
-  { ops: OpWire[]; hlc: Hlc };                                             // research R7; same stamping rule as applyChanges
+  { ops: OpWire[]; hlc: Hlc | null };                                             // research R7; same stamping rule as applyChanges
 function readingMinutes(words: number | null): number | null;             // ceil(words / 238)
 function articleStats(articles: readonly Article[], opts: { year: number; today: LocalDate }): ArticleStats;
 ```

@@ -7,3 +7,6 @@ export * from './decide.ts';
 export * from './stats.ts';
 export * from './merge.ts';
 export * from './duplicates.ts';
+export * from './url.ts';
+export * from './article.ts';
+export * from './ops.ts';

@@ -60,11 +60,31 @@ export type Command =
       readonly duplicateId: string;
       readonly copies: readonly { readonly from: string; readonly to: string }[];
     }
-  | { readonly kind: 'DismissDuplicate'; readonly dismissalId: string; readonly itemA: string; readonly itemB: string };
+  | { readonly kind: 'DismissDuplicate'; readonly dismissalId: string; readonly itemA: string; readonly itemB: string }
+  /** 005 contracts/capture.md. `url` is raw input; decide() normalizes it. */
+  | {
+      readonly kind: 'AddArticle';
+      readonly itemId: string;
+      readonly url: string;
+      readonly title: string;
+      readonly author?: string | null;
+      readonly wordCount?: number | null;
+      readonly readOn: string;
+      readonly detailsStatus: 'complete' | 'notFound';
+    }
+  | {
+      readonly kind: 'EditArticle';
+      readonly itemId: string;
+      readonly title?: string;
+      readonly author?: string | null;
+      readonly readOn?: string;
+    }
+  | { readonly kind: 'RemoveArticle'; readonly itemId: string };
 
 export type Rejection =
   | { readonly kind: 'TitleRequired' }
   | { readonly kind: 'InvalidIsbn' }
+  | { readonly kind: 'InvalidUrl' }
   | { readonly kind: 'InvalidPageCount' }
   | { readonly kind: 'InvalidPage' }
   | { readonly kind: 'PageBeyondEnd'; readonly totalPages: number }

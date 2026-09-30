@@ -74,12 +74,12 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
 
 ### Tests first
 
-- [ ] T002 [P] Write `packages/core/test/url.test.ts`:
+- [X] T002 [P] Write `packages/core/test/url.test.ts`:
   - every vector in contracts/capture.md, plus: IPv6 hosts are rejected (or not
     supported); `?` with no params is dropped; parameter order is kept; a percent-
     encoded path stays as is;
   - `siteOf` strips only a leading `www.`.
-- [ ] T003 [P] Write `packages/core/test/decide.articles.test.ts` for `AddArticle`,
+- [X] T003 [P] Write `packages/core/test/decide.articles.test.ts` for `AddArticle`,
   `EditArticle` and `RemoveArticle` (contracts/capture.md table, invariants A-1 to A-3):
   - **`AddArticle`** emits one `items` insert with `type='article'`, the normalized
     `url`, `domain`, `title`, `author` (null when absent), `word_count`, `read_on`,
@@ -97,7 +97,7 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
   - **Books**: `LogEvent`, `EditBook` and `RemoveBook`-style book commands on an
     article give `NotFound`. Make `RemoveBook` check the type too, as it doesn't today;
     `specs/001-local-book-log/contracts/commands.md` is amended to match.
-- [ ] T004 [P] Write `packages/core/test/ops.test.ts` for `stampOps`:
+- [X] T004 [P] Write `packages/core/test/ops.test.ts` for `stampOps`:
   - one op per change;
   - HLCs strictly increase, starting after the given `hlc`, and use `hlcNext`
     semantics with `wallMs` and the device;
@@ -107,7 +107,7 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
   Also add a db test proving equivalence: in `packages/db/test/ops.equiv.test.ts`,
   stamping a change list with `stampOps` gives the same `(tbl, row, fields, hlc)`
   sequence that `applyChanges` writes to `change_log`, for the same clock and device.
-- [ ] T005 [P] Write `packages/db/test/articles.test.ts`:
+- [X] T005 [P] Write `packages/db/test/articles.test.ts`:
   - `articles()` returns live articles ordered by `read_on` desc, then `created_at`
     desc, and maps to the `Article` type;
   - `article(id)` returns one;
@@ -117,7 +117,7 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
 
 ### Implementation
 
-- [ ] T006 Implement the article core in `packages/core`:
+- [X] T006 Implement the article core in `packages/core`:
   - `src/url.ts`: `normalizeUrl` and `siteOf`;
   - `src/article.ts`: the `Article` type, `WordCount` parsing, and `readingMinutes`;
   - `src/ops.ts`: `stampOps`;
@@ -126,7 +126,7 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
   - export them all.
 
   T002–T004 (core part) must pass, and all existing tests must stay green.
-- [ ] T007 Implement the article read model in `packages/db`:
+- [X] T007 Implement the article read model in `packages/db`:
   - `rowToArticle`, and the queries `articles()`, `article(id)` and
     `findArticleByUrl()` in `packages/db/src/queries.ts` (plus `ReaderlogDb` methods);
   - `dispatch` loads the single-item snapshot for the article commands. Reuse
@@ -141,7 +141,7 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
   - The engine uses it through a `ReaderlogDb` adapter.
   - This is **a refactor with no behaviour change**: all existing sync tests,
     including `pnpm test:convergence`, must pass unchanged.
-- [ ] T009 Add a minimal Articles list to the PWA:
+- [X] T009 Add a minimal Articles list to the PWA:
   - Library gets a **Books | Articles** segmented control (`role="tablist"`).
   - Articles lists title, site, date read and "~N min" (or "—"), from the new worker
     query `articles` in `apps/pwa/src/lib/protocol.ts` and

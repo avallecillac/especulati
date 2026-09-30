@@ -77,6 +77,12 @@ button.link { border: none; background: none; color: var(--accent); padding: 0 8
 button:disabled { opacity: 0.5; }
 .chip[aria-pressed='true'] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 12px; background: var(--line); border-radius: 999px; }
+.segmented button { border: 0; background: none; color: var(--muted); }
+.segmented button[aria-selected='true'] { background: var(--surface); color: var(--text); font-weight: 600; }
+.article-main { display: grid; min-width: 0; }
+.article-title { overflow-wrap: anywhere; }
+
 label { display: block; margin: 14px 0 6px; font-weight: 600; }
 input[type='text'], input[type='number'] {
   width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: 10px;

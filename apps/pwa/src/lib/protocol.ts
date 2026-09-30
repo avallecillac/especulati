@@ -1,4 +1,4 @@
-import type { Command, Rejection, Result, StatsView } from '@readerlog/core';
+import type { Article, Command, Rejection, Result, StatsView } from '@readerlog/core';
 import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
@@ -6,6 +6,7 @@ import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@read
 export type Query =
   | { name: 'home' }
   | { name: 'library' }
+  | { name: 'articles' }
   | { name: 'book'; itemId: string }
   | { name: 'stats'; year: number; today: string }
   | { name: 'storage' }
@@ -27,6 +28,7 @@ export interface StorageInfo {
 export interface QueryResult {
   home: HomeView;
   library: LibraryView;
+  articles: Article[];
   book: BookView | null;
   stats: StatsView;
   storage: StorageInfo;

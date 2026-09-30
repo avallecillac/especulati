@@ -2,7 +2,7 @@ import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import { detailsStatusFromDb } from '@readerlog/core';
 import type {
   Author, BookSnapshot, BooksSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
-  NonEmptyTitle, Page, PageCount, ReadingEvent,
+  NonEmptyTitle, NormalizedUrl, Page, PageCount, ReadingEvent,
 } from '@readerlog/core';
 
 // Rows were validated by decide() before they were written, and CHECK constraints guard
@@ -33,6 +33,10 @@ export function rowToItem(r: Record<string, SqlValue>): Item {
     createdAt: text(r['created_at'], 'created_at') as Instant,
     deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
     mergedInto: textOrNull(r['merged_into'], 'merged_into') as ItemId | null,
+    url: textOrNull(r['url'], 'url') as NormalizedUrl | null,
+    domain: textOrNull(r['domain'], 'domain'),
+    wordCount: intOrNull(r['word_count'], 'word_count'),
+    readOn: textOrNull(r['read_on'], 'read_on') as LocalDate | null,
   };
 }
 
