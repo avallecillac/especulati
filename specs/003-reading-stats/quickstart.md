@@ -44,4 +44,25 @@ Expected: every command exits 0.
 
 ## Validation results
 
-*Filled in after `/speckit-implement`.*
+### 2026-09-30, dev container, Chromium 141 headless, version 0.6.0
+
+This run is on the tree merged to `main`: 003 only, without 006.
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; no dependency violations |
+| `pnpm test` | ✅ 573 tests, 65 files |
+| `pnpm test:convergence` | ✅ 7/7 (1,000 runs), after the `LogEvent` abandon-at-page change |
+| `pnpm e2e` | ✅ 105/105; the new specs (`stats`, `book-pace`, `abandon-page`), plus the fixed `timezone` and `duplicates`, pass with `--repeat-each=2` |
+| Scenarios 1–19 | ✅ all automated, at the levels listed in the table |
+| SC-001 / R8 performance | ✅ `stats(2026)` takes **25 ms** on 400 books, 10,000 events and 3,650 days (budget 100 ms). The first attempt took 130 ms; packing events as JSON in SQLite fixed it (research R8). The Stats screen shows within 200 ms in e2e |
+| SC-005: articles don't change book stats | ✅ covered by 005's `articles.test.ts` (T026) |
+
+**Decisions made during review:**
+- **Stats loader:** it packs each book's events into one JSON row, instead of adding a cache (R8).
+- **Two e2e races fixed:** `duplicates` counted the Library before it rendered, and
+  `timezone` read the history before it loaded.
+- **`AlreadyExists` for a colliding `pageEventId`:** this is stricter than the
+  contract. Such a collision can't happen with random UUIDs.
+- **A rejected abandon page:** the dialog closes and an error toast shows, rather than
+  keeping the dialog open with an inline error. This is accepted for now.

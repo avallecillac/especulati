@@ -415,12 +415,12 @@ abandon one at a page, then check every number.
   `packages/db/test/stats.test.ts`, insert 50 article rows (with `read_on`, `domain`
   and `word_count`) into a populated DB and assert that `db.stats(...)` is deep-equal
   before and after.
-- [ ] T027 Run the full validation (main session):
+- [X] T027 Run the full validation (main session):
   - `pnpm typecheck && pnpm lint && pnpm test && pnpm e2e`, plus `pnpm e2e
     --repeat-each=2`;
   - run quickstart scenarios 1–19;
   - fill in "Validation results" in `quickstart.md`;
-  - bump `apps/pwa/package.json` to `0.3.0`.
+  - bump `apps/pwa/package.json` to `0.3.0` (released as **0.6.0**, since 004 and 005 shipped in between).
 
 ---
 
