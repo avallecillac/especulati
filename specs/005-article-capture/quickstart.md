@@ -55,4 +55,28 @@ pnpm --filter extension build   # produces apps/extension/dist
 
 ## Validation results
 
-*Filled in after `/speckit-implement`.*
+### 2026-09-30, dev container, Chromium 141 headless, version 0.5.0
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; dependency-cruiser finds no violations. The new rules `extension-no-pwa-no-db` and `capture-peer-no-db` are enforced |
+| `pnpm test` | ✅ 533 tests, 64 files |
+| `pnpm test:convergence` | ✅ 1,000 runs, unchanged after the `push.ts` refactor |
+| `pnpm e2e` | ✅ 96/96; the new specs pass **46/46** with `--repeat-each=2` |
+| Extension release build | ✅ `check-manifest`: no `host_permissions`, no test hooks, no SQLite in `sw.js` |
+| SC-001: 1 click or key on the Mac | ✅ extension-capture.spec (toolbar, command, context menu) |
+| SC-002: seen on the other device after Sync now | ✅ extension-capture.spec and capture-link.spec |
+| SC-003: extractor accuracy | ✅ titles 20/20, word counts within 15% 20/20, on synthetic EN/ES fixtures |
+| SC-004: no article text or details at the relay | ✅ privacy.test (article capture) |
+| SC-005: book stats unaffected | ✅ db articles.test: `home`, `library`, `stats`, `duplicates`, `findByIsbn` and `missingCovers` are deep-equal before and after 100 articles |
+| SC-006: offline capture on both paths | ✅ the extension (badge, then flush) and the capture link (offline, then online and sync) |
+| Performance (R10b) | ✅ with 5,000 articles: first `articles()` page 3 ms, `loadArticles` 35 ms, `findArticleByUrl` 2 ms |
+| Scenarios 1–15 | ✅ all automated, apart from Brave, the Show more UI (covered at the db level) and the non-http(s) badge, which can't be triggered headlessly |
+| Manual device checks (above) | ⏳ Pending: load the extension on the Mac, pair Readerlog in Chrome on the iPhone, and build the Shortcut |
+
+**Decisions made during review:**
+- The toast doesn't wait for the relay.
+- Test hooks exist only in the e2e build.
+- The Articles list is paged, because copying rows across the WASM boundary dominated at 5,000 articles.
+- `articleStats` takes only the fields it reads.
+- The perf tests take the best of 5 samples.

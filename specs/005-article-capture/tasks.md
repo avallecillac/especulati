@@ -340,7 +340,7 @@ It saves, and a reload doesn't duplicate it.
 - [X] T025 Update the docs (main session): `docs/architecture.md` (the extension and
   capture peer, and the Articles UI), `CLAUDE.md` (the `apps/extension` rules and the
   build command), and the README (extension install).
-- [ ] T026 Run the full validation (main session):
+- [X] T026 Run the full validation (main session):
   - `pnpm typecheck && pnpm lint && pnpm test && pnpm test:convergence && pnpm e2e`,
     plus `--repeat-each=2` on the new specs;
   - quickstart scenarios 1–15;
