@@ -73,7 +73,7 @@ pnpm --filter extension build   # produces apps/extension/dist
 | Performance (R10b) | ✅ with 5,000 articles: first `articles()` page 3 ms, `loadArticles` 35 ms, `findArticleByUrl` 2 ms |
 | Scenarios 1–15 | ✅ all automated, apart from Brave, the Show more UI (covered at the db level) and the non-http(s) badge, which can't be triggered headlessly |
 | Manual check: iPhone (Chrome) | ✅ 2026-09-30, production: Readerlog in Chrome paired as its own device, the Shortcut captures from the share sheet, and the article shows in Readerlog. Two Shortcut settings were missing from the guide and are now in `docs/ios-shortcut.md`: Base64 Encode must have **Line Breaks: None** (a line break cut the link after 76 characters), and Format Date needs **Include ISO 8601 Time**. The damaged-link screen now names the wrong value |
-| Manual check: Mac extension (Chrome/Brave) | ⏳ Pending |
+| Manual check: Mac extension (Chrome/Brave) | ✅ 2026-09-30, production: release build 0.5.0 loaded unpacked in both Chrome and Brave, paired from Options, and captures reach Readerlog. This covers Brave, which e2e doesn't |
 
 **Decisions made during review:**
 - The toast doesn't wait for the relay.
