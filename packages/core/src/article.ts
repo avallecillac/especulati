@@ -8,7 +8,7 @@ export type WordCount = Brand<number, 'WordCount'>;
 
 const MAX_WORDS = 100_000;
 /** Average adult reading speed (research R10). */
-const WORDS_PER_MINUTE = 238;
+export const WORDS_PER_MINUTE = 238;
 
 export function parseWordCount(n: number): Result<WordCount, ParseError> {
   return Number.isInteger(n) && n >= 0 && n <= MAX_WORDS

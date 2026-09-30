@@ -1,4 +1,5 @@
 import { eventOrder, type ReadingEvent } from './book.ts';
+import { WORDS_PER_MINUTE, type Article } from './article.ts';
 import type { Genre, ItemId, LocalDate, PageCount } from './types.ts';
 
 /** Days since 1970-01-01 for a calendar date (Hinnant's days-from-civil; integer maths only, research R2). */
@@ -205,4 +206,46 @@ export function computeStats(books: readonly StatsBook[], opts: { year: number; 
     longest: longestStreak(keys),
     hasAnyEvents: books.some((b) => b.events.some((e) => e.deletedAt === null)),
   };
+}
+
+export interface ArticleStats {
+  readonly thisWeek: number;
+  readonly thisMonth: number;
+  /** Twelve entries, `month` 1..12, for the selected year. */
+  readonly months: { readonly month: number; readonly count: number }[];
+  /** round(sum(word_count) / 238) over the selected year; null word counts are ignored. */
+  readonly minutes: number;
+  readonly topSites: { readonly domain: string; readonly count: number }[];
+}
+
+
+/** Article stats (data-model "Derived: ArticleStats"). Pure: `today` is a parameter; the week starts on Monday. */
+export function articleStats(articles: readonly Article[], opts: { year: number; today: LocalDate }): ArticleStats {
+  const { year, today } = opts;
+  const t = dayNumber(today);
+  // Day 0 (1970-01-01) was a Thursday, so (n + 3) % 7 is 0 on Mondays.
+  const weekStart = t - (((t + 3) % 7) + 7) % 7;
+  const monthPrefix = today.slice(0, 7);
+  const yearPrefix = `${String(year).padStart(4, '0')}-`;
+
+  let thisWeek = 0;
+  let thisMonth = 0;
+  let words = 0;
+  const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, count: 0 }));
+  const sites = new Map<string, number>();
+  for (const a of articles) {
+    if (a.deletedAt !== null) continue;
+    const n = dayNumber(a.readOn);
+    if (n >= weekStart && n <= t) thisWeek++;
+    if (a.readOn.startsWith(monthPrefix) && n <= t) thisMonth++;
+    if (!a.readOn.startsWith(yearPrefix)) continue;
+    months[Number(a.readOn.slice(5, 7)) - 1]!.count++;
+    words += a.wordCount ?? 0;
+    sites.set(a.domain, (sites.get(a.domain) ?? 0) + 1);
+  }
+  const topSites = [...sites]
+    .map(([domain, count]) => ({ domain, count }))
+    .sort((x, y) => y.count - x.count || (x.domain < y.domain ? -1 : x.domain > y.domain ? 1 : 0))
+    .slice(0, 5);
+  return { thisWeek, thisMonth, months, minutes: Math.round(words / WORDS_PER_MINUTE), topSites };
 }

@@ -307,7 +307,7 @@ It saves, and a reload doesn't duplicate it.
 
 ## Phase 6: User Story 4 - See my article reading stats (Priority: P3)
 
-- [ ] T021 [P] [US4] Write `packages/core/test/stats.articles.test.ts` for
+- [X] T021 [P] [US4] Write `packages/core/test/stats.articles.test.ts` for
   `articleStats`:
   - 3 articles this week (Monday start) plus 5 earlier this month give `thisWeek` 3
     and `thisMonth` 8;
