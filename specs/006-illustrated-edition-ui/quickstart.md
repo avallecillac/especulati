@@ -8,11 +8,11 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm e2e
 
 | # | Scenario | Covers | How |
 |---|---|---|---|
-| 1 | Every theme defines exactly the token list; the swatch and themeColor match | FR-019, SC-005 | `apps/pwa/test/theme-tokens.test.ts` |
-| 2 | Contrast pairs meet AA in both themes; heat steps are distinguishable | SC-003, FR-014 | `theme-contrast.test.ts` |
-| 3 | No literal colours outside `src/theme` (allow-list: QR, camera, backdrop) | FR-020 | `theme-guard.test.ts` |
-| 4 | `resolve()` for automatic, light, dark, invalid and missing values | FR-017, FR-018 | `appearance.test.ts` |
-| 5 | `parent()` and `depth()` for every route | FR-002, FR-004 | `nav.test.ts` |
+| 1 | Every theme defines exactly the token list; the swatch and themeColor match | FR-019, SC-005 | `apps/pwa/src/theme/theme-tokens.test.ts` |
+| 2 | Contrast pairs meet AA in both themes; heat steps are distinguishable | SC-003, FR-014 | `src/theme/theme-contrast.test.ts` |
+| 3 | No literal colours outside `src/theme` (allow-list: QR, camera, backdrop) | FR-020 | `src/theme/theme-guard.test.ts` |
+| 4 | `resolve()` for automatic, light, dark, invalid and missing values | FR-017, FR-018 | `src/lib/appearance.test.ts` |
+| 5 | `parent()` and `depth()` for every route | FR-002, FR-004 | `src/lib/nav.test.ts` |
 | 6 | The large title collapses into the bar on scroll; the tab bar has 5 icons and labels; a book shows "Back to Library", which returns to Library | US1 | `e2e/shell.spec.ts` |
 | 7 | The log sheet has a grabber, and the page behind it doesn't scroll | FR-005 | `e2e/shell.spec.ts` |
 | 8 | Input font-size is 16 px or more (no iOS zoom); controls have `user-select: none` | FR-006 | `e2e/shell.spec.ts` |

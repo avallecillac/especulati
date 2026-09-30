@@ -1,7 +1,9 @@
 # Contract: Theme tokens
 
 A theme is one CSS file, `apps/pwa/src/theme/<id>.css`, containing exactly one rule,
-`:root[data-theme='<id>'] { … }`, which sets **every** token below and nothing else.
+`:root[data-theme='<id>'] { … }`, which sets **every** token below and nothing else,
+apart from one `color-scheme: light | dark` declaration. That declaration mirrors
+`--scheme`, because CSS can't set `color-scheme` from a variable.
 It also has one entry in `apps/pwa/src/theme/themes.ts`. Screens and components use
 **only** these tokens, plus the structural constants in `src/theme/base.css` (spacing,
 tap size, fonts, radii, motion).

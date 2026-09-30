@@ -84,7 +84,7 @@ apps/pwa/
 │   ├── ornaments/             # Fleuron, Butterfly, Sprig, Fish, Rule, DropCap, TabIcon
 │   ├── shell/                 # TopBar.svelte (large/compact title, back), TabBar.svelte
 │   └── screens/*.svelte       # restyled; Settings gains Appearance
-└── test/                      # theme-tokens, contrast, theme-guard, nav, appearance tests
+(tests sit next to the code as src/**/*.test.ts: theme tokens, contrast, colour guard, nav, appearance)
 e2e/
 ├── shell.spec.ts              # large title, back, tab icons, sheet, no-zoom
 ├── appearance.spec.ts         # picker, persistence, no flash, automatic

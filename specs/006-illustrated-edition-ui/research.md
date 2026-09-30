@@ -144,7 +144,7 @@ at least 1.15:1 luminance ratio (FR-014, distinguishable).
 
 ## R6. Guards
 
-- **No literal colours (FR-020):** `apps/pwa/test/theme-guard.test.ts` scans
+- **No literal colours (FR-020):** `apps/pwa/src/theme/theme-guard.test.ts` scans
   `src/**/*.svelte` and `src/app.css` for `#rgb`, `#rrggbb`, `rgb(` and `hsl(` outside
   `src/theme/`. The allow-list is `Scan.svelte` / `.scan-*` (camera) and `.qr`, and
   `rgb(0 0 0 / x)` for backdrops.

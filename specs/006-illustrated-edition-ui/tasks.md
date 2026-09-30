@@ -29,7 +29,7 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
     `apps/pwa/public/fonts/`, with `OFL.txt`;
   - add `woff2` to the workbox `globPatterns`;
   - preload `eb-garamond-latin-wght-normal.woff2` in `index.html`.
-- [ ] T002 [P] Tests first, in `apps/pwa/test/`:
+- [ ] T002 [P] Tests first, next to the code (`apps/pwa/src/**/*.test.ts`, which is the pwa Vitest include):
   - `theme-tokens.test.ts`: every `src/theme/<id>.css` sets exactly the token list; the
     registry's `swatch` and `themeColor` equal the CSS values;
   - `theme-contrast.test.ts`: the pairs in the contract;
@@ -102,7 +102,7 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 
 ## Phase 5: US4, themes are palettes only (P3)
 
-- [ ] T015 [US4] Add a test-only theme fixture (`apps/pwa/test/fixtures/test-theme.css`)
+- [ ] T015 [US4] Add a test-only theme fixture (`apps/pwa/src/theme/test-fixtures/test-theme.css`)
   that passes the token test, proving that a new theme needs only a CSS file and a
   registry entry. Document "Adding a theme" in `docs/architecture.md`.
 
