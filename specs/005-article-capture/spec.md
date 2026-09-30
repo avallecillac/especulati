@@ -6,6 +6,15 @@
 
 **Status**: Draft
 
+## Clarifications
+
+### Session 2026-09-30
+
+- Q: Which browsers? → A: On the Mac, Chrome and Brave, with one extension, since Brave
+  runs Chrome extensions. On the iPhone, **Chrome**. Safari-specific support is out of
+  scope. Chrome on iOS has no extensions and only shares the page's address, so the
+  iPhone capture fetches the page's public version to get its details.
+
 **Input**: User description: "005 article capture: log articles I've read with near-zero
 friction. On the Mac, a Chrome MV3 extension: toolbar click, keyboard shortcut, or
 right-click "Log as read" collects URL, title, author, and a readability-style word
@@ -28,14 +37,14 @@ top domains) are a separate section on the Stats screen."
   address, title, author (if known), site (domain) and approximate length in words.
   Articles have no progress entries.
 - **Capture**: logging the article I'm looking at, from where I'm reading it.
-- **Extension**: the Readerlog add-on for Chrome on the Mac.
-- **Shortcut**: the Readerlog action in the iPhone's Safari share sheet.
+- **Extension**: the Readerlog add-on for Chrome and Brave on the Mac.
+- **Shortcut**: the Readerlog action in the iPhone's share sheet, used from Chrome.
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Log the article I'm reading on my Mac in one click (Priority: P1)
 
-I finish an article in Chrome and click the Readerlog button in the toolbar, press the
+I finish an article in Chrome or Brave and click the Readerlog button in the toolbar, press the
 keyboard shortcut, or right-click the page and choose **Log as read**. A small
 confirmation shows the title, site and estimated reading time. The article appears in
 Readerlog on my other devices after they sync.
@@ -69,9 +78,9 @@ shows its title and word count, and after syncing, the PWA lists it with today's
 
 ---
 
-### User Story 2 - Log an article from Safari on my iPhone (Priority: P1)
+### User Story 2 - Log an article from Chrome on my iPhone (Priority: P1)
 
-Reading in Safari on my phone, I tap Share → **Log in Readerlog**. Readerlog opens and
+Reading in Chrome on my phone, I tap Share → **Log in Readerlog**. Readerlog opens and
 shows "Logged" with the title and site. I'm done.
 
 **Why this priority**: the second main reading place, and the same near-zero friction
@@ -83,17 +92,23 @@ in the installed PWA. The article is saved and shown.
 **Acceptance Scenarios**:
 
 1. **Given** the Shortcut is installed, **When** I tap Share → **Log in Readerlog** on
-   an article, **Then** Readerlog opens and saves it with the address, title, author,
-   site and word count, dated today, in at most 2 taps from the share button.
-2. **Given** I'm offline, **When** I capture, **Then** it is saved on the phone and
+   an article in Chrome, **Then** Readerlog opens and saves it with the address, title,
+   author, site and word count, dated today, in at most 2 taps from the share button.
+   The details come from the page's public version: Chrome only shares the address,
+   so the Shortcut fetches the page itself.
+2. **Given** a paywalled article, **When** I capture it on the iPhone, **Then** it is
+   still saved with its address and title, but the word count may reflect only the
+   public preview. If no text is found, the word count is left empty rather than
+   wrong.
+3. **Given** I'm offline, **When** I capture, **Then** it is saved on the phone and
    syncs later.
-3. **Given** the capture link is malformed or missing its address, **When** Readerlog
+4. **Given** the capture link is malformed or missing its address, **When** Readerlog
    opens it, **Then** nothing is saved and I see why, with **Add article** available.
-4. **Given** I already logged that address, **When** I capture it, **Then** I see
+5. **Given** I already logged that address, **When** I capture it, **Then** I see
    "Already logged on <date>" with **Log again** or **Cancel**.
-5. **Given** the capture was just saved, **When** I tap **Undo**, **Then** it is
+6. **Given** the capture was just saved, **When** I tap **Undo**, **Then** it is
    removed.
-6. **Given** the same capture link is opened twice (for example by reloading), **When**
+7. **Given** the same capture link is opened twice (for example by reloading), **When**
    Readerlog opens it the second time, **Then** it isn't logged a second time.
 
 ---
@@ -158,6 +173,8 @@ each number.
 - **Non-article pages** (a search result, a PDF, a browser settings page): capture is
   unavailable or clearly fails. Nothing half-saved.
 - **Private or incognito windows**: capture works the same.
+- **Safari and other browsers**: not supported. The iPhone Shortcut may happen to work
+  from other apps' share sheets, but only Chrome is tested.
 - **Date near midnight**: the date read is the device's local date at the moment of
   capture.
 - **Extension removed or unpaired**: captures not yet sent are lost only if the user
@@ -179,14 +196,16 @@ each number.
   local date), and the time it was recorded.
 - **FR-002**: The article's text MUST never be stored or sent anywhere. Only the
   derived details in FR-001 are kept (constitution II).
-- **FR-003**: On the Mac, capture MUST be available from a toolbar button, a keyboard
+- **FR-003**: On the Mac, in Chrome and Brave, capture MUST be available from a toolbar button, a keyboard
   shortcut, and a right-click **Log as read** item, and each MUST save in one action
   with no further input when the extension is paired.
-- **FR-004**: On the iPhone, capture from the Safari share sheet MUST take at most 2
+- **FR-004**: On the iPhone, capture from Chrome's share sheet MUST take at most 2
   taps from the share button, and MUST save without further input.
-- **FR-005**: Details MUST be collected from the page as the user sees it, so
-  logged-in and paywalled pages work. Capture MUST NOT fetch the page again from
-  anywhere else.
+- **FR-005**: On the Mac, details MUST be collected from the page as the user sees it,
+  so logged-in and paywalled pages work, without fetching the page again. On the
+  iPhone, where only the address is shared, the Shortcut MAY fetch the page's public
+  version directly from the site, and from nowhere else. A word count it can't
+  determine MUST be left empty.
 - **FR-006**: Addresses MUST be normalized before storing and comparing: common
   tracking parameters (for example `utm_*`, `fbclid`, `gclid`) and the `#fragment` are
   removed, and the scheme and host are lowercased.
@@ -260,8 +279,9 @@ each number.
 - **SC-002**: A capture made on the Mac while online appears on the phone within 10 s
   of the phone being opened or its sync button being tapped.
 - **SC-003**: For a set of 20 reference article pages (saved copies, in English and
-  Spanish), the captured title is correct for all 20 and the word count is within 15%
-  of a hand count for at least 18.
+  Spanish), the extension's captured title is correct for all 20 and its word count is
+  within 15% of a hand count for at least 18. On the iPhone, the title is correct for
+  the non-paywalled pages among them.
 - **SC-004**: No article text leaves the device: inspecting everything sent to the
   relay shows only encrypted data, and decrypted captures contain only the FR-001
   details.
@@ -272,10 +292,11 @@ each number.
 
 ## Assumptions
 
-- The extension is installed "unpacked" in Chrome on the Mac. Publishing it to the
+- The extension is installed "unpacked" in Chrome or Brave on the Mac. Publishing it to the
   Chrome Web Store is optional and out of scope.
-- The iPhone Shortcut is built by the user from written instructions (a short script
-  plus an "Open URL" step). Shortcuts can't be signed or distributed without an Apple
+- The iPhone Shortcut is built by the user from written instructions. It takes the
+  shared address, fetches the page's readable version, counts its words, and opens the
+  capture link. Shortcuts can't be signed or distributed without an Apple
   developer account, so a ready-made file isn't promised.
 - Holding the sync code lets the extension read the whole log in principle; the
   requirement is that it doesn't (FR-012). A write-only key isn't possible with the
