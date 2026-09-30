@@ -21,7 +21,8 @@ export const THEMES: readonly Theme[] = [
 export const DEFAULT_LIGHT = 'macondo';
 export const DEFAULT_DARK = 'patriarca';
 
-export type Appearance = 'automatic' | string;
+/** 'automatic' or a theme id; stored values are checked with isThemeId. */
+export type Appearance = string;
 
 export const isThemeId = (id: unknown): id is string => typeof id === 'string' && THEMES.some((t) => t.id === id);
 
