@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { parseSyncCode } from '../src/code.ts';
 import { deriveKeys } from '../src/keys.ts';
 import { open } from '../src/envelope.ts';
-import { fakeRelay, makePeer, uuid, type Peer } from './harness.ts';
+import { createCapturePeer, type CaptureStore } from '../src/capturePeer.ts';
+import { fakeRelay, makePeer, prng, randomBytes, uuid, type Peer } from './harness.ts';
 
 const TITLE = 'Zanzibar Quokka Chronicle';
 const AUTHOR = 'Ophelia Wurtzelbacher';
@@ -113,3 +114,68 @@ describe('privacy audit (SC-005)', () => {
     expect(text).toContain(String(PAGE));
   });
 });
+
+describe('privacy audit: article capture (SC-004)', () => {
+  it('a capture-peer article never appears in relay rows, and its batches hold only the FR-001 fields', async () => {
+    const A_TITLE = 'Zanzibar Quokka Essay';
+    const A_URL = 'https://quokka.example/essay-7351';
+    const A_AUTHOR = 'Ottoline Brackwater';
+    const A_WORDS = 4321;
+    const relay = fakeRelay();
+    const host = makePeer(1, relay);
+    expect((await host.engine.turnOn()).ok).toBe(true);
+    const code = host.engine.showCode()!.code;
+
+    const data = new Map<string, unknown>();
+    const store: CaptureStore = {
+      get<T>(k: string) {
+        return Promise.resolve(data.has(k) ? (structuredClone(data.get(k)) as T) : undefined);
+      },
+      set(patch) {
+        for (const [k, v] of Object.entries(patch)) data.set(k, structuredClone(v));
+        return Promise.resolve();
+      },
+    };
+    const wall = Date.UTC(2026, 8, 28, 9, 0, 0);
+    const peer = createCapturePeer(store, { fetch: relay.fetch, now: () => wall, random: randomBytes(prng(77)), online: () => true });
+    expect((await peer.pair('https://readerlog.test', code)).ok).toBe(true);
+    const cap = await peer.capture({ url: A_URL, title: A_TITLE, author: A_AUTHOR, words: A_WORDS, at: '2026-09-28T09:00:00.000Z', readOn: '2026-09-28' });
+    expect(cap.ok).toBe(true);
+    expect((await peer.flush()).sent).toBe(1);
+
+    const k = parseSyncCode(code);
+    if (!k.ok) throw new Error('code');
+    const keys = await deriveKeys(k.value);
+    const batches = await relay.store.listBatches(keys.spaceId, 0, 1000);
+    expect(batches.length).toBeGreaterThan(0);
+    const plains = [];
+    for (const env of batches) {
+      const r = await open(env, keys.encKey, keys.spaceId);
+      expect(r.ok).toBe(true);
+      if (r.ok) plains.push(r.value);
+    }
+    const ops = plains.flatMap((p) => p.ops);
+    expect(ops.length).toBeGreaterThan(0);
+
+    // 1. Nothing about the article is visible in any relay row, in the clear or base64 / base64url.
+    const dump = relay.store.dumpAll();
+    expect(dump.length).toBeGreaterThan(0);
+    for (const needle of [A_TITLE, A_URL, 'quokka.example', A_AUTHOR, `"word_count":${A_WORDS}`]) {
+      for (const form of encodings(needle)) {
+        if (form.length < 4) continue;
+        expect(dump.includes(form), `relay dump must not contain ${JSON.stringify(needle)} as ${JSON.stringify(form)}`).toBe(false);
+      }
+    }
+
+    // 2. The decrypted batches hold only `items` ops with the FR-001 fields, and no text body.
+    const allowed = new Set(['type', 'title', 'author', 'url', 'domain', 'word_count', 'read_on', 'metadata_status', 'created_at', 'deleted_at']);
+    for (const o of ops) {
+      expect(o.tbl).toBe('items');
+      for (const f of Object.keys(o.fields)) expect(allowed.has(f), `unexpected field ${f}`).toBe(true);
+    }
+    const text = JSON.stringify(plains);
+    expect(text).toContain(A_TITLE); // sanity: the article really is in the batch
+    expect(text).toContain('"word_count":4321');
+  });
+});
+

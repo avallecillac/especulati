@@ -328,7 +328,7 @@ It saves, and a reload doesn't duplicate it.
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T023 [P] Extend the privacy test (SC-004): in
+- [X] T023 [P] Extend the privacy test (SC-004): in
   `packages/sync/test/privacy.test.ts`, a capture-peer capture of a distinctive
   article ("Zanzibar Quokka Essay", URL `https://quokka.example/essay-7351`) never
   appears in relay rows, raw or base64-encoded, and the decrypted batch holds only the
