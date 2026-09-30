@@ -73,6 +73,11 @@ test('a damaged link saves nothing and offers Add article', async ({ page }) => 
     await expect(page.getByText('This capture link is damaged')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Add article' })).toBeVisible();
   }
+  // A date without a time, as Format Date gives with Include ISO 8601 Time off.
+  const dateOnly = { v: 1, url: 'https://example.com/a', at: '2026-09-30' };
+  await page.goto(`/#/capture?d=${encodeURIComponent(Buffer.from(JSON.stringify(dateOnly)).toString('base64'))}`);
+  await expect(page.getByText('This capture link is damaged')).toBeVisible();
+  await expect(page.getByText('turn on Include ISO 8601 Time')).toBeVisible();
   await openArticles(page);
   await expect(rows(page)).toHaveCount(0);
 });

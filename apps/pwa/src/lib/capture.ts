@@ -14,11 +14,14 @@ export interface Capture {
   at: string;
 }
 
+/** Which part of the payload is wrong: shown on the damaged-link screen. */
+export type CaptureProblem = 'encoding' | 'v' | 'url' | 'at';
+
 export interface CaptureError {
-  reason: string;
+  reason: CaptureProblem;
 }
 
-const fail = (reason: string) => ({ ok: false as const, error: { reason } });
+const fail = (reason: CaptureProblem) => ({ ok: false as const, error: { reason } });
 
 const TITLE_MAX = 500;
 const AUTHOR_MAX = 200;
@@ -43,22 +46,22 @@ export function decodeCapture(d: string) {
     const raw = /%[0-9A-Fa-f]{2}/.test(d) ? decodeURIComponent(d) : d;
     text = decodeBase64(raw.replace(/ /g, '+'));
   } catch {
-    return fail('bad encoding');
+    return fail('encoding');
   }
   let o: unknown;
   try {
     o = JSON.parse(text);
   } catch {
-    return fail('bad JSON');
+    return fail('encoding');
   }
-  if (typeof o !== 'object' || o === null || Array.isArray(o)) return fail('bad payload');
+  if (typeof o !== 'object' || o === null || Array.isArray(o)) return fail('encoding');
   const p = o as Record<string, unknown>;
-  if (p['v'] !== 1) return fail('unknown version');
-  if (typeof p['url'] !== 'string') return fail('bad url');
+  if (p['v'] !== 1) return fail('v');
+  if (typeof p['url'] !== 'string') return fail('url');
   const url = normalizeUrl(p['url']);
-  if (!url.ok) return fail('bad url');
+  if (!url.ok) return fail('url');
   const at = typeof p['at'] === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(p['at']) ? Date.parse(p['at']) : NaN;
-  if (Number.isNaN(at)) return fail('bad at');
+  if (Number.isNaN(at)) return fail('at');
 
   const site = siteOf(url.value);
   const title = typeof p['title'] === 'string' ? cut(p['title'].trim(), TITLE_MAX).trim() : '';

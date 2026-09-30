@@ -35,7 +35,9 @@ order:
 3. **Get Details of Articles**: **Title**. Repeat for **Author**, then again for **Body**.
    Keep each result in a variable (for example `Title`, `Author`, `Body`).
 4. **Count** the *Body* (type: **Words**). Keep the result as `Words`.
-5. **Current Date**, then **Format Date** with the format **ISO 8601**. Keep it as `At`.
+5. **Current Date**, then **Format Date** with the format **ISO 8601**, and turn on
+   **Include ISO 8601 Time** (it's off by default; a date alone is rejected). Keep it as
+   `At`.
 6. **Dictionary** with the keys below. Each value except `v` must be a **variable**
    (a blue pill), not typed text: tap the value field, then **Select Variable**, then
    tap the action whose output you want. Typing `Title` gives the word "Title".
@@ -45,7 +47,9 @@ order:
    - `author`: **Text**, `Author`
    - `words`: **Number**, `Words`
    - `at`: **Text**, `At`
-7. **Base64 Encode** the *Dictionary* (encode, not decode). Line breaks are fine.
+7. **Base64 Encode** the *Dictionary* (encode, not decode). Tap **Show More** and set
+   **Line Breaks** to **None**: a line break ends the link, so everything after the
+   first 76 characters would be lost.
 8. **URL Encode** the Base64 text.
 9. **Text**. Type `https://<your-readerlog-address>/#/capture?d=`, then, with the cursor
    right after `d=`, insert the output of step 8 as a variable. Don't type its name:
@@ -77,7 +81,9 @@ If the address is already in your log, Readerlog asks whether to **Log again** o
   variable. Build the address in a **Text** action (step 9) and pass that Text to *Open
   URLs* (step 10). To check it, put a **Show Result** before *Open URLs*: it should read
   `https://…/#/capture?d=eyJ…` on one line.
-- **"This capture link is damaged".** Nothing was saved. Check that every Dictionary
+- **"This capture link is damaged".** The screen says which value is wrong. Nothing was saved.
+  If the part after `d=` is exactly 76 characters, Base64 Encode still adds line breaks
+  (step 7). Check that every Dictionary
   value in step 6 is a blue variable pill (a typed `At` isn't a date), that step 7 is
   *Base64 Encode* and step 8 is *URL Encode*. Use **Add article** to log it by hand.
 - **No reading time (—).** Shortcuts couldn't count the words. Paywalled pages give only a

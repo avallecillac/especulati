@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { readingMinutes, type Article } from '@readerlog/core';
   import { dispatch, query } from '../lib/dbClient.ts';
-  import { captureId, decodeCapture, type Capture } from '../lib/capture.ts';
+  import { captureId, decodeCapture, type Capture, type CaptureProblem } from '../lib/capture.ts';
   import { todayLocal } from '../lib/clock.ts';
   import { longDate } from '../lib/dates.ts';
   import { errorMessage } from '../lib/errors.ts';
@@ -15,12 +15,21 @@
 
   type Phase =
     | { kind: 'working' }
-    | { kind: 'damaged' }
+    | { kind: 'damaged'; problem: CaptureProblem }
     | { kind: 'error'; message: string }
     | { kind: 'duplicate'; capture: Capture; id: string; loggedOn: string }
     | { kind: 'saved'; capture: Capture; id: string; fresh: boolean };
 
   const UNDO_MS = 6000;
+
+  /** What to fix in the Shortcut (docs/ios-shortcut.md). Names fields, never shows their values. */
+  const PROBLEM: Record<CaptureProblem, string> = {
+    encoding:
+      "The link's data is incomplete or couldn't be read. In the Shortcut, set Base64 Encode's Line Breaks to None, then URL Encode.",
+    v: 'The “v” value must be the number 1.',
+    url: 'The “url” value isn’t a web address. It should be the Shortcut Input.',
+    at: 'The “at” value must be a date with a time. In Format Date, choose ISO 8601 and turn on Include ISO 8601 Time.',
+  };
 
   let phase = $state<Phase>({ kind: 'working' });
   let canUndo = $state(false);
@@ -51,7 +60,7 @@
 
   async function run() {
     const parsed = decodeCapture(d);
-    if (!parsed.ok) return void (phase = { kind: 'damaged' });
+    if (!parsed.ok) return void (phase = { kind: 'damaged', problem: parsed.error.reason });
     const c = parsed.value;
     const id = await captureId(c);
     const found = await query({ name: 'findArticleByUrl', url: c.url });
@@ -91,6 +100,7 @@
 {:else if phase.kind === 'damaged'}
   <section class="card">
     <p role="alert"><strong>This capture link is damaged</strong></p>
+    <p>{PROBLEM[phase.problem]}</p>
     <p class="muted">Nothing was saved. You can add the article by hand.</p>
     <div class="actions"><a class="button primary" href="#/articles">Add article</a></div>
   </section>

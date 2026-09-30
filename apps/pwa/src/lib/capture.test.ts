@@ -68,6 +68,19 @@ describe('decodeCapture', () => {
     expect(decodeCapture('').ok).toBe(false);
   });
 
+  it('says which field is wrong, so the Shortcut can be fixed', () => {
+    const reason = (d: string) => {
+      const r = decodeCapture(d);
+      if (r.ok) throw new Error('expected an error');
+      return r.error.reason;
+    };
+    expect(reason(std({ ...base, at: '2026-09-30' }))).toBe('at');
+    expect(reason(std({ ...base, url: 'not a url' }))).toBe('url');
+    expect(reason(std({ ...base, v: '1' }))).toBe('v');
+    expect(reason('%%%not base64')).toBe('encoding');
+    expect(reason(Buffer.from('{nope', 'utf8').toString('base64'))).toBe('encoding');
+  });
+
   it('trims the title and cuts it to 500 characters; an empty title falls back to the site', () => {
     expect(value(std({ ...base, title: '  Hello  ' })).title).toBe('Hello');
     expect(value(std({ ...base, title: 'x'.repeat(600) })).title).toHaveLength(500);
