@@ -6,6 +6,7 @@
 {
   "manifest_version": 3,
   "name": "Readerlog",
+  "version": "0.1.0",
   "action": { "default_title": "Log as read" },
   "background": { "service_worker": "sw.js", "type": "module" },
   "permissions": ["activeTab", "scripting", "contextMenus", "storage", "alarms"],
@@ -31,7 +32,8 @@ code.
 ## Capture sequence
 
 1. A trigger gives an `activeTab`.
-   - A non-`http(s)` URL shows a notification: "Can't log this page".
+   - A non-`http(s)` URL sets a "!" badge for 3 s and the action title "Can't log this
+     page". There's no `notifications` permission.
 2. `executeScript(extractPage)` returns the details.
    - An error shows the toast "Couldn't read this page". Nothing is saved.
 3. The URL is normalized, and the `captured[url]` entry is looked up.
@@ -39,9 +41,10 @@ code.
      again** or **Cancel**, and the sequence waits for the choice.
 4. `decide(null, AddArticle{ itemId: uuidFromHash("readerlog-capture-v1|"+url+"|"+at), … })`,
    then `stampOps`, then append to `pending`, and save `captured[url]`.
-5. The toast shows "Logged · <site> · ~N min" with **Undo** for 6 s. The badge shows
-   the number waiting.
-6. A push-only run follows.
+5. The toast shows "Logged · <site> · ~N min" with **Undo** for 6 s, **straight away**:
+   `capture()` returns once the ops are stored, without waiting for the relay. The
+   badge shows the number waiting.
+6. A push-only run follows in the background.
    - Offline or a relay failure: the ops stay in `pending`, and a retry happens on the
      next capture, on startup, and on a `chrome.alarms` tick every 5 minutes (this
      needs the `alarms` permission).
@@ -67,6 +70,13 @@ function createCapturePeer(store: CaptureStore, deps: { fetch; now; random; onli
   imported by a subpath, so the extension bundle contains no SQLite.
 - **Shared push**: the batching and idempotent-retry logic is shared with the 004
   engine through `packages/sync/src/push.ts`.
+
+## Build-time rules
+
+- **Test hooks**: `globalThis.readerlog` (the e2e handles) exists only in the `EXT_E2E=1`
+  build. The release `build` fails if `dist/sw.js` contains them.
+- **Minimum article size**: Readability text shorter than `MIN_ARTICLE_WORDS = 25` gives
+  `words: null`. This is how pages with no article, such as product grids, are detected.
 
 ## Relay access
 
