@@ -36,7 +36,9 @@ order:
    Keep each result in a variable (for example `Title`, `Author`, `Body`).
 4. **Count** the *Body* (type: **Words**). Keep the result as `Words`.
 5. **Current Date**, then **Format Date** with the format **ISO 8601**. Keep it as `At`.
-6. **Dictionary** with these keys:
+6. **Dictionary** with the keys below. Each value except `v` must be a **variable**
+   (a blue pill), not typed text: tap the value field, then **Select Variable**, then
+   tap the action whose output you want. Typing `Title` gives the word "Title".
    - `v`: a **Number**, `1`
    - `url`: **Text**, the *Shortcut Input*
    - `title`: **Text**, `Title`
@@ -75,8 +77,9 @@ If the address is already in your log, Readerlog asks whether to **Log again** o
   variable. Build the address in a **Text** action (step 9) and pass that Text to *Open
   URLs* (step 10). To check it, put a **Show Result** before *Open URLs*: it should read
   `https://…/#/capture?d=eyJ…` on one line.
-- **"This capture link is damaged".** Nothing was saved. Check that step 7 is *Base64
-  Encode* and step 8 is *URL Encode*, then use **Add article** to log it by hand.
+- **"This capture link is damaged".** Nothing was saved. Check that every Dictionary
+  value in step 6 is a blue variable pill (a typed `At` isn't a date), that step 7 is
+  *Base64 Encode* and step 8 is *URL Encode*. Use **Add article** to log it by hand.
 - **No reading time (—).** Shortcuts couldn't count the words. Paywalled pages give only a
   preview, because Safari Reader fetches without your cookies. The article is still saved.
 - **Sync stopped after a long time unused.** Chrome may have cleared the site's data. Join
