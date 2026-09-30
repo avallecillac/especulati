@@ -220,7 +220,7 @@ each number.
 **Extension as a sync peer (US1)**
 
 - **FR-011**: The extension MUST pair with the user's existing sync space using the
-  sync code (feature 004), by paste or by scanning the QR code shown in Readerlog.
+  sync code (feature 004), by pasting it.
 - **FR-012**: The extension MUST only send its own captures (and their undo or edits).
   It MUST NOT download or keep the rest of the reading log.
 - **FR-013**: The extension MUST keep captures made while offline, or while the relay
@@ -254,8 +254,8 @@ each number.
 
 - **FR-022**: The Stats screen MUST have a separate **Articles** section showing:
   articles read this week and this month, and per month for the selected year;
-  estimated reading time as the total words ÷ 238, in minutes or hours; and the top 5
-  sites by count.
+  estimated reading time for the **selected year** as the total words ÷ 238, in minutes
+  or hours; and the top 5 sites by count for the selected year.
 - **FR-023**: Articles MUST NOT count toward reading days, streaks, pages read, books
   finished or any other book stat (constitution III, feature 003 FR-005).
 
@@ -278,8 +278,8 @@ each number.
   iPhone at most 2 taps after Share.
 - **SC-002**: A capture made on the Mac while online appears on the phone within 10 s
   of the phone being opened or its sync button being tapped.
-- **SC-003**: For a set of 20 reference article pages (saved copies, in English and
-  Spanish), the extension's captured title is correct for all 20 and its word count is
+- **SC-003**: For a set of 20 reference article pages (synthetic pages modelled on common
+  site layouts, in English and Spanish), the extension's captured title is correct for all 20 and its word count is
   within 15% of a hand count for at least 18. On the iPhone, the title is correct for
   the non-paywalled pages among them.
 - **SC-004**: No article text leaves the device: inspecting everything sent to the

@@ -35,7 +35,7 @@ the shell (Today or Yesterday) at save time.
 |---|---|---|---|
 | `AddBook` | `itemId, title, author?, totalPages?, genre?, startNow, startEventId?, localDate` | insert the item. If `startNow`, also insert a `started` event | `TitleRequired`, `InvalidPageCount`, `AlreadyExists` |
 | `EditBook` | `itemId, title?, author?, totalPages?, genre?` | set only the fields that changed. An unchanged value emits nothing | `NotFound`, `TitleRequired`, `InvalidPageCount`, `PagesBelowLogged` (totalPages < max logged page) |
-| `RemoveBook` | `itemId` | set `items.deleted_at = now` | `NotFound` (already removed → no-op, zero changes) |
+| `RemoveBook` | `itemId` | set `items.deleted_at = now` | `NotFound` (already removed → no-op, zero changes). **Amended by 005:** an article id also gives `NotFound` (use `RemoveArticle`) |
 | `LogEvent` | `itemId, eventId, type, page?, localDate` | insert an event with `occurred_at = now` | `NotFound`, `InvalidPage`, `PageBeyondEnd`, `PageNotAllowed` (a page on a non-progress event), `InvalidTransition` |
 
 **Amended by 003:** an abandon may carry a page and `pageEventId`, and `eventOrder` gains a type tie-break. See [commands-003](../../003-reading-stats/contracts/commands-003.md).

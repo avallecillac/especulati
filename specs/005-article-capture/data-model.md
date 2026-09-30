@@ -56,5 +56,6 @@ Encoding and validation rules are in `contracts/capture.md`.
 `{ thisWeek, thisMonth, months: { month; count }[12], minutes, topSites: { domain; count }[≤5] }`.
 
 - `thisWeek` counts from Monday to `today`.
-- `minutes = round(sum(word_count) / 238)`. Null word counts are ignored.
+- `minutes = round(sum(word_count) / 238)` over the **selected year**. Null word counts
+  are ignored. `topSites` also covers the selected year.
 - `topSites` is sorted by count descending, then domain ascending.

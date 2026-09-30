@@ -76,6 +76,11 @@
   - **Options page**: set the Readerlog address and paste the sync code, then Pair.
     It also shows the status (paired, waiting count, last sent) and **Unpair**, which
     warns if captures are still waiting.
+- **Test-only build** (`EXT_E2E=1`, used only by the e2e fixture): its manifest adds
+  `host_permissions: ["http://localhost/*", "http://127.0.0.1/*"]`, so tests can run the
+  extractor on localhost fixture pages and reach the local relay without a user gesture
+  or a permission prompt. The release build is checked to have **no `host_permissions`**
+  at all (`apps/extension/scripts/check-manifest.mjs`, run by `build`).
 - **Rationale**:
   - A toolbar click with no popup captures in one click (SC-001).
   - `activeTab` avoids a "read all sites" permission.

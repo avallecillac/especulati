@@ -55,7 +55,7 @@ interface CaptureStore { get<T>(k: string): Promise<T | undefined>; set(patch: R
 function createCapturePeer(store: CaptureStore, deps: { fetch; now; random; online }): {
   pair(appOrigin: string, code: string): Promise<Result<void, SyncError>>;   // parseSyncCode + GET /spaces/:id
   unpair(): Promise<void>;
-  capture(p: { url: string; title: string; author: string | null; words: number | null; at: string; readOn: string }):
+  capture(p: { url: string; title: string; author: string | null; words: number | null; at: string; readOn: string; force?: boolean }):   // force = Log again
     Promise<Result<{ itemId: string; duplicateOf?: { readOn: string } }, 'notPaired' | 'invalid'>>;
   undo(itemId: string): Promise<void>;
   flush(): Promise<{ sent: number; problem: SyncProblem | null }>;           // push-only; never GET /batches

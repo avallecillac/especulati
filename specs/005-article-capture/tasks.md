@@ -51,6 +51,11 @@ before implementing it.
       `extract.ts` and `toast.ts` as separate IIFE-safe chunks into `dist/`, plus
       copying `manifest.json`;
     - `manifest.json` exactly as in contracts/extension.md;
+    - an **`EXT_E2E=1` test build** (`pnpm --filter extension build:e2e`, output
+      `dist-e2e/`) that adds `host_permissions` for `http://localhost/*` and
+      `http://127.0.0.1/*` (research R3). The release `build` runs
+      `scripts/check-manifest.mjs`, which fails if `dist/manifest.json` has any
+      `host_permissions`;
   - add a `build` script (`pnpm --filter extension build`);
   - add `apps/extension/src` to the root `lint` depcruise paths;
   - add dependency-cruiser rules `extension-no-pwa-no-db` and `capture-peer-no-db`
@@ -90,7 +95,8 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
     `NotFound`.
   - **`RemoveArticle`**: a second removal is a no-op, and a book id gives `NotFound`.
   - **Books**: `LogEvent`, `EditBook` and `RemoveBook`-style book commands on an
-    article give `NotFound`. Make `RemoveBook` check the type too, as it doesn't today.
+    article give `NotFound`. Make `RemoveBook` check the type too, as it doesn't today;
+    `specs/001-local-book-log/contracts/commands.md` is amended to match.
 - [ ] T004 [P] Write `packages/core/test/ops.test.ts` for `stampOps`:
   - one op per change;
   - HLCs strictly increase, starting after the given `hlc`, and use `hlcNext`
@@ -130,8 +136,8 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
 - [ ] T008 Factor the push logic out of `packages/sync/src/engine.ts` into
   `packages/sync/src/push.ts`: batching of up to 500, persisting `pendingBatch` before
   POST, resending the same `batchId`, and completing afterwards. It works over a small
-  `PushSource` interface (`next(limit)`, `complete(maxSeq or count)`,
-  `pending()`, `setPending()`).
+  `PushSource` interface: `next(limit)` returns `{ ops, token }` with an opaque
+  `token`, then `complete(token)`, `pending()` and `setPending()`.
   - The engine uses it through a `ReaderlogDb` adapter.
   - This is **a refactor with no behaviour change**: all existing sync tests,
     including `pnpm test:convergence`, must pass unchanged.
@@ -141,8 +147,8 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
     query `articles` in `apps/pwa/src/lib/protocol.ts` and
     `apps/pwa/src/worker/db.worker.ts`.
   - The screen is `apps/pwa/src/screens/Articles.svelte`.
-  - Add an e2e smoke test in `e2e/articles.spec.ts`: an article inserted through a
-    dispatched `AddArticle` (via a test helper in the page) appears.
+  - **No e2e and no test helpers in the app** in this task. The query is covered by T005,
+    and the list is exercised end to end by T012 and T016.
 
 **Checkpoint**: articles can be created, listed and synced like any item.
 
@@ -188,7 +194,8 @@ The PWA context (on the same routed relay) lists it after **Sync now**.
     `extract.js`, and asserts the title is exact for all 20 and words are within 15%
     for at least 18 (SC-003).
 - [ ] T012 [P] [US1] Write `e2e/fixtures/extension.ts` (a persistent-context fixture
-  with `--disable-extensions-except` and `--load-extension=apps/extension/dist`, plus
+  with `--disable-extensions-except` and `--load-extension=apps/extension/dist-e2e`
+  (the test build), plus
   the service-worker handle) and `e2e/extension-capture.spec.ts`:
   - **Pairing**: set the origin to the test app origin and paste the code from the PWA
     context's Show code. It reaches "Paired". Grant the permission programmatically if
@@ -261,7 +268,9 @@ It saves, and a reload doesn't duplicate it.
     again** or **Cancel**;
   - **with sync on** (two contexts), the article reaches the other context after its
     **Sync now**, without waiting 3 s, because the capture screen runs sync at once;
-  - **with sync off**, it's saved, and a "Finish setup" join prompt is shown.
+  - **with sync off**, it's saved, and a "Finish setup" join prompt is shown;
+  - **offline** (US2·3, SC-006): with the context offline, the capture saves locally.
+    After going online and a sync, the other context has it.
 - [ ] T017 [US2] Implement the capture screen:
   - `apps/pwa/src/lib/capture.ts`: `decodeCapture`, and the capture id through
     `uuidFromHash`;
@@ -302,7 +311,8 @@ It saves, and a reload doesn't duplicate it.
   `articleStats`:
   - 3 articles this week (Monday start) plus 5 earlier this month give `thisWeek` 3
     and `thisMonth` 8;
-  - 2,380 plus 1,190 words give 15 minutes, and null word counts are ignored;
+  - 2,380 plus 1,190 words in the selected year give 15 minutes. Null word counts and
+    other years are ignored;
   - top sites are sorted by count desc, then domain asc, at most 5;
   - `months` has 12 entries for the selected year;
   - removed articles are excluded;

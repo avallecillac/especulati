@@ -31,7 +31,7 @@ pnpm --filter extension build   # produces apps/extension/dist
 
 ## Manual setup and checks
 
-**Mac (Chrome or Brave)**
+**Mac (Chrome or Brave).** Brave is checked by hand only; e2e runs on Chromium.
 
 1. Run `pnpm --filter extension build`.
 2. Open `chrome://extensions` (or `brave://extensions`), turn on **Developer mode**,
