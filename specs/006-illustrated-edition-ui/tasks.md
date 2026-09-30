@@ -79,7 +79,7 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 
 ## Phase 3: US2, edition look (P1)
 
-- [ ] T009 [US2] Ornaments in `src/ornaments/`: Fleuron, Butterfly, Sprig, Fish, Rule,
+- [X] T009 [US2] Ornaments in `src/ornaments/`: Fleuron, Butterfly, Sprig, Fish, Rule,
   DropCap and the tab icons. They are original line art, and drawn by the main session
   (design).
 - [ ] T010 [US2] Typography and structure:
