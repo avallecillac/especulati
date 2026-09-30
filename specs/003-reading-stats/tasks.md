@@ -320,7 +320,7 @@ abandon one at a page, then check every number.
 
 ### Tests for User Story 4
 
-- [ ] T019 [P] [US4] Extend `packages/core/test/decide.logEvent.test.ts` per
+- [X] T019 [P] [US4] Extend `packages/core/test/decide.logEvent.test.ts` per
   contracts/commands-003.md:
   - `abandoned` with `page: 120` and a valid `pageEventId` on a reading book emits
     exactly 2 event inserts, in order:
@@ -338,7 +338,7 @@ abandon one at a page, then check every number.
 
   Also extend `packages/core/test/decide.property.test.ts` with invariants **I-9** and
   **I-10** (random ids and pages).
-- [ ] T020 [P] [US4] Extend `packages/core/test/stats.view.test.ts` for abandon rates and
+- [X] T020 [P] [US4] Extend `packages/core/test/stats.view.test.ts` for abandon rates and
   days to finish:
   - 3 finished and 1 abandoned "Fiction" books, plus 2 finished books with no genre,
     give:
@@ -353,7 +353,7 @@ abandon one at a page, then check every number.
   - **Abandon at a page**: page 120 after a last page of 90 gives today as a reading
     day with 30 pages. A bare abandon with nothing else that day gives no reading day
     (US4 · 6–7).
-- [ ] T021 [P] [US4] Write `e2e/abandon-page.spec.ts`:
+- [X] T021 [P] [US4] Write `e2e/abandon-page.spec.ts`:
   - **abandon at a page**: on a reading 300-page book at page 90, tap **Abandon**. The
     dialog has an empty "Stopped at page (optional)" field with placeholder "90".
     Enter 120 and confirm.
@@ -367,13 +367,13 @@ abandon one at a page, then check every number.
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Implement abandoning at a page in `packages/core`:
+- [X] T022 [US4] Implement abandoning at a page in `packages/core`:
   - `src/commands.ts`: add `readonly pageEventId?: string` to `LogEvent`.
   - `src/decide.ts`: validate in this order: `pageEventId`, page, transition. Then emit
     the 2 inserts.
 
   T019 must pass, including the property tests.
-- [ ] T023 [US4] Make the abandon dialog take a page, in `BookDetail.svelte` and
+- [X] T023 [US4] Make the abandon dialog take a page, in `BookDetail.svelte` and
   `lib/actions.ts`:
   - the Abandon confirmation gets an optional numeric input "Stopped at page
     (optional)", **empty by default**, with `placeholder` set to the last page
@@ -383,7 +383,7 @@ abandon one at a page, then check every number.
   - read the input value **before** clearing `confirming` (the Svelte gotcha);
   - add `toastSavedMany(message, itemId, eventIds[])` in `lib/actions.ts`. Its Undo
     removes the ids in the given order, abandoned first, then progress.
-- [ ] T024 [US4] Add the finishing and abandoning stats:
+- [X] T024 [US4] Add the finishing and abandoning stats:
   - in `packages/core/src/stats.ts`:
     - `abandonRates(books)`, returning `{ overall; byGenre }` of
       `AbandonStat = { genre: string | null; finished; abandoned; rate }`, where `rate`
@@ -403,14 +403,15 @@ abandon one at a page, then check every number.
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T025 Add a performance check (SC-001, research R8):
+- [X] T025 Add a performance check (SC-001, research R8):
   - `packages/db/test/perf.test.ts`: a new case with a synthetic 10-year database of 400
     books and about 10,000 events on about 3,650 distinct days (build rows with
     `dispatch`, as the existing perf test does). `db.stats(2026, '2026-09-29')` must
     take under 100 ms warm, and log its time.
   - `e2e/perf.spec.ts`: navigating to `#/stats` shows the headline within 200 ms on the
     production build. Seed as the existing perf spec does.
-- [ ] T026 [P] Test articles end to end at the db level (SC-005): in
+- [X] T026 [P] Test articles end to end at the db level (SC-005). Already covered by 005's
+  `packages/db/test/articles.test.ts`, which deep-equals `db.stats(...)` before and after 100 articles: in
   `packages/db/test/stats.test.ts`, insert 50 article rows (with `read_on`, `domain`
   and `word_count`) into a populated DB and assert that `db.stats(...)` is deep-equal
   before and after.

@@ -61,6 +61,7 @@
       <p>Books finished: <span data-testid="books-finished">{v.summary.booksFinished}</span></p>
       <p>Pages read: <span data-testid="pages-read">{v.summary.pages}</span></p>
       <p>Pages per reading day: <span data-testid="pages-per-day">{v.summary.pagesPerReadingDay ?? '—'}</span></p>
+      <p>Average days to finish: <span data-testid="avg-days-to-finish">{v.summary.avgDaysToFinish ?? '—'}</span></p>
       <table aria-label="Books and pages per month">
         <thead><tr><th scope="col">Month</th><th scope="col">Books</th><th scope="col">Pages</th></tr></thead>
         <tbody>
@@ -77,6 +78,25 @@
             <tr><th scope="row">{r.year}</th><td>{r.readingDays}</td><td>{r.booksFinished}</td><td>{r.pages}</td></tr>
           {:else}
             <tr><td colspan="4" class="muted">No reading yet.</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+  </section>
+{/if}
+
+{#if view}
+  {@const ab = view.abandon}
+  <section class="card" aria-labelledby="abandon-title">
+    <h2 id="abandon-title">Abandon rate</h2>
+    {#if ab.overall.finished + ab.overall.abandoned === 0}
+      <p class="muted">Finish or abandon a book to see this.</p>
+    {:else}
+      <table aria-label="Abandon rate by genre">
+        <thead><tr><th scope="col">Genre</th><th scope="col">Finished</th><th scope="col">Abandoned</th><th scope="col">Rate</th></tr></thead>
+        <tbody>
+          {#each [{ ...ab.overall, label: 'All books' }, ...ab.byGenre.map((g) => ({ ...g, label: g.genre ?? 'No genre' }))] as r (r.label)}
+            <tr><th scope="row">{r.label}</th><td>{r.finished}</td><td>{r.abandoned}</td><td>{r.rate}%</td></tr>
           {/each}
         </tbody>
       </table>

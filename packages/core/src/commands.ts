@@ -51,6 +51,8 @@ export type Command =
       readonly type: EventType;
       readonly page?: number | null;
       readonly localDate: string;
+      /** 003 FR-022: the id of the `progress` entry an abandon at a page emits; only with `abandoned` and a page. */
+      readonly pageEventId?: string;
     }
   | { readonly kind: 'RemoveEvent'; readonly itemId: string; readonly eventId: string }
   /** 004 R8. `copies` carries the shell's deterministic ids (core has no crypto). */

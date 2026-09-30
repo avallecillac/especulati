@@ -166,6 +166,8 @@ export interface YearSummary {
   readonly pages: number;
   /** round(pages / readingDays), or null when there are no reading days. */
   readonly pagesPerReadingDay: number | null;
+  /** Mean days to finish of the read-throughs finished in the year, to 1 decimal place; null when none. */
+  readonly avgDaysToFinish: number | null;
   /** Always 12 entries, `month` 1..12. */
   readonly months: MonthStat[];
 }
@@ -181,7 +183,18 @@ const yearPrefix = (year: number) => `${String(year).padStart(4, '0')}-`;
 
 /** Reading days, books finished and pages for one year, with its monthly breakdown (FR-011, FR-012). */
 export function yearSummary(books: readonly StatsBook[], year: number): YearSummary {
-  return summarize(readingDays(books), finishDates(books), year);
+  return summarize(readingDays(books), finishDates(books), year, finishSpans(books));
+}
+
+/** The `daysToFinish` of every read-through finished in the year (by finish date). */
+function finishSpans(books: readonly StatsBook[]): { end: LocalDate; days: number }[] {
+  const out: { end: LocalDate; days: number }[] = [];
+  for (const b of books) {
+    for (const rt of readThroughs(b.events)) {
+      if (rt.outcome === 'finished' && rt.end !== null && rt.daysToFinish !== null) out.push({ end: rt.end, days: rt.daysToFinish });
+    }
+  }
+  return out;
 }
 
 function finishDates(books: readonly StatsBook[]): LocalDate[] {
@@ -190,7 +203,7 @@ function finishDates(books: readonly StatsBook[]): LocalDate[] {
   return out;
 }
 
-function summarize(days: ReadonlyMap<LocalDate, number>, finishes: readonly LocalDate[], year: number): YearSummary {
+function summarize(days: ReadonlyMap<LocalDate, number>, finishes: readonly LocalDate[], year: number, spans: readonly { end: LocalDate; days: number }[] = []): YearSummary {
   const prefix = yearPrefix(year);
   const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, booksFinished: 0, pages: 0 }));
   let readingDaysInYear = 0;
@@ -207,14 +220,57 @@ function summarize(days: ReadonlyMap<LocalDate, number>, finishes: readonly Loca
     booksFinished++;
     months[Number(d.slice(5, 7)) - 1]!.booksFinished++;
   }
+  const inYear = spans.filter((s) => s.end.startsWith(prefix));
+  const total = inYear.reduce((a, s) => a + s.days, 0);
   return {
     year,
     readingDays: readingDaysInYear,
     booksFinished,
     pages,
     pagesPerReadingDay: readingDaysInYear === 0 ? null : Math.round(pages / readingDaysInYear),
+    avgDaysToFinish: inYear.length === 0 ? null : Math.round((total / inYear.length) * 10) / 10,
     months,
   };
+}
+
+export interface AbandonStat {
+  /** null is the overall row, or books with no genre (shown as "No genre"). */
+  readonly genre: string | null;
+  readonly finished: number;
+  readonly abandoned: number;
+  /** round(100 * abandoned / (finished + abandoned)); 0 when both are 0. */
+  readonly rate: number;
+}
+
+const abandonStat = (genre: string | null, finished: number, abandoned: number): AbandonStat => ({
+  genre,
+  finished,
+  abandoned,
+  rate: finished + abandoned === 0 ? 0 : Math.round((100 * abandoned) / (finished + abandoned)),
+});
+
+/** Abandon rate overall and per genre, from each book's current status (FR-017). Genres sort A-Z, "No genre" last. */
+export function abandonRates(books: readonly StatsBook[]): { overall: AbandonStat; byGenre: AbandonStat[] } {
+  const groups = new Map<string | null, { finished: number; abandoned: number }>();
+  let finished = 0;
+  let abandoned = 0;
+  for (const b of books) {
+    const status = deriveStatus(b.events.filter((e) => e.deletedAt === null));
+    if (status !== 'finished' && status !== 'abandoned') continue;
+    const g = groups.get(b.genre) ?? { finished: 0, abandoned: 0 };
+    if (status === 'finished') {
+      g.finished++;
+      finished++;
+    } else {
+      g.abandoned++;
+      abandoned++;
+    }
+    groups.set(b.genre, g);
+  }
+  const byGenre = [...groups]
+    .map(([genre, g]) => abandonStat(genre, g.finished, g.abandoned))
+    .sort((a, b) => (a.genre === null ? 1 : b.genre === null ? -1 : a.genre < b.genre ? -1 : a.genre > b.genre ? 1 : 0));
+  return { overall: abandonStat(null, finished, abandoned), byGenre };
 }
 
 export interface HeatCell {
@@ -233,6 +289,7 @@ export interface StatsView {
   readonly heatmap: HeatCell[];
   readonly current: Streak | null;
   readonly longest: Streak | null;
+  readonly abandon: { overall: AbandonStat; byGenre: AbandonStat[] };
   readonly hasAnyEvents: boolean;
 }
 
@@ -256,6 +313,7 @@ export function computeStats(books: readonly StatsBook[], opts: { year: number; 
   }
 
   const finishes = finishDates(books);
+  const spans = finishSpans(books);
   const allTimeYears = new Set<number>(finishes.map(yearOf));
   for (const d of days.keys()) allTimeYears.add(yearOf(d));
 
@@ -263,7 +321,7 @@ export function computeStats(books: readonly StatsBook[], opts: { year: number; 
   return {
     year,
     years: [...yearSet].sort((a, b) => b - a),
-    summary: summarize(days, finishes, year),
+    summary: summarize(days, finishes, year, spans),
     allTime: [...allTimeYears]
       .sort((a, b) => b - a)
       .map((y) => {
@@ -273,6 +331,7 @@ export function computeStats(books: readonly StatsBook[], opts: { year: number; 
     heatmap,
     current: currentStreak(keys, today),
     longest: longestStreak(keys),
+    abandon: abandonRates(books),
     hasAnyEvents: books.some((b) => b.events.some((e) => e.deletedAt === null)),
   };
 }

@@ -74,3 +74,31 @@ describe('article query performance (005 T024)', () => {
   }, 120_000);
 });
 
+
+/** Feature 003 SC-001 (research R8): the Stats screen query over a synthetic ten-year history. */
+describe('stats query performance (003 T025)', () => {
+  it('stats(2026) over 400 books, about 10,000 events and 3,650 reading days takes < 100 ms warm', () => {
+    const t = openTestDb();
+    const run = (cmd: Command) => { t.tick(60_000); if (!t.db.dispatch(cmd, t.env).ok) throw new Error(JSON.stringify(cmd)); };
+    const dayOf = (n: number) => new Date(Date.UTC(2017, 0, 1) + n * 86_400_000).toISOString().slice(0, 10);
+    let ev = 0;
+    for (let b = 0; b < 400; b++) {
+      run({ kind: 'AddBook', itemId: uuid(b + 1), title: `Book ${b}`, totalPages: 600, genre: `Genre ${b % 7}`, startNow: true, startEventId: uuid(1_000_000 + b), localDate: dayOf((b * 25) % 3650) });
+      for (let i = 1; i < 25; i++) {
+        run({ kind: 'LogEvent', itemId: uuid(b + 1), eventId: uuid(2_000_000 + ev++), type: 'progress', page: i * 20, localDate: dayOf((b * 25 + i) % 3650) });
+      }
+    }
+    expect(t.raw.selectValue('SELECT count(*) FROM reading_events')).toBe(10_000);
+    expect(t.raw.selectValue('SELECT count(DISTINCT local_date) FROM reading_events')).toBe(3650);
+
+    t.db.stats(2026, '2026-09-29' as never); // warm
+    let best = Infinity;
+    for (let i = 0; i < 5; i++) {
+      const start = performance.now();
+      t.db.stats(2026, '2026-09-29' as never);
+      best = Math.min(best, performance.now() - start);
+    }
+    console.log(`stats(2026) ${best.toFixed(1)} ms over 400 books / 10,000 events`);
+    expect(best).toBeLessThan(100);
+  }, 180_000);
+});

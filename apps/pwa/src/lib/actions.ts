@@ -11,3 +11,15 @@ export async function undoEvent(itemId: string, eventId: string): Promise<void> 
 export function toastSaved(message: string, itemId: string, eventId: string): void {
   showToast(message, { action: { label: 'Undo', run: () => void undoEvent(itemId, eventId) } });
 }
+
+/** Undo for a write that made several entries: removes them in the given order (abandoned first, then progress). */
+export function toastSavedMany(message: string, itemId: string, eventIds: readonly string[]): void {
+  const run = async () => {
+    for (const eventId of eventIds) {
+      const r = await dispatch({ kind: 'RemoveEvent', itemId, eventId });
+      if (!r.ok) return void showToast(errorMessage(r.error), { kind: 'error' });
+    }
+    showToast('Entry removed');
+  };
+  showToast(message, { action: { label: 'Undo', run: () => void run() } });
+}
