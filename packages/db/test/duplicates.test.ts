@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openTestDb, uuid, type TestDb } from './helpers.ts';
+import { openTestDb, TODAY, uuid, type TestDb } from './helpers.ts';
 
 const ISBN = '9780306406157';
 
@@ -10,7 +10,7 @@ function add(t: TestDb, n: number, title: string, extra: { isbn?: string; author
 }
 const merge = (t: TestDb, survivor: number, dup: number, to: (from: string) => string) => {
   t.tick();
-  const copies = t.db.book(uuid(dup))!.events.map((e) => ({ from: e.id, to: to(e.id) }));
+  const copies = t.db.book(uuid(dup), TODAY)!.events.map((e) => ({ from: e.id, to: to(e.id) }));
   expect(t.db.dispatch({ kind: 'MergeBooks', survivorId: uuid(survivor), duplicateId: uuid(dup), copies }, t.env)).toMatchObject({ ok: true });
 };
 

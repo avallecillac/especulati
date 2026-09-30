@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openTestDb, uuid } from './helpers.ts';
+import { openTestDb, TODAY, uuid } from './helpers.ts';
 
 describe('removal keeps a record (FR-009)', () => {
   it('a removed entry stays in reading_events with deleted_at, and the removal is in change_log', () => {
@@ -13,7 +13,7 @@ describe('removal keeps a record (FR-009)', () => {
     expect(row).toEqual({ page: 500, deleted_at: t.env.now });
     const last = t.raw.selectObject('SELECT tbl, row_id, fields_json FROM change_log ORDER BY seq DESC LIMIT 1');
     expect(last).toEqual({ tbl: 'reading_events', row_id: uuid(102), fields_json: JSON.stringify({ deleted_at: t.env.now }) });
-    expect(t.db.book(uuid(1))!.card.lastPage).toBeNull();
-    expect(t.db.book(uuid(1))!.events.map((e) => e.id)).toEqual([uuid(101)]);
+    expect(t.db.book(uuid(1), TODAY)!.card.lastPage).toBeNull();
+    expect(t.db.book(uuid(1), TODAY)!.events.map((e) => e.id)).toEqual([uuid(101)]);
   });
 });

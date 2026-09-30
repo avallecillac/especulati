@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '@readerlog/core';
-import { openTestDb, uuid, type TestDb } from './helpers.ts';
+import { openTestDb, TODAY, uuid, type TestDb } from './helpers.ts';
 
 function seed(t: TestDb) {
   const run = (cmd: Command) => { t.tick(); const r = t.db.dispatch(cmd, t.env); expect(r).toMatchObject({ ok: true }); };
@@ -43,7 +43,7 @@ describe('book query', () => {
   it('returns the card and non-deleted events, newest first', () => {
     const t = openTestDb();
     seed(t);
-    const view = t.db.book(uuid(1))!;
+    const view = t.db.book(uuid(1), TODAY)!;
     expect(view.card).toMatchObject({ title: 'Reading old', status: 'reading', lastPage: 55 });
     expect(view.events.map((e) => [e.localDate, e.type, e.page])).toEqual([
       ['2026-09-03', 'progress', 55],
@@ -52,10 +52,19 @@ describe('book query', () => {
     ]);
   });
 
+  it('returns pace for a reading book and null for a finished one', () => {
+    const t = openTestDb();
+    seed(t);
+    // Book 1 started Sep 1, credited 40 + 15 pages by Sep 3: 55 pages over a 3-day divisor. No total pages: no estimate.
+    expect(t.db.book(uuid(1), '2026-09-03' as typeof TODAY)!.pace).toEqual({ pagesPerDay: 18.3, daysLeft: null, finishDate: null });
+    expect(t.db.book(uuid(4), TODAY)!.pace).toBeNull();
+    expect(t.db.book(uuid(3), TODAY)!.pace).toBeNull();
+  });
+
   it('removed books are absent from every view', () => {
     const t = openTestDb();
     seed(t);
-    expect(t.db.book(uuid(6))).toBeNull();
+    expect(t.db.book(uuid(6), TODAY)).toBeNull();
     expect(t.db.home().otherReading.map((c) => c.itemId)).not.toContain(uuid(6));
   });
 });

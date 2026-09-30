@@ -1,4 +1,4 @@
-import { eventOrder, type ReadingEvent } from './book.ts';
+import { deriveStatus, eventOrder, lastPage, type ReadingEvent } from './book.ts';
 import { WORDS_PER_MINUTE, type Article } from './article.ts';
 import type { Genre, ItemId, LocalDate, PageCount } from './types.ts';
 
@@ -153,9 +153,68 @@ export function longestStreak(days: ReadonlySet<LocalDate>): Streak | null {
   return best;
 }
 
+export interface MonthStat {
+  readonly month: number;
+  readonly booksFinished: number;
+  readonly pages: number;
+}
+
 export interface YearSummary {
   readonly year: number;
   readonly readingDays: number;
+  readonly booksFinished: number;
+  readonly pages: number;
+  /** round(pages / readingDays), or null when there are no reading days. */
+  readonly pagesPerReadingDay: number | null;
+  /** Always 12 entries, `month` 1..12. */
+  readonly months: MonthStat[];
+}
+
+export interface AllTimeRow {
+  readonly year: number;
+  readonly readingDays: number;
+  readonly booksFinished: number;
+  readonly pages: number;
+}
+
+const yearPrefix = (year: number) => `${String(year).padStart(4, '0')}-`;
+
+/** Reading days, books finished and pages for one year, with its monthly breakdown (FR-011, FR-012). */
+export function yearSummary(books: readonly StatsBook[], year: number): YearSummary {
+  return summarize(readingDays(books), finishDates(books), year);
+}
+
+function finishDates(books: readonly StatsBook[]): LocalDate[] {
+  const out: LocalDate[] = [];
+  for (const b of books) for (const e of b.events) if (e.deletedAt === null && e.type === 'finished') out.push(e.localDate);
+  return out;
+}
+
+function summarize(days: ReadonlyMap<LocalDate, number>, finishes: readonly LocalDate[], year: number): YearSummary {
+  const prefix = yearPrefix(year);
+  const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, booksFinished: 0, pages: 0 }));
+  let readingDaysInYear = 0;
+  let pages = 0;
+  for (const [d, p] of days) {
+    if (!d.startsWith(prefix)) continue;
+    readingDaysInYear++;
+    pages += p;
+    months[Number(d.slice(5, 7)) - 1]!.pages += p;
+  }
+  let booksFinished = 0;
+  for (const d of finishes) {
+    if (!d.startsWith(prefix)) continue;
+    booksFinished++;
+    months[Number(d.slice(5, 7)) - 1]!.booksFinished++;
+  }
+  return {
+    year,
+    readingDays: readingDaysInYear,
+    booksFinished,
+    pages,
+    pagesPerReadingDay: readingDaysInYear === 0 ? null : Math.round(pages / readingDaysInYear),
+    months,
+  };
 }
 
 export interface HeatCell {
@@ -169,6 +228,8 @@ export interface StatsView {
   /** Years with at least one reading day, plus today's year; descending. */
   readonly years: number[];
   readonly summary: YearSummary;
+  /** One row per year with a reading day or a finish, newest first. */
+  readonly allTime: AllTimeRow[];
   readonly heatmap: HeatCell[];
   readonly current: Streak | null;
   readonly longest: Streak | null;
@@ -187,25 +248,71 @@ export function computeStats(books: readonly StatsBook[], opts: { year: number; 
   const jan1 = dayNumber(`${String(year).padStart(4, '0')}-01-01` as LocalDate);
   const nextJan1 = dayNumber(`${String(year + 1).padStart(4, '0')}-01-01` as LocalDate);
   const heatmap: HeatCell[] = [];
-  let readingDaysInYear = 0;
   for (let n = jan1; n < nextJan1; n++) {
     const date = fromDayNumber(n);
     const pages = days.get(date);
     const isDay = pages !== undefined;
-    if (isDay) readingDaysInYear++;
     heatmap.push({ date, level: heatLevel(isDay, pages ?? 0), pages: pages ?? 0 });
   }
+
+  const finishes = finishDates(books);
+  const allTimeYears = new Set<number>(finishes.map(yearOf));
+  for (const d of days.keys()) allTimeYears.add(yearOf(d));
 
   const keys = new Set(days.keys());
   return {
     year,
     years: [...yearSet].sort((a, b) => b - a),
-    summary: { year, readingDays: readingDaysInYear },
+    summary: summarize(days, finishes, year),
+    allTime: [...allTimeYears]
+      .sort((a, b) => b - a)
+      .map((y) => {
+        const { readingDays: rd, booksFinished, pages } = summarize(days, finishes, y);
+        return { year: y, readingDays: rd, booksFinished, pages };
+      }),
     heatmap,
     current: currentStreak(keys, today),
     longest: longestStreak(keys),
     hasAnyEvents: books.some((b) => b.events.some((e) => e.deletedAt === null)),
   };
+}
+
+export interface Pace {
+  /** Rounded to 1 decimal place for display only; the estimate uses the unrounded value. */
+  readonly pagesPerDay: number;
+  readonly daysLeft: number | null;
+  readonly finishDate: LocalDate | null;
+}
+
+/** Days in the pace window: today and the 13 days before it (FR-014). */
+const PACE_WINDOW = 14;
+
+/**
+ * Pace and estimated finish for a book that is being read (research R7); null otherwise.
+ * Pure: `today` is a parameter.
+ */
+export function pace(book: StatsBook, today: LocalDate): Pace | null {
+  const live = book.events.filter((e) => e.deletedAt === null);
+  if (deriveStatus(live) !== 'reading') return null;
+  const rt = readThroughs(live).find((r) => r.outcome === 'open');
+  if (!rt) return null;
+
+  const t = dayNumber(today);
+  const divisor = Math.max(1, Math.min(PACE_WINDOW, t - dayNumber(rt.start) + 1));
+  let pages = 0;
+  for (const c of rt.credits) {
+    const n = dayNumber(c.date);
+    if (n > t - PACE_WINDOW && n <= t) pages += c.pages;
+  }
+  const pagesPerDay = Math.round((pages / divisor) * 10) / 10;
+
+  const last = lastPage(live);
+  if (pages === 0 || book.totalPages === null || last === null || book.totalPages <= last) {
+    return { pagesPerDay, daysLeft: null, finishDate: null };
+  }
+  // ceil(remaining / (pages / divisor)) in integers, so no float error creeps in.
+  const daysLeft = Math.ceil(((book.totalPages - last) * divisor) / pages);
+  return { pagesPerDay, daysLeft, finishDate: fromDayNumber(t + daysLeft) };
 }
 
 export interface ArticleStats {

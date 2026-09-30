@@ -168,8 +168,11 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);
       return d.articleStats(q.year, today.value);
     }
-    case 'book':
-      return d.book(q.itemId);
+    case 'book': {
+      const today = parseLocalDate(q.today);
+      if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);
+      return d.book(q.itemId, today.value);
+    }
     case 'stats': {
       const today = parseLocalDate(q.today);
       if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);

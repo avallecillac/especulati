@@ -46,7 +46,7 @@
     : 'form';
 
   if (editId !== undefined) {
-    void query({ name: 'book', itemId: editId }).then((r) => {
+    void query({ name: 'book', itemId: editId, today: todayLocal() }).then((r) => {
       if (r.ok && r.value) {
         const c = r.value.card;
         title = c.title;

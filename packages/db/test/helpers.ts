@@ -1,11 +1,13 @@
 import sqlite3InitModule, { type Database } from '@sqlite.org/sqlite-wasm';
-import type { DeviceId, Instant } from '@readerlog/core';
+import type { DeviceId, Instant, LocalDate } from '@readerlog/core';
 import { ReaderlogDb, type DispatchEnv } from '../src/index.ts';
 
 // One wasm module per test file; a fresh in-memory DB per test.
 const sqlite3 = await sqlite3InitModule();
 
 export const uuid = (n: number): string => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+/** A fixed `today` for queries that take one. */
+export const TODAY = '2026-09-27' as LocalDate;
 export const DEVICE = uuid(0xd00d) as DeviceId;
 
 export interface TestDb {

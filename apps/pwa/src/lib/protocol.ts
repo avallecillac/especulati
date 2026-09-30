@@ -11,7 +11,7 @@ export type Query =
   | { name: 'article'; itemId: string }
   | { name: 'findArticleByUrl'; url: string }
   | { name: 'articleStats'; year: number; today: string }
-  | { name: 'book'; itemId: string }
+  | { name: 'book'; itemId: string; today: string }
   | { name: 'stats'; year: number; today: string }
   | { name: 'storage' }
   | { name: 'findByIsbn'; isbn: string }

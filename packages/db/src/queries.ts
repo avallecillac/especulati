@@ -2,6 +2,7 @@ import type { SqlValue } from '@sqlite.org/sqlite-wasm';
 import type { Article, Author, BookStatus, DetailsStatus, EventType, Instant, ItemId, LocalDate, NonEmptyTitle, NormalizedUrl, WordCount } from '@readerlog/core';
 import { detailsStatusFromDb } from '@readerlog/core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
+import { pace as computePace, type Pace } from '@readerlog/core';
 import { deriveStatus, eventOrder, findDuplicates, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
 import { intOrNull, loadBookSnapshot, mergeChainIds, rowToEvent, rowToItem, text, textOrNull } from './snapshot.ts';
 
@@ -45,6 +46,8 @@ export interface BookView {
   card: BookCard;
   /** Non-deleted events, newest first. */
   events: BookEventView[];
+  /** Pace and estimated finish for a book being read; null otherwise (003 US3). */
+  pace: Pace | null;
 }
 
 
@@ -108,14 +111,16 @@ export function libraryView(db: Database): LibraryView {
   return view;
 }
 
-export function bookView(db: Database, itemId: string): BookView | null {
+export function bookView(db: Database, itemId: string, today: LocalDate): BookView | null {
   const snapshot = loadBookSnapshot(db, itemId);
   if (!snapshot || snapshot.item.deletedAt !== null || snapshot.item.type !== 'book') return null;
   const live = eventOrder(snapshot.events);
   const events = [...live]
     .reverse()
     .map((e) => ({ id: e.id, type: e.type, page: e.page, localDate: e.localDate, occurredAt: e.occurredAt }));
-  return { card: toCard(snapshot.item, live, db.selectValue('SELECT 1 FROM covers WHERE item_id = ?', [itemId]) !== undefined), events };
+  const card = toCard(snapshot.item, live, db.selectValue('SELECT 1 FROM covers WHERE item_id = ?', [itemId]) !== undefined);
+  const pace = computePace({ itemId: snapshot.item.id, genre: snapshot.item.genre, totalPages: snapshot.item.totalPages, events: live }, today);
+  return { card, events, pace };
 }
 
 /** The non-removed book with this ISBN-13 (uses idx_items_isbn), or null. */
