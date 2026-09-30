@@ -133,7 +133,7 @@ shared push, and a minimal Articles list, so every story's test can see saved ar
     `loadBookSnapshot`, which works for any item; rename it only if trivial.
 
   T004 (db part) and T005 must pass.
-- [ ] T008 Factor the push logic out of `packages/sync/src/engine.ts` into
+- [X] T008 Factor the push logic out of `packages/sync/src/engine.ts` into
   `packages/sync/src/push.ts`: batching of up to 500, persisting `pendingBatch` before
   POST, resending the same `batchId`, and completing afterwards. It works over a small
   `PushSource` interface: `next(limit)` returns `{ ops, token }` with an opaque

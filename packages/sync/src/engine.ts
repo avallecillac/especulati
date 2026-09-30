@@ -3,6 +3,7 @@ import type { ReaderlogDb, SyncProblem, SyncStatus } from '@readerlog/db';
 import { formatSyncCode, newSyncSecret, parseSyncCode, qrPayload } from './code.ts';
 import { open, seal } from './envelope.ts';
 import { deriveKeys, type SyncKeys } from './keys.ts';
+import { pushAll, type PushSource } from './push.ts';
 import { createRelayClient, type RelayClient, type RelayFailure } from './relayClient.ts';
 
 export interface SyncDeps {
@@ -51,7 +52,6 @@ export interface SyncEngine {
 }
 
 const PULL_LIMIT = 50;
-const PUSH_LIMIT = 500;
 const BACKOFF_MS = [30_000, 120_000, 600_000] as const;
 /** Problems that end sync until the user rejoins (FR-021). */
 const STOPPED: readonly SyncProblem[] = ['unauthorized', 'spaceGone'];
@@ -173,35 +173,28 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     return null;
   }
 
-  async function sendBatch(s: Session, batchId: string, maxSeq: number, res: SyncRunResult): Promise<RelayFailure | null> {
-    const { ops } = db.unpushedOps(PUSH_LIMIT, maxSeq);
-    if (ops.length === 0) {
-      db.completePush(maxSeq);
-      return null;
-    }
-    const device = db.getMeta('device_id') ?? '';
-    const env = await seal({ v: 1, device, ops }, s.keys.encKey, s.keys.spaceId, batchId);
-    const r = await s.client.postBatch(env);
-    if (!r.ok) return r;
-    db.completePush(maxSeq);
-    res.pushed += ops.length;
-    return null;
-  }
+  /** The push source over the local DB: the token is the change_log seq the batch reaches up to. */
+  const source: PushSource<number> = {
+    next: (limit, upTo) => {
+      const { maxSeq, ops } = db.unpushedOps(limit, upTo);
+      return { ops, token: maxSeq };
+    },
+    complete: (token) => db.completePush(token),
+    pending: () => {
+      const p = db.syncMeta().pendingBatch;
+      return p ? { batchId: p.batchId, token: p.maxSeq } : null;
+    },
+    setPending: (p) => db.setSyncMeta({ pendingBatch: p ? { batchId: p.batchId, maxSeq: p.token } : null }),
+  };
 
   async function push(s: Session, res: SyncRunResult): Promise<RelayFailure | null> {
-    const pending = db.syncMeta().pendingBatch;
-    if (pending) {
-      const f = await sendBatch(s, pending.batchId, pending.maxSeq, res);
-      if (f) return f;
-    }
-    for (;;) {
-      const { maxSeq, ops } = db.unpushedOps(PUSH_LIMIT);
-      if (ops.length === 0) return null;
-      const batchId = newUuid();
-      db.setSyncMeta({ pendingBatch: { batchId, maxSeq } });
-      const f = await sendBatch(s, batchId, maxSeq, res);
-      if (f) return f;
-    }
+    const out = await pushAll(source, {
+      client: s.client,
+      seal: (ops, batchId) => seal({ v: 1, device: db.getMeta('device_id') ?? '', ops }, s.keys.encKey, s.keys.spaceId, batchId),
+      newBatchId: newUuid,
+    });
+    res.pushed += out.pushed;
+    return out.failure;
   }
 
   /** After a reset: the old space is deleted only once the new one holds everything. A failure is retried on later runs. */
