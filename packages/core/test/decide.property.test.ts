@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { decide, deriveStatus, lastPage, type BookSnapshot, type BookStatus, type Command, type EventType } from '../src/index.ts';
-import { applyToSnapshot, eventId, instant, itemId } from './fixtures.ts';
+import { decide, deriveStatus, lastPage, type BookSnapshot, type BookStatus, type Command, type EventType, type Page, type PageCount } from '../src/index.ts';
+import { applyToSnapshot, book, day, event, eventId, instant, itemId, NOW, snap, uuid } from './fixtures.ts';
 
 /** Deterministic PRNG (mulberry32) — randomness lives in the test, never in core. */
 function prng(seed: number) {
@@ -22,6 +22,44 @@ function reference(events: RefEvent[]): { status: BookStatus; lastPage: number |
   const withPage = live.filter((e) => e.page !== null);
   return { status, lastPage: withPage.length ? withPage[withPage.length - 1]!.page : null };
 }
+
+describe('decide: abandon at a page (I-9, I-10; 500 runs)', () => {
+  it('I-9 abandoned at page N, whatever the ids; I-10 removing either event', () => {
+    for (let seq = 0; seq < 500; seq++) {
+      const rand = prng(seq + 7);
+      const uid = () => uuid(1 + Math.floor(rand() * 1_000_000_000));
+      const total = 50 + Math.floor(rand() * 400);
+      const prev = rand() < 0.5 ? null : 1 + Math.floor(rand() * total);
+      const events = [event({ id: eventId(0), type: 'started', localDate: day('2026-09-01'), occurredAt: instant('2026-09-01T10:00:00.000Z') })];
+      if (prev !== null) events.push(event({ id: eventId(1), type: 'progress', page: prev as Page, localDate: day('2026-09-02'), occurredAt: instant('2026-09-02T10:00:00.000Z') }));
+      const start = snap(book({ totalPages: total as PageCount }), events);
+
+      const n = 1 + Math.floor(rand() * total);
+      const abandonedId = uid();
+      let pageId = uid();
+      while (pageId === abandonedId) pageId = uid();
+      const cmd: Command = { kind: 'LogEvent', itemId: itemId(1), eventId: abandonedId, type: 'abandoned', page: n, pageEventId: pageId, localDate: '2026-09-03' };
+      const r = decide(start, cmd, NOW);
+      expect(r.ok).toBe(true);
+      if (!r.ok) continue;
+      const after = applyToSnapshot(start, r.value.changes)!;
+      expect(deriveStatus(after.events)).toBe('abandoned');
+      expect(lastPage(after.events)).toBe(n);
+
+      const remove = (id: string) => {
+        const d = decide(after, { kind: 'RemoveEvent', itemId: itemId(1), eventId: id }, NOW);
+        expect(d.ok).toBe(true);
+        return applyToSnapshot(after, d.ok ? d.value.changes : [])!;
+      };
+      const noAbandon = remove(abandonedId);
+      expect(deriveStatus(noAbandon.events)).toBe('reading');
+      expect(lastPage(noAbandon.events)).toBe(n);
+      const noPage = remove(pageId);
+      expect(deriveStatus(noPage.events)).toBe('abandoned');
+      expect(lastPage(noPage.events)).toBe(prev);
+    }
+  });
+});
 
 describe('decide: random command sequences vs. the reference model', () => {
   it('status and lastPage always match; invariants 1, 2 and 5 hold (1000 sequences)', () => {

@@ -49,6 +49,53 @@ describe('decide LogEvent: progress with a page', () => {
   });
 });
 
+describe('decide LogEvent: abandon at a page (003 US4)', () => {
+  const abandonAt = (page: number | null | undefined, p: Partial<Extract<Command, { kind: 'LogEvent' }>> = {}) =>
+    log('abandoned', page, { pageEventId: eventId(2), ...p });
+
+  it('emits a progress insert then an abandoned insert, same date and occurred_at', () => {
+    expect(decide(reading, abandonAt(120), NOW)).toEqual({
+      ok: true,
+      value: {
+        offerFinish: false,
+        changes: [
+          { tbl: 'reading_events', rowId: eventId(2), fields: { item_id: itemId(1), event_type: 'progress', page: 120, occurred_at: NOW, local_date: '2026-09-27' } },
+          { tbl: 'reading_events', rowId: eventId(1), fields: { item_id: itemId(1), event_type: 'abandoned', page: null, occurred_at: NOW, local_date: '2026-09-27' } },
+        ],
+      },
+    });
+  });
+
+  it('offerFinish is false even at the last page', () =>
+    expect(decide(reading, abandonAt(300), NOW)).toMatchObject({ ok: true, value: { offerFinish: false } }));
+
+  it('a page without pageEventId is PageNotAllowed', () =>
+    expect(decide(reading, log('abandoned', 120), NOW)).toEqual(rejected('PageNotAllowed')));
+
+  it('pageEventId equal to eventId, or not a uuid, is InvalidInput on pageEventId', () => {
+    for (const bad of [eventId(1), 'nope']) {
+      expect(decide(reading, abandonAt(120, { pageEventId: bad }), NOW)).toMatchObject({ ok: false, error: { kind: 'InvalidInput', field: 'pageEventId' } });
+    }
+  });
+
+  it('page 0 is InvalidPage and a page above total_pages is PageBeyondEnd', () => {
+    expect(decide(reading, abandonAt(0), NOW)).toEqual(rejected('InvalidPage'));
+    expect(decide(reading, abandonAt(301), NOW)).toEqual({ ok: false, error: { kind: 'PageBeyondEnd', totalPages: 300 } });
+  });
+
+  it('a page below the last page is accepted', () => expect(decide(reading, abandonAt(50), NOW).ok).toBe(true));
+
+  it('on a queued book it is InvalidTransition', () =>
+    expect(decide(snap(book()), abandonAt(120), NOW)).toEqual(rejected('InvalidTransition')));
+
+  it('started or finished with a page is still PageNotAllowed', () => {
+    for (const t of ['started', 'finished'] as const) expect(decide(reading, log(t, 10, { pageEventId: eventId(2) }), NOW)).toEqual(rejected('PageNotAllowed'));
+  });
+
+  it('the pageEventId colliding with an existing event is AlreadyExists', () =>
+    expect(decide(reading, abandonAt(120, { pageEventId: reading.events[0]!.id }), NOW)).toEqual({ ok: false, error: { kind: 'AlreadyExists' } }));
+});
+
 describe('decide LogEvent: other kinds and transitions', () => {
   it('progress without a page ("read today") is accepted', () => {
     const r = decide(reading, log('progress', null), NOW);

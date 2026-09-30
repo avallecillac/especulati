@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { computeStats, readingDays, yearSummary, type EventType, type Page, type ReadingEvent, type StatsBook } from '../src/index.ts';
+import { abandonRates, computeStats, readingDays, yearSummary, type EventType, type Page, type ReadingEvent, type StatsBook } from '../src/index.ts';
 import { day, event, itemId } from './fixtures.ts';
+import type { Genre } from '../src/index.ts';
 
 const ev = (type: EventType, date: string, page: number | null = null, extra: Partial<ReadingEvent> = {}): ReadingEvent =>
   event({
@@ -218,5 +219,66 @@ describe('yearSummary and allTime (US2)', () => {
 
   it('allTime is empty with no reading days', () => {
     expect(computeStats([], opts).allTime).toEqual([]);
+  });
+});
+
+describe('abandonRates and days to finish (US4)', () => {
+  const g = (n: number, genre: string | null, events: ReadingEvent[]): StatsBook => ({ ...sb(n, events), genre: genre as Genre | null });
+  const fin = (n: number, genre: string | null) => g(n, genre, [ev('started', '2026-03-01'), ev('finished', '2026-03-05')]);
+  const aband = (n: number, genre: string | null) => g(n, genre, [ev('started', '2026-03-01'), ev('abandoned', '2026-03-05')]);
+
+  it('Fiction 25%, No genre 0%, overall 17%', () => {
+    const r = abandonRates([fin(1, 'Fiction'), fin(2, 'Fiction'), fin(3, 'Fiction'), aband(4, 'Fiction'), fin(5, null), fin(6, null)]);
+    expect(r.overall).toEqual({ genre: null, finished: 5, abandoned: 1, rate: 17 });
+    expect(r.byGenre).toEqual([
+      { genre: 'Fiction', finished: 3, abandoned: 1, rate: 25 },
+      { genre: null, finished: 2, abandoned: 0, rate: 0 },
+    ]);
+  });
+
+  it('a book abandoned then resumed and finished counts as finished', () => {
+    const b = g(1, 'Fiction', [ev('started', '2026-03-01'), ev('abandoned', '2026-03-05'), ev('started', '2026-04-01'), ev('finished', '2026-04-09')]);
+    expect(abandonRates([b]).byGenre).toEqual([{ genre: 'Fiction', finished: 1, abandoned: 0, rate: 0 }]);
+  });
+
+  it('reading and queued books are not counted, and a genre with only those is not listed', () => {
+    const r = abandonRates([g(1, 'Poetry', [ev('started', '2026-03-01')]), g(2, 'Poetry', []), fin(3, 'Fiction')]);
+    expect(r.byGenre.map((x) => x.genre)).toEqual(['Fiction']);
+    expect(r.overall).toEqual({ genre: null, finished: 1, abandoned: 0, rate: 0 });
+  });
+
+  it('removed events are excluded; with no books the overall rate is 0', () => {
+    const b = g(1, 'Fiction', [ev('started', '2026-03-01'), ev('abandoned', '2026-03-05', null, { deletedAt: '2026-03-06T00:00:00.000Z' as ReadingEvent['deletedAt'] })]);
+    expect(abandonRates([b]).byGenre).toEqual([]);
+    expect(abandonRates([])).toEqual({ overall: { genre: null, finished: 0, abandoned: 0, rate: 0 }, byGenre: [] });
+  });
+
+  it('computeStats exposes abandon, and is order independent', () => {
+    const books = [fin(1, 'Fiction'), aband(2, 'Fiction'), fin(3, null)];
+    const v = computeStats(books, { year: 2026, today: TODAY });
+    expect(v.abandon).toEqual(abandonRates(books));
+    expect(computeStats(shuffle(books, 5), { year: 2026, today: TODAY }).abandon).toEqual(v.abandon);
+  });
+
+  it('summary.avgDaysToFinish averages the read-throughs finished in the year', () => {
+    const books = [
+      sb(1, [ev('started', '2026-03-01'), ev('finished', '2026-03-10')]),
+      sb(2, [ev('started', '2026-04-01'), ev('finished', '2026-04-01')]),
+      sb(3, [ev('started', '2025-01-01'), ev('finished', '2025-01-30')]),
+    ];
+    expect(yearSummary(books, 2026).avgDaysToFinish).toBe(5.5);
+    expect(yearSummary(books, 2024).avgDaysToFinish).toBeNull();
+    expect(yearSummary([], 2026).avgDaysToFinish).toBeNull();
+  });
+
+  it('abandon at a page: page 120 after 90 makes today a reading day with 30 pages', () => {
+    const events = [ev('started', '2026-09-01'), ev('progress', '2026-09-02', 90), ev('progress', '2026-09-29', 120), ev('abandoned', '2026-09-29')];
+    const days = readingDays([sb(1, events)]);
+    expect(days.get(day('2026-09-29'))).toBe(30);
+  });
+
+  it('a bare abandon with nothing else that day is not a reading day', () => {
+    const events = [ev('started', '2026-09-01'), ev('progress', '2026-09-02', 90), ev('abandoned', '2026-09-29')];
+    expect(readingDays([sb(1, events)]).has(day('2026-09-29'))).toBe(false);
   });
 });

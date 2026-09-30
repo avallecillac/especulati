@@ -151,6 +151,12 @@
   events took about 50 ms, including grouping.
 - **Fallback, if over budget**: cache the loaded events in the worker, invalidated on
   every `dispatch`. That needs no schema change. It isn't planned.
+- **Measured (2026-09-30, T025):** the joined query took 130 to 180 ms at 10,000 events.
+  Almost all of it was copying one row per event across the WASM boundary; the core maths
+  took about 14 ms.
+- **Fix, instead of the cache:** SQLite packs each book's events into one JSON array
+  (`json_group_array`), so 400 rows cross the boundary instead of 10,000. That brought
+  `stats()` down to **25 ms**. The budget is unchanged, and no cache is needed.
 
 ## R9. Where stats appear
 

@@ -2,7 +2,7 @@ import type { SqlValue } from '@sqlite.org/sqlite-wasm';
 import type { Article, Author, BookStatus, DetailsStatus, EventType, Instant, ItemId, LocalDate, NonEmptyTitle, NormalizedUrl, WordCount } from '@readerlog/core';
 import { detailsStatusFromDb } from '@readerlog/core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { pace as computePace, type Pace } from '@readerlog/core';
+import { pace as computePace, readThroughs as computeReadThroughs, type Pace } from '@readerlog/core';
 import { deriveStatus, eventOrder, findDuplicates, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
 import { intOrNull, loadBookSnapshot, mergeChainIds, rowToEvent, rowToItem, text, textOrNull } from './snapshot.ts';
 
@@ -48,6 +48,8 @@ export interface BookView {
   events: BookEventView[];
   /** Pace and estimated finish for a book being read; null otherwise (003 US3). */
   pace: Pace | null;
+  /** Finished read-throughs only, newest first (003 US4). */
+  readThroughs: { start: string; end: string; daysToFinish: number }[];
 }
 
 
@@ -120,7 +122,10 @@ export function bookView(db: Database, itemId: string, today: LocalDate): BookVi
     .map((e) => ({ id: e.id, type: e.type, page: e.page, localDate: e.localDate, occurredAt: e.occurredAt }));
   const card = toCard(snapshot.item, live, db.selectValue('SELECT 1 FROM covers WHERE item_id = ?', [itemId]) !== undefined);
   const pace = computePace({ itemId: snapshot.item.id, genre: snapshot.item.genre, totalPages: snapshot.item.totalPages, events: live }, today);
-  return { card, events, pace };
+  const readThroughs = computeReadThroughs(live)
+    .flatMap((rt) => (rt.outcome === 'finished' && rt.end !== null && rt.daysToFinish !== null ? [{ start: rt.start, end: rt.end, daysToFinish: rt.daysToFinish }] : []))
+    .reverse();
+  return { card, events, pace, readThroughs };
 }
 
 /** The non-removed book with this ISBN-13 (uses idx_items_isbn), or null. */

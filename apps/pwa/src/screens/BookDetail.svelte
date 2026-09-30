@@ -9,7 +9,7 @@
   import { shortDate } from '../lib/dates.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
-  import { toastSaved, undoEvent } from '../lib/actions.ts';
+  import { toastSaved, toastSavedMany, undoEvent } from '../lib/actions.ts';
   import Cover from './Cover.svelte';
   import DetailsBadge from './DetailsBadge.svelte';
   import LogSheet from './LogSheet.svelte';
@@ -23,6 +23,8 @@
   let logging = $state(false);
   let confirming = $state<'abandon' | 'remove' | null>(null);
   let removingEvent = $state<BookEventView | null>(null);
+  /** The optional "stopped at page" of the Abandon dialog; empty by default (FR-022). */
+  let abandonPage = $state('');
 
   async function load() {
     const r = await query({ name: 'book', itemId: id, today: todayLocal() });
@@ -39,6 +41,16 @@
     const eventId = crypto.randomUUID();
     const r = await dispatch({ kind: 'LogEvent', itemId: id, eventId, type, localDate: todayLocal() });
     if (r.ok) toastSaved(type === 'started' ? 'Started' : type === 'finished' ? 'Marked finished' : 'Abandoned', id, eventId);
+    else reportError(r.error);
+  }
+
+  /** Abandon, optionally at a page: one LogEvent that decide() turns into a progress entry then an abandoned entry. */
+  async function abandon(rawPage: string) {
+    if (rawPage.trim() === '') return record('abandoned');
+    const eventId = crypto.randomUUID();
+    const pageEventId = crypto.randomUUID();
+    const r = await dispatch({ kind: 'LogEvent', itemId: id, eventId, type: 'abandoned', page: Number(rawPage), pageEventId, localDate: todayLocal() });
+    if (r.ok) toastSavedMany('Abandoned', id, [eventId, pageEventId]);
     else reportError(r.error);
   }
 
@@ -81,6 +93,9 @@
           {#if p.pagesPerDay === 0}No recent pace{:else}{p.pagesPerDay} pages/day{#if p.daysLeft !== null && p.finishDate} · about {plural(p.daysLeft, 'day')} left (around {shortDate(p.finishDate)}){/if}{/if}
         </p>
       {/if}
+      {#each view.readThroughs as rt (rt.end + rt.start)}
+        <p class="muted" data-testid="read-through">Finished in {plural(rt.daysToFinish, 'day')} ({shortDate(rt.start)} – {shortDate(rt.end)})</p>
+      {/each}
     </div>
   </div>
 
@@ -89,7 +104,7 @@
     <button class="primary" onclick={() => (logging = true)}>Log</button>
     {#if c.status === 'reading'}
       <button onclick={() => void record('finished')}>Finish</button>
-      <button onclick={() => (confirming = 'abandon')}>Abandon</button>
+      <button onclick={() => { abandonPage = ''; confirming = 'abandon'; }}>Abandon</button>
     {/if}
     <button onclick={() => navigate(`/edit/${id}`)}>Edit</button>
   </div>
@@ -124,7 +139,10 @@
   {/if}
   {#if confirming === 'abandon'}
     <Confirm title="Abandon this book?" body="You can start it again later." confirmLabel="Abandon"
-      onconfirm={() => { confirming = null; void record('abandoned'); }} oncancel={() => (confirming = null)} />
+      onconfirm={() => { const raw = abandonPage; confirming = null; void abandon(raw); }} oncancel={() => (confirming = null)}>
+      <label for="abandon-page">Stopped at page (optional)</label>
+      <input id="abandon-page" type="text" inputmode="numeric" autocomplete="off" placeholder={c.lastPage === null ? '' : String(c.lastPage)} bind:value={abandonPage} />
+    </Confirm>
   {:else if confirming === 'remove'}
     <Confirm title="Remove this book?" body="It and its history disappear from every view." confirmLabel="Remove" danger
       onconfirm={() => void removeBook()} oncancel={() => (confirming = null)} />

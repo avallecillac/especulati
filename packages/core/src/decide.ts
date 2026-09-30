@@ -106,8 +106,18 @@ function logEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: '
   if (!localDate.ok) return localDate;
 
   let page: number | null = null;
+  let pageEventId: string | null = null;
   if (cmd.page !== undefined && cmd.page !== null) {
-    if (cmd.type !== 'progress') return err({ kind: 'PageNotAllowed' });
+    if (cmd.type !== 'progress' && cmd.type !== 'abandoned') return err({ kind: 'PageNotAllowed' });
+    if (cmd.type === 'abandoned') {
+      // 003 commands contract: an abandon at a page carries its own id for the progress entry.
+      if (cmd.pageEventId === undefined) return err({ kind: 'PageNotAllowed' });
+      const pid = need(parseEventId(cmd.pageEventId), () => ({ kind: 'InvalidInput', field: 'pageEventId', reason: 'not a lowercase uuid' }));
+      if (!pid.ok) return pid;
+      if (pid.value === eventId.value) return err({ kind: 'InvalidInput', field: 'pageEventId', reason: 'same as eventId' });
+      if (events.some((e) => e.id === pid.value)) return err({ kind: 'AlreadyExists' });
+      pageEventId = pid.value;
+    }
     const p = need(parsePage(cmd.page), () => ({ kind: 'InvalidPage' }));
     if (!p.ok) return p;
     if (item.totalPages !== null && p.value > item.totalPages) return err({ kind: 'PageBeyondEnd', totalPages: item.totalPages });
@@ -117,6 +127,12 @@ function logEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: '
   const from = deriveStatus(events);
   if (!ALLOWED_FROM[cmd.type].includes(from)) return err({ kind: 'InvalidTransition', from, type: cmd.type });
 
+  if (pageEventId !== null) {
+    return decided([
+      eventInsert(pageEventId, item.id, 'progress', page, now, localDate.value),
+      eventInsert(eventId.value, item.id, 'abandoned', null, now, localDate.value),
+    ]);
+  }
   const offerFinish = page !== null && page === item.totalPages;
   return decided([eventInsert(eventId.value, item.id, cmd.type, page, now, localDate.value)], offerFinish);
 }
