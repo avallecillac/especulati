@@ -77,7 +77,7 @@ pnpm e2e    # two browser contexts + routed in-memory relay (research R10)
 | SC-007 / FR-023: free tier | ✅ a simulated day for 3 devices uses 896 requests (0.9%), 2,735 D1 reads (0.05%) and 1,147 D1 writes (1.1%) |
 | Scenarios 1–20 | ✅ all automated. Covers for synced books (scenario from FR-016) are covered by the db `missingCovers` test only; there is no e2e for the download path |
 | Adversarial review (main session) | Fixed during review: <ul><li>an op's device now comes from its HLC (reset re-push);</li><li>HLC overflow guard;</li><li>merge copy ids made content-addressed (multi-path sweep doubling);</li><li>identical entries collapse instead of blocking a merge;</li><li>per-client rate limit on `PUT /spaces`;</li><li>`sync_old_space` stores the old code, because deleting needs its token</li></ul> |
-| Manual device checks (above) | ⏳ Pending: needs the one-time Cloudflare D1 setup, then the iPhone and the Mac |
+| Manual device checks (above) | ✅ 2026-09-30, iPhone and Mac on production (Cloudflare Pages + D1): pairing and sync both worked. After merging duplicate books, some entries appeared twice, because the same reading had been logged separately on each device (different times, so they are distinct entries by design, M-1). The user removed the extras by hand |
 
 **Known limits (accepted for the MVP):**
 - There is no background polling. An idle open device gets changes when it's brought to
