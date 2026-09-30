@@ -14,9 +14,9 @@ export function initials(title: string): string {
   return out || '#';
 }
 
-/** Stable hash of `key` into a hue, 0..359. */
-export function coverHue(key: string): number {
+/** Stable hash of `key` into one of the six cloth colours, 1..6 (the theme's --cloth-n tokens). */
+export function coverCloth(key: string): 1 | 2 | 3 | 4 | 5 | 6 {
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-  return h % 360;
+  return ((h % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverHue, initials } from './coverArt.ts';
+import { coverCloth, initials } from './coverArt.ts';
 
 describe('initials', () => {
   it('takes the first two words', () => {
@@ -20,16 +20,21 @@ describe('initials', () => {
   });
 });
 
-describe('coverHue', () => {
-  it('is stable and within 0..359', () => {
-    expect(coverHue('abc')).toBe(coverHue('abc'));
+describe('coverCloth', () => {
+  it('is stable and within 1..6', () => {
+    expect(coverCloth('abc')).toBe(coverCloth('abc'));
     for (const k of ['', 'a', 'Dune', 'x'.repeat(500)]) {
-      const h = coverHue(k);
-      expect(h).toBeGreaterThanOrEqual(0);
-      expect(h).toBeLessThan(360);
+      const n = coverCloth(k);
+      expect(Number.isInteger(n)).toBe(true);
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(6);
     }
   });
+  it('uses every cloth across many keys', () => {
+    const seen = new Set(Array.from({ length: 200 }, (_, i) => coverCloth(`Book ${i}`)));
+    expect(seen.size).toBe(6);
+  });
   it('varies with the key', () => {
-    expect(coverHue('Dune')).not.toBe(coverHue('Emma'));
+    expect(new Set(['Dune', 'Emma', 'Ulysses', 'Beloved', 'Dracula'].map(coverCloth)).size).toBeGreaterThan(1);
   });
 });

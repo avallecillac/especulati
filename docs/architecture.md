@@ -294,6 +294,27 @@ Streaks and reading days count books only. Article stats have their own section.
   can also be downloaded.
 - **Import** merges by `id`. It is idempotent and never returns a partial result.
 
+## 10a. Themes (feature 006)
+
+Colours live only in `apps/pwa/src/theme/`; screens use tokens (`--paper`, `--ink`, `--accent`, ...). A
+theme is a palette, nothing more.
+
+### Adding a theme
+
+1. Copy `apps/pwa/src/theme/macondo.css` to `<id>.css` and change the values. It must set exactly the
+   contract tokens (`specs/006-illustrated-edition-ui/contracts/theme-tokens.md`) inside one
+   `:root[data-theme='<id>']` rule. `theme-tokens.test.ts` checks this, and
+   `test-fixtures/test-theme.css` is the test-only proof that a CSS file alone is enough.
+2. Import the file in `apps/pwa/src/main.ts` next to the other theme CSS, and add an entry to `THEMES` in
+   `src/theme/themes.ts` (`id`, `name`, `scheme`, `swatch` = paper, accent, ornament, and `themeColor` =
+   the bar colour). The tests check that `swatch` and `themeColor` equal the CSS values, and
+   `theme-contrast.test.ts` checks the WCAG pairs.
+3. Update the **pre-paint script in `apps/pwa/index.html`**. It runs before any module loads, so it hard-codes
+   the theme ids and the `theme-color` values, and cannot import `THEMES`. `prepaint.test.ts` runs that
+   script against the registry and fails if it disagrees. The manifest colours come from the default theme.
+
+The picker in Settings builds its rows from `THEMES`, so it needs no change.
+
 ## 11. Out of scope (v1)
 
 - In-app reading and storing article text

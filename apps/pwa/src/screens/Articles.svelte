@@ -4,6 +4,7 @@
   import { todayLocal } from '../lib/clock.ts';
   import { longDate } from '../lib/dates.ts';
   import { errorMessage, reportError } from '../lib/errors.ts';
+  import Butterfly from '../ornaments/Butterfly.svelte';
   import { navigate } from '../lib/router.svelte.ts';
 
   const PAGE = 100;
@@ -119,17 +120,20 @@
 
 {#if articles}
   {#if articles.length === 0}
-    <p class="muted">No articles yet.</p>
+    <div class="vignette">
+      <Butterfly size={40} />
+      <p class="muted">No articles yet.</p>
+    </div>
   {:else}
     <ul class="plain" aria-label="Articles">
       {#each articles as a (a.id)}
         <li data-testid="article-row">
           <div class="article-main">
             <a class="article-title" href={`#/article/${a.id}`}>{a.title}</a>
-            <span class="muted">{a.domain} · {a.readOn}</span>
+            <span class="muted smallcaps">{a.domain} · {a.readOn}</span>
           </div>
           <span class="spacer"></span>
-          <span class="muted">{minutesLabel(a)}</span>
+          <span class="muted mins">{minutesLabel(a)}</span>
         </li>
       {/each}
     </ul>
@@ -138,3 +142,8 @@
     {/if}
   {/if}
 {/if}
+
+<style>
+  .actions + :is(ul, .vignette), form + :is(ul, .vignette) { margin-top: 14px; }
+  .mins { font-style: italic; font-size: 0.9rem; white-space: nowrap; }
+</style>

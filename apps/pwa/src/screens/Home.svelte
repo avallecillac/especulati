@@ -3,6 +3,9 @@
   import { onChanged, query } from '../lib/dbClient.ts';
   import { STATUS_LABEL, plural, progressLabel } from '../lib/format.ts';
   import { reportError } from '../lib/errors.ts';
+  import DropCap from '../ornaments/DropCap.svelte';
+  import Sprig from '../ornaments/Sprig.svelte';
+  import Butterfly from '../ornaments/Butterfly.svelte';
   import Cover from './Cover.svelte';
   import DetailsBadge from './DetailsBadge.svelte';
   import LogSheet from './LogSheet.svelte';
@@ -40,15 +43,16 @@
 
 {#if view}
   {#if current}
+    <div class="headpiece"><DropCap letter={[...current.title.trim()][0]?.toUpperCase() ?? '#'} size={56} /></div>
     <section class="card" aria-label="Current book">
       <div class="with-cover">
         <Cover itemId={current.itemId} hasCover={current.hasCover} title={current.title} size="md" />
         <div>
-          <p class="muted">{STATUS_LABEL[current.status]}</p>
+          <p class="running-head status">{STATUS_LABEL[current.status]}</p>
           <h1><a href={`#/book/${current.itemId}`}>{current.title}</a></h1>
           <DetailsBadge status={current.detailsStatus} />
-          {#if current.author}<p class="muted">{current.author}</p>{/if}
-          <p>{progressLabel(current)}</p>
+          {#if current.author}<p class="muted smallcaps">{current.author}</p>{/if}
+          <p class="progress">{progressLabel(current)}</p>
           {#if current.lastActivity}
             <p class="muted">Last read <time datetime={current.lastActivity.localDate}>{dateLabel(current.lastActivity.localDate)}</time></p>
           {/if}
@@ -56,8 +60,10 @@
         </div>
       </div>
     </section>
+    <Sprig class="tail" />
   {:else}
-    <section class="card">
+    <section class="card vignette">
+      <Butterfly size={48} />
       <h1>No book in progress</h1>
       <p class="muted">Add a book and start reading to log your progress here.</p>
       <a class="button primary" href="#/add">Add a book</a>
@@ -81,3 +87,10 @@
 {#if logging}
   <LogSheet card={logging} onclose={() => (logging = null)} />
 {/if}
+
+<style>
+  .headpiece { display: flex; justify-content: center; margin: 4px 0 10px; color: var(--ornament); }
+  .status { margin: 0; }
+  .progress { font-style: italic; margin: 4px 0 0; }
+  :global(.tail) { margin: 18px auto 0; }
+</style>

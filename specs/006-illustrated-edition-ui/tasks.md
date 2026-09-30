@@ -82,27 +82,27 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 - [X] T009 [US2] Ornaments in `src/ornaments/`: Fleuron, Butterfly, Sprig, Fish, Rule,
   DropCap and the tab icons. They are original line art, and drawn by the main session
   (design).
-- [ ] T010 [US2] Typography and structure:
+- [X] T010 [US2] Typography and structure:
   - running heads for every `h2`;
   - the chapter opening on Home's current book and on BookDetail (drop cap, display
     title, small-caps author);
   - stats numerals in the display face with `tnum` in tables;
   - hairline rules with a fleuron between major sections.
-- [ ] T011 [US2] Empty states with vignettes on Home, Library (books, articles) and
+- [X] T011 [US2] Empty states with vignettes on Home, Library (books, articles) and
   Stats. Cloth covers: `coverCloth()` in `lib/coverArt.ts` replaces the hue (with a
   unit test), and `Cover.svelte` uses the cloth tokens plus a label and a fleuron.
-- [ ] T012 [US2] Paper texture token (Macondo only). Heatmap cells use `--heat-*`.
+- [X] T012 [US2] Paper texture token (Macondo only). Heatmap cells use `--heat-*`.
 
 ## Phase 4: US3, theme picker (P2)
 
-- [ ] T013 [P] [US3] Write `e2e/appearance.spec.ts` (quickstart scenario 10).
-- [ ] T014 [US3] Settings → Appearance: an inset list of Automatic, Macondo and
+- [X] T013 [P] [US3] Write `e2e/appearance.spec.ts` (quickstart scenario 10).
+- [X] T014 [US3] Settings → Appearance: an inset list of Automatic, Macondo and
   Patriarca, each with a swatch and a check mark, using radio semantics
   (`role="radio"`, `aria-checked`). The change is live.
 
 ## Phase 5: US4, themes are palettes only (P3)
 
-- [ ] T015 [US4] Add a test-only theme fixture (`apps/pwa/src/theme/test-fixtures/test-theme.css`)
+- [X] T015 [US4] Add a test-only theme fixture (`apps/pwa/src/theme/test-fixtures/test-theme.css`)
   that passes the token test, proving that a new theme needs only a CSS file and a
   registry entry. Document "Adding a theme" in `docs/architecture.md`.
 

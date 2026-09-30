@@ -1,6 +1,6 @@
 import { onChanged, query } from './dbClient.ts';
 
-export { coverHue, initials } from './coverArt.ts';
+export { coverCloth, initials } from './coverArt.ts';
 
 /** Object URLs by item id; `null` caches "no cover". */
 const cache = new Map<string, string | null>();

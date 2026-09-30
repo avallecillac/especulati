@@ -89,10 +89,10 @@
   {:else}
     <h1>{a.title}</h1>
     <dl class="card">
-      {#if a.author}<dt class="muted">Author</dt><dd>{a.author}</dd>{/if}
-      <dt class="muted">Site</dt><dd>{a.domain}</dd>
-      <dt class="muted">Read on</dt><dd>{longDate(a.readOn)}</dd>
-      <dt class="muted">Reading time</dt><dd data-testid="reading-time">{minutesLabel(a)}</dd>
+      {#if a.author}<dt class="muted smallcaps">Author</dt><dd>{a.author}</dd>{/if}
+      <dt class="muted smallcaps">Site</dt><dd>{a.domain}</dd>
+      <dt class="muted smallcaps">Read on</dt><dd>{longDate(a.readOn)}</dd>
+      <dt class="muted smallcaps">Reading time</dt><dd data-testid="reading-time">{minutesLabel(a)}</dd>
     </dl>
     {#if a.detailsStatus === 'notFound'}<p class="muted">Details not fetched</p>{/if}
     <div class="actions">

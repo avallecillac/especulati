@@ -61,7 +61,7 @@
     display: flex; gap: 3px; width: max-content;
   }
   .week { display: grid; grid-template-rows: 14px repeat(7, 12px); gap: 3px; }
-  .month { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: visible; line-height: 14px; }
+  .month { font-size: 0.7rem; color: var(--ink-soft); white-space: nowrap; overflow: visible; line-height: 14px; }
   .cell { width: 12px; height: 12px; border-radius: 2px; }
   .pad { visibility: hidden; }
   .l0 { background: var(--heat-0); }

@@ -10,6 +10,7 @@
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
   import { toastSaved, toastSavedMany, undoEvent } from '../lib/actions.ts';
+  import Rule from '../ornaments/Rule.svelte';
   import Cover from './Cover.svelte';
   import DetailsBadge from './DetailsBadge.svelte';
   import LogSheet from './LogSheet.svelte';
@@ -78,28 +79,28 @@
   <p class="muted">It may have been removed. <a href="#/library">Back to library</a></p>
 {:else if view}
   {@const c = view.card}
-  <div class="with-cover">
+  <header class="titlepage">
     <Cover itemId={c.itemId} hasCover={c.hasCover} title={c.title} size="md" />
-    <div>
-      <p class="muted">{STATUS_LABEL[c.status]}</p>
-      <h1>{c.title}</h1>
-      <DetailsBadge status={c.detailsStatus} />
-      {#if c.author}<p class="muted">{c.author}</p>{/if}
-      {#if c.isbn}<p class="muted">ISBN {c.isbn}</p>{/if}
-      <p>{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
-      {#if view.pace}
-        {@const p = view.pace}
-        <p class="muted" data-testid="pace">
-          {#if p.pagesPerDay === 0}No recent pace{:else}{p.pagesPerDay} pages/day{#if p.daysLeft !== null && p.finishDate} · about {plural(p.daysLeft, 'day')} left (around {shortDate(p.finishDate)}){/if}{/if}
-        </p>
-      {/if}
-      {#each view.readThroughs as rt (rt.end + rt.start)}
-        <p class="muted" data-testid="read-through">Finished in {plural(rt.daysToFinish, 'day')} ({shortDate(rt.start)} – {shortDate(rt.end)})</p>
-      {/each}
-    </div>
-  </div>
+    <p class="running-head status">{STATUS_LABEL[c.status]}</p>
+    <h1>{c.title}</h1>
+    <DetailsBadge status={c.detailsStatus} />
+    {#if c.author}<p class="muted smallcaps author">{c.author}</p>{/if}
+    {#if c.isbn}<p class="muted">ISBN {c.isbn}</p>{/if}
+    <p class="progress">{progressLabel(c)}{c.genre ? ` · ${c.genre}` : ''}</p>
+    {#if view.pace}
+      {@const p = view.pace}
+      <p class="muted" data-testid="pace">
+        {#if p.pagesPerDay === 0}No recent pace{:else}{p.pagesPerDay} pages/day{#if p.daysLeft !== null && p.finishDate}{' · '}about {plural(p.daysLeft, 'day')} left (around {shortDate(p.finishDate)}){/if}{/if}
+      </p>
+    {/if}
+    {#each view.readThroughs as rt (rt.end + rt.start)}
+      <p class="muted" data-testid="read-through">Finished in {plural(rt.daysToFinish, 'day')} ({shortDate(rt.start)} – {shortDate(rt.end)})</p>
+    {/each}
+  </header>
 
-  <div class="row">
+  <Rule />
+
+  <div class="row buttons">
     {#if c.status !== 'reading'}<button onclick={() => void record('started')}>Start</button>{/if}
     <button class="primary" onclick={() => (logging = true)}>Log</button>
     {#if c.status === 'reading'}
@@ -118,7 +119,7 @@
         <li>
           <span>{describe(e)}</span>
           <span class="spacer"></span>
-          <time class="muted" datetime={e.localDate}>{dateLabel(e.localDate)}</time>
+          <time class="muted smallcaps" datetime={e.localDate}>{dateLabel(e.localDate)}</time>
           <button class="link danger" aria-label="Remove" onclick={() => (removingEvent = e)}>✕</button>
         </li>
       {/each}
@@ -148,3 +149,14 @@
       onconfirm={() => void removeBook()} oncancel={() => (confirming = null)} />
   {/if}
 {/if}
+
+<style>
+  .titlepage { display: grid; justify-items: center; text-align: center; gap: 2px; }
+  .titlepage > :global(.cover) { margin-bottom: 10px; }
+  .titlepage > p { margin: 0; }
+  .titlepage h1 { margin: 2px 0 4px; }
+  .status { margin: 0; }
+  .author { font-size: 1rem; }
+  .titlepage > p.progress { font-style: italic; margin-top: 6px; }
+  .buttons { justify-content: center; }
+</style>

@@ -16,14 +16,6 @@
   --dur-slow: 350ms;
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* TEMPORARY aliases so screens written against the old names keep working (006 phase 1). */
-  --bg: var(--paper);
-  --surface: var(--leaf);
-  --text: var(--ink);
-  --muted: var(--ink-soft);
-  --line: var(--rule);
-  --accent-text: var(--on-accent);
-
   font-family: var(--font-text);
   font-size: 18px;
   line-height: 1.45;

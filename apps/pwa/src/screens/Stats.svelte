@@ -4,6 +4,8 @@
   import { todayLocal } from '../lib/clock.ts';
   import { reportError } from '../lib/errors.ts';
   import { longDate, monthAbbr } from '../lib/dates.ts';
+  import Sprig from '../ornaments/Sprig.svelte';
+  import Rule from '../ornaments/Rule.svelte';
   import Heatmap from './Heatmap.svelte';
 
   let year = $state(Number(todayLocal().slice(0, 4)));
@@ -48,8 +50,14 @@
   <p>Longest streak: {plural(v.longest?.length ?? 0, 'day')}{v.longest ? ` (${longDate(v.longest.start)} – ${longDate(v.longest.end)})` : ''}</p>
 
   {#if !v.hasAnyEvents}
-    <p class="muted">Log reading from a book to see stats here.</p>
+    <div class="vignette">
+      <Sprig width={96} />
+      <p class="begin">Log a page to begin your year</p>
+      <p class="muted">Log reading from a book to see stats here.</p>
+    </div>
   {/if}
+
+  <Rule />
 
   <section class="card" aria-labelledby="totals-title">
     <h2 id="totals-title">Books and pages</h2>
@@ -87,6 +95,7 @@
 
 {#if view}
   {@const ab = view.abandon}
+  <Rule />
   <section class="card" aria-labelledby="abandon-title">
     <h2 id="abandon-title">Abandon rate</h2>
     {#if ab.overall.finished + ab.overall.abandoned === 0}
@@ -106,6 +115,7 @@
 
 {#if view && articles}
   {@const a = articles}
+  <Rule />
   <section class="card" aria-labelledby="article-stats-title">
     <h2 id="article-stats-title">Articles</h2>
     <p>This week: <span data-testid="articles-week">{a.thisWeek}</span></p>
@@ -126,9 +136,21 @@
 {/if}
 
 <style>
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 2px 8px 2px 0; }
-  .months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px 8px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px 6px 0; }
+  thead th { font-size: 0.78rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); }
+  tbody th { font-weight: 400; }
+  tbody tr { border-top: 0.5px solid var(--rule); }
+  th:not(:first-child), td { text-align: right; }
+  .months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px 8px; font-variant-numeric: tabular-nums; }
   .months li { display: block; padding: 0; border: 0; }
-  .headline { font-size: 1.2rem; color: var(--text); text-transform: none; letter-spacing: 0; margin-top: 0; }
+  .months li::before { display: none; }
+  /* The headline figure: a running-head element styled as a big display-face line. */
+  h2.headline {
+    display: block; font-family: var(--font-display); font-size: 1.85rem; font-weight: 600; line-height: 1.15;
+    color: var(--ink); text-transform: none; letter-spacing: -0.01em; margin: 0 0 12px; text-align: left;
+  }
+  h2.headline::before, h2.headline::after { display: none; }
+  .begin { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; }
+  [data-testid] { font-variant-numeric: tabular-nums; }
 </style>

@@ -12,8 +12,15 @@ export const COLOUR_TOKENS = [
 export const OTHER_TOKENS = ['scheme', 'font-text', 'font-display', 'radius-group', 'radius-sheet'];
 
 /** Declarations of a theme file: custom properties by name, plus any other property names. */
-export function parseTheme(id: string): { tokens: Map<string, string>; others: string[]; rules: number } {
-  const css = readFileSync(join(SRC, 'theme', `${id}.css`), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+export function parseTheme(id: string): ParsedTheme {
+  return parseThemeFile(join(SRC, 'theme', `${id}.css`));
+}
+
+export interface ParsedTheme { tokens: Map<string, string>; others: string[]; rules: number }
+
+/** Same, for any theme CSS file (the test fixture uses this). */
+export function parseThemeFile(path: string): ParsedTheme {
+  const css = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const tokens = new Map<string, string>();
   const others: string[] = [];
   for (const m of css.matchAll(/^\s*([a-z0-9-]+)\s*:\s*(.+?);\s*$/gm)) {

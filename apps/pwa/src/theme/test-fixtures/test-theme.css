@@ -1,0 +1,34 @@
+/* Test-only theme (never imported by the app): proves a theme is one CSS file plus a registry entry. */
+:root[data-theme='test'] {
+  --scheme: light;
+  color-scheme: light;
+  --paper: #f3ecdd;
+  --leaf: #fbf7ee;
+  --ink: #2a2419;
+  --ink-soft: #6a5f4e;
+  --rule: #d9cdb6;
+  --accent: #2e6a5c;
+  --on-accent: #fbf7ee;
+  --ornament: #a8651f;
+  --butterfly: #e0b43a;
+  --danger: #9a3226;
+  --heat-0: #e7decb;
+  --heat-1: #c2d0b0;
+  --heat-2: #98bc9f;
+  --heat-3: #5b8f7e;
+  --heat-4: #2e6a5c;
+  --cloth-1: #2e6a5c;
+  --cloth-2: #8c5420;
+  --cloth-3: #33567a;
+  --cloth-4: #7a2e2a;
+  --cloth-5: #55602f;
+  --cloth-6: #5a3d5c;
+  --on-cloth: #f6eedc;
+  --bar: rgb(251 247 238 / 0.78);
+  --backdrop: rgb(42 36 25 / 0.36);
+  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.15 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --font-text: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-display: 'Cormorant', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
+  --radius-group: 12px;
+  --radius-sheet: 16px;
+}

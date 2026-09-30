@@ -5,6 +5,7 @@
   import { reportError } from '../lib/errors.ts';
   import Cover from './Cover.svelte';
   import DetailsBadge from './DetailsBadge.svelte';
+  import Fish from '../ornaments/Fish.svelte';
   import Articles from './Articles.svelte';
 
   let { initialTab = 'books' }: { initialTab?: 'books' | 'articles' } = $props();
@@ -44,7 +45,11 @@
 {:else if view}
   {@const v = view}
   {#if groups.every(([key]) => v[key].length === 0)}
-    <p class="muted">No books yet. <a href="#/add">Add one</a>.</p>
+    <div class="vignette">
+      <Fish size={30} />
+      <p class="title">Your shelves are empty</p>
+      <p class="muted">No books yet. <a href="#/add">Add one</a>.</p>
+    </div>
   {/if}
   {#each groups as [key, label] (key)}
     {#if v[key].length > 0}
@@ -54,10 +59,13 @@
           {#each v[key] as card (card.itemId)}
             <li>
               <Cover itemId={card.itemId} hasCover={card.hasCover} title={card.title} size="sm" />
-              <a href={`#/book/${card.itemId}`}>{card.title}</a>
+              <div class="book-main">
+                <a class="book-title" href={`#/book/${card.itemId}`}>{card.title}</a>
+                {#if card.author}<span class="muted smallcaps">{card.author}</span>{/if}
+              </div>
               <DetailsBadge status={card.detailsStatus} />
               <span class="spacer"></span>
-              <span class="muted">{progressLabel(card)}</span>
+              <span class="muted status">{progressLabel(card)}</span>
             </li>
           {/each}
         </ul>
@@ -66,3 +74,10 @@
   {/each}
 {/if}
 </div>
+
+<style>
+  .book-main { display: grid; min-width: 0; }
+  .book-title { font-weight: 500; overflow-wrap: anywhere; color: var(--ink); }
+  .status { font-style: italic; font-size: 0.9rem; text-align: right; }
+  .vignette .title { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; }
+</style>

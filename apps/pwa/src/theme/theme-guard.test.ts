@@ -13,8 +13,6 @@ const ALLOWED_LINES: RegExp[] = [
   /\.scan-/,
   /\.qr\b/,
   /rgb\(\s*0 0 0 \/ [\d.]+\s*\)/,
-  // TEMPORARY: remove in T011 (Cover.svelte moves to cloth tokens).
-  /hsl\(\$\{coverHue/,
 ];
 
 describe('no literal colours outside src/theme', () => {

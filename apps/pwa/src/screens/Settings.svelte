@@ -4,6 +4,9 @@
   import { maskKey, removeGoogleKey, saveGoogleKey, settings } from '../lib/settings.svelte.ts';
   import { syncState } from '../lib/sync.svelte.ts';
   import { summaryLine } from '../lib/syncText.ts';
+  import { appearance, setAppearance } from '../lib/appearance.svelte.ts';
+  import { THEMES, themeById, type Appearance } from '../theme/themes.ts';
+  import Rule from '../ornaments/Rule.svelte';
   import { testGoogleKey, type KeyTestResult } from '../catalog/googleKey.ts';
 
   let keyText = $state('');
@@ -58,31 +61,47 @@
     void load();
     return onChanged(() => void load());
   });
+
+  // Swatch colours come from the theme registry and reach CSS through custom properties.
+  const autoSwatch = [themeById('macondo').swatch[0], themeById('patriarca').swatch[0], themeById('macondo').swatch[1]] as const;
+  const choices: { id: Appearance; name: string; swatch: readonly [string, string, string] }[] = [
+    { id: 'automatic', name: 'Automatic', swatch: autoSwatch },
+    ...THEMES.map((t) => ({ id: t.id, name: t.name, swatch: t.swatch })),
+  ];
+
+  function onKey(e: KeyboardEvent, i: number) {
+    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+    if (step === 0) return;
+    e.preventDefault();
+    const next = choices[(i + step + choices.length) % choices.length]!;
+    setAppearance(next.id);
+    (e.currentTarget as HTMLElement).parentElement?.parentElement?.querySelector<HTMLElement>(`[data-choice="${next.id}"]`)?.focus();
+  }
 </script>
 
 <h1>Settings</h1>
 
-{#if info}
-  <section class="card">
-    {#if info.persisted}
-      <p><strong>Storage: persistent.</strong> Your browser won't clear Readerlog's data to free space.</p>
-    {:else}
-      <p><strong>Storage: not persistent.</strong></p>
-      <p class="muted">
-        The browser may clear data under storage pressure. On iPhone, add Readerlog to your Home Screen
-        (Share → Add to Home Screen) and open it from there. Export and sync are coming in later versions.
-      </p>
-    {/if}
-  </section>
+<section aria-labelledby="appearance-title">
+  <h2 id="appearance-title">Appearance</h2>
+  <ul class="plain appearance" role="radiogroup" aria-label="Appearance">
+    {#each choices as c, i (c.id)}
+      {@const on = appearance.value === c.id}
+      <li role="none">
+        <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id}
+          onclick={() => setAppearance(c.id)} onkeydown={(e) => onKey(e, i)}>
+          <span class="swatch" aria-hidden="true" style:--s1={c.swatch[0]} style:--s2={c.swatch[1]} style:--s3={c.swatch[2]}><i></i><i></i><i></i></span>
+          <span class="name">{c.name}</span>
+          <span class="spacer"></span>
+          {#if on}
+            <svg class="tick" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          {/if}
+        </button>
+      </li>
+    {/each}
+  </ul>
+</section>
 
-  <section class="card">
-    <p class="muted">Device</p>
-    <p><code data-testid="device-id">{info.deviceId}</code></p>
-    <p class="muted" data-testid="app-version">Readerlog {__APP_VERSION__}</p>
-    <p class="muted">Schema version {info.schemaVersion}</p>
-    <p class="muted" data-testid="cover-stats">Covers stored: {info.covers.count} ({Math.round(info.covers.bytes / 1024)} KB)</p>
-  </section>
-{/if}
+<Rule />
 
 <section class="card">
   <h2>Sync</h2>
@@ -107,3 +126,40 @@
   </div>
   <p role="status">{keyResult ?? ''}</p>
 </section>
+
+<Rule />
+
+{#if info}
+  <section class="card">
+    {#if info.persisted}
+      <p><strong>Storage: persistent.</strong> Your browser won't clear Readerlog's data to free space.</p>
+    {:else}
+      <p><strong>Storage: not persistent.</strong></p>
+      <p class="muted">
+        The browser may clear data under storage pressure. On iPhone, add Readerlog to your Home Screen
+        (Share → Add to Home Screen) and open it from there. Export and sync are coming in later versions.
+      </p>
+    {/if}
+  </section>
+
+  <section class="card">
+    <p class="muted">Device</p>
+    <p><code data-testid="device-id">{info.deviceId}</code></p>
+    <p class="muted" data-testid="app-version">Readerlog {__APP_VERSION__}</p>
+    <p class="muted">Schema version {info.schemaVersion}</p>
+    <p class="muted" data-testid="cover-stats">Covers stored: {info.covers.count} ({Math.round(info.covers.bytes / 1024)} KB)</p>
+  </section>
+{/if}
+
+<style>
+  .appearance li { padding: 0; }
+  .appearance button {
+    width: 100%; min-height: 44px; padding: 11px 16px; border: 0; border-radius: 0; background: none;
+    justify-content: flex-start; gap: 12px; text-align: left; font-weight: 400;
+  }
+  .swatch { display: inline-flex; flex: none; }
+  .swatch i { width: 14px; height: 14px; border-radius: 50%; border: 0.5px solid var(--ink-soft); background: var(--s1); }
+  .swatch i + i { margin-left: -5px; background: var(--s2); }
+  .swatch i + i + i { background: var(--s3); }
+  .tick { color: var(--accent); flex: none; }
+</style>
