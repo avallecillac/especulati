@@ -26,7 +26,14 @@
   --on-cloth: #efe3cc;
   --bar: rgb(33 25 22 / 0.78);
   --backdrop: rgb(0 0 0 / 0.55);
-  --texture: none;
+  /* A dark page by candlelight: gold-flecked grain and smoky mottling (006 research R5). */
+  --texture: url('/textures/night-grain.svg'), url('/textures/night-age.svg');
+  --texture-size: 240px 240px, 900px 900px;
+  --leaf-texture: url('/textures/night-grain.svg');
+  /* A candle above the page, and deep shadow at its edges. */
+  --vignette:
+    radial-gradient(ellipse 95% 55% at 50% 0%, rgb(214 168 86 / 0.085), transparent 70%),
+    radial-gradient(ellipse 125% 95% at 50% 45%, transparent 48%, rgb(0 0 0 / 0.5) 100%);
   --font-text: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-display: 'Cormorant', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
   --radius-group: 12px;

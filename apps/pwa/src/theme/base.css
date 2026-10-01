@@ -25,7 +25,9 @@ body {
   font-family: var(--font-text);
   font-size: 18px;
   line-height: 1.45;
-  background: var(--paper) var(--texture);
+  background-color: var(--paper);
+  background-image: var(--texture);
+  background-size: var(--texture-size);
   color: var(--ink);
 }
 
@@ -37,4 +39,14 @@ body {
   font-size: 0.78em;
   letter-spacing: 0.12em;
   color: var(--ink-soft);
+}
+
+/* Lamplight vignette, fixed to the screen and behind all content (006 research R5). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--vignette);
 }

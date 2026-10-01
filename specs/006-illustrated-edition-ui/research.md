@@ -138,9 +138,22 @@ at least 1.15:1 luminance ratio (FR-014, distinguishable).
   - Line art (no raster watercolour) keeps the size small and the drawings
     theme-able.
   - They are original drawings, so there's no copyright question.
-- **A paper texture** is a very low-contrast SVG `feTurbulence` noise, as a data URI
-  background on `body` (under 1 KB, opacity 0.04). It's disabled on Patriarca, where
-  the noise reads as dirt on a dark page.
+- **Paper texture** (revised 2026-10-01 at the user's request: "a precious old book that
+  gives a cozy feeling"):
+  - **Source:** original SVG `feTurbulence` noise tiles in `apps/pwa/public/textures/`
+    (each under 1 KB, precached as SVG).
+  - **Layering:** they are layered through the `--texture` token, and each layer has a
+    different tile size (240, 700 and 900 px), so the repetition doesn't show.
+  - **Macondo:** fine grain with faint fibres, large soft age stains, sparse foxing
+    freckles, and laid and chain lines (repeating gradients). A warm lamplight vignette
+    darkens toward the screen edges. Cards, lists and sheets carry a quieter grain
+    (`--leaf-texture`).
+  - **Patriarca:** dark grain with faint gold flecks and smoky mottling, under a candle
+    glow at the top and deep shadow at the edges.
+  - **Contrast:** the vignette sits behind the content (`body::before`, `z-index: -1`),
+    so text contrast is unaffected.
+  - **Tuning:** the first version's foxing was too strong (it read as stains). It was
+    tuned down by eye on device-size screenshots.
 
 ## R6. Guards
 

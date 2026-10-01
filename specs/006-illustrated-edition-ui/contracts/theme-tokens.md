@@ -27,7 +27,10 @@ tap size, fonts, radii, motion).
 | `--on-cloth` | label and border ink on cloth | see above |
 | `--bar` | translucent bar tint (usually `--leaf` at 78%) | — |
 | `--backdrop` | sheet backdrop | — |
-| `--texture` | `none` or a `url(data:…)` paper texture | — |
+| `--texture` | the page's background-image layers (paper grain, age, foxing, laid lines), or `none` | — |
+| `--texture-size` | one `background-size` per `--texture` layer | — |
+| `--leaf-texture` | a quieter grain for cards, lists and sheets, or `none` | — |
+| `--vignette` | the lamplight overlay: gradients fixed behind the content, or `none` | — |
 
 ## Non-colour tokens (per theme)
 

@@ -26,7 +26,17 @@
   --on-cloth: #f6eedc;
   --bar: rgb(251 247 238 / 0.78);
   --backdrop: rgb(42 36 25 / 0.36);
-  --texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.15 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Old paper: foxing, fibres and grain, age stains, and laid lines (006 research R5). */
+  --texture:
+    url('/textures/paper-foxing.svg'),
+    url('/textures/paper-grain.svg'),
+    url('/textures/paper-age.svg'),
+    repeating-linear-gradient(90deg, rgb(110 80 40 / 0.035) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgb(110 80 40 / 0.022) 0 1px, transparent 1px 4px);
+  --texture-size: 700px 700px, 240px 240px, 900px 900px, auto, auto;
+  --leaf-texture: url('/textures/leaf-grain.svg');
+  /* Lamplight: warm darkening toward the edges of the page. */
+  --vignette: radial-gradient(ellipse 125% 95% at 50% 42%, transparent 52%, rgb(128 84 34 / 0.17) 100%);
   --font-text: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --font-display: 'Cormorant', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
   --radius-group: 12px;

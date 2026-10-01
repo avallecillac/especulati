@@ -27,8 +27,9 @@ test.describe('US3: appearance', () => {
     await expect(html(page)).toHaveAttribute('data-theme', 'macondo');
     const light = await bodyBg(page);
     const lightMeta = await metaColor(page);
-    // Macondo has the paper texture; Patriarca has none to draw (R7).
-    expect(await bodyImage(page)).toContain('url(');
+    // Each theme draws its own aged-paper texture (research R5).
+    const lightImage = await bodyImage(page);
+    expect(lightImage).toContain('paper-grain.svg');
 
     await radio(page, 'Patriarca').click();
     await expect(html(page)).toHaveAttribute('data-theme', 'patriarca');
@@ -37,7 +38,7 @@ test.describe('US3: appearance', () => {
     const dark = await bodyBg(page);
     expect(dark).not.toBe(light);
     expect(await metaColor(page)).not.toBe(lightMeta);
-    expect(await bodyImage(page)).not.toContain('url(');
+    expect(await bodyImage(page)).toContain('night-grain.svg');
 
     await page.reload();
     await expect(page.getByTestId('ready')).toBeAttached();

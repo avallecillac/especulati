@@ -13,6 +13,13 @@ I envision a future where I can have themes."
 
 Export/import, previously numbered 006, becomes **007**.
 
+## Revisions
+
+- **2026-10-01, the user:** "Let's add some texture to the background. I want it to
+  feel like a precious old book that gives a cozy feeling." Both themes now draw an
+  aged-paper surface (grain, age stains, foxing, laid lines) under a lamplight
+  vignette (research R5; tokens in contracts/theme-tokens.md).
+
 ## Design references
 
 - ***Cien años de soledad*, 50th-anniversary illustrated edition** (Literatura Random

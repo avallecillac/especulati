@@ -98,7 +98,7 @@ main > :first-child:is(h2), .card > h2:first-child, .sheet h2 { margin-top: 0; }
 .vignette { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 8px 0 4px; }
 .vignette > :is(h1, p) { margin: 0; }
 
-.card { background: var(--leaf); border: 0.5px solid var(--rule); border-radius: var(--radius-group); padding: 16px; }
+.card { background: var(--leaf) var(--leaf-texture); border: 0.5px solid var(--rule); border-radius: var(--radius-group); padding: 16px; }
 .card + .card { margin-top: 12px; }
 .muted { color: var(--ink-soft); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -144,7 +144,7 @@ select { min-height: var(--tap); padding: 6px 12px; border-radius: 10px; border:
 /* Sheets (LogSheet, Confirm): a grabber, a slide-up, and a page scroll lock while one is open. */
 .sheet-backdrop { position: fixed; inset: 0; background: var(--backdrop); z-index: 30; display: flex; align-items: flex-end; overscroll-behavior: contain; animation: backdrop-in var(--dur) var(--ease); }
 .sheet {
-  position: relative; background: var(--leaf); width: 100%; max-width: 640px; margin: 0 auto;
+  position: relative; background: var(--leaf) var(--leaf-texture); width: 100%; max-width: 640px; margin: 0 auto;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   padding: 28px var(--gutter) calc(20px + env(safe-area-inset-bottom));
   max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
@@ -160,7 +160,7 @@ html:has(.sheet-backdrop) { overflow: hidden; }
 .actions { display: grid; gap: 10px; margin-top: 16px; }
 
 /* Grouped inset lists: one rounded leaf with hairline separators inset 16px; navigating rows end in a chevron. */
-ul.plain { list-style: none; padding: 0; margin: 0; background: var(--leaf); border-radius: var(--radius-group); overflow: hidden; }
+ul.plain { list-style: none; padding: 0; margin: 0; background: var(--leaf) var(--leaf-texture); border-radius: var(--radius-group); overflow: hidden; }
 ul.plain li { position: relative; min-height: 44px; padding: 11px 16px; display: flex; align-items: center; gap: 8px; }
 ul.plain li + li::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--rule); }
 ul.plain li:has(a[href^='#/book/'], a[href^='#/article/'])::after { content: '›'; flex: none; color: var(--rule); font-size: 1.4rem; line-height: 1; }

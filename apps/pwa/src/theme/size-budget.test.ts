@@ -9,9 +9,9 @@ const size = (dir: string, match: RegExp) =>
   readdirSync(dir).filter((f) => match.test(f)).reduce((sum, f) => sum + statSync(join(dir, f)).size, 0);
 
 describe('size budget', () => {
-  it('precached latin fonts + ornaments are under 400 KB', () => {
+  it('precached latin fonts + ornaments + paper textures are under 400 KB', () => {
     const fonts = size(join(PWA, 'public/fonts'), /-latin-wght-.*\.woff2$/);
-    const ornaments = size(join(PWA, 'src/ornaments'), /\.svelte$/);
+    const ornaments = size(join(PWA, 'src/ornaments'), /\.svelte$/) + size(join(PWA, 'public/textures'), /\.svg$/);
     expect(fonts).toBeGreaterThan(0);
     expect(ornaments).toBeGreaterThan(0);
     expect(fonts + ornaments).toBeLessThan(400 * 1024);
