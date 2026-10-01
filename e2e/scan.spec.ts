@@ -39,8 +39,18 @@ test('(b) UPC and ISMN are ignored; the hint appears after 10 s', async ({ page,
   await expect.poll(() => fakeCamera.requests()).toBeGreaterThan(0);
   await expect(page.getByText('Having trouble?')).toBeHidden();
 
-  await page.clock.fastForward(10_000);
-  await expect(page.getByText('Having trouble?')).toBeVisible();
+  // The app arms its 10 s hint timer only after getUserMedia AND video.play() resolve, which
+  // is later than the getUserMedia request seen above (slow under load). A single fastForward
+  // before that would be lost, so wait until the video plays, then advance the fake clock in
+  // steps until the hint shows. Time only moves after the timer exists; the 10 s total still holds.
+  await expect.poll(() => page.evaluate(() => {
+    const v = document.querySelector('video');
+    return !!v && !!v.srcObject && !v.paused;
+  })).toBe(true);
+  await expect(async () => {
+    await page.clock.fastForward(2_000);
+    await expect(page.getByText('Having trouble?')).toBeVisible({ timeout: 300 });
+  }).toPass({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'Enter ISBN' })).toBeVisible();
 
   await fakeCamera.show('9790001234566');

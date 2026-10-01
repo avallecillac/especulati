@@ -47,7 +47,7 @@ a, button, input, select, textarea, label, summary { touch-action: manipulation;
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .sync-btn.spinning svg { animation-duration: 3s; } }
 main {
-  flex: 1; max-width: 640px; width: 100%; margin: 0 auto;
+  flex: 1; max-width: 640px; width: 100%; margin: 0 auto; min-width: 0; overflow-wrap: anywhere;
   padding: var(--gutter); padding-bottom: calc(84px + env(safe-area-inset-bottom));
   padding-left: max(var(--gutter), env(safe-area-inset-left)); padding-right: max(var(--gutter), env(safe-area-inset-right));
 }
@@ -120,7 +120,7 @@ button:disabled { opacity: 0.5; }
 .chip[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 .segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 12px; background: var(--rule); border-radius: 999px; }
-.segmented button { border: 0; background: none; color: var(--ink-soft); border-radius: 999px; }
+.segmented button { border: 0; background: none; color: var(--ink); border-radius: 999px; }
 .segmented button[aria-selected='true'] { background: var(--leaf); color: var(--ink); font-weight: 600; }
 .article-main { display: grid; min-width: 0; }
 .article-title { overflow-wrap: anywhere; }

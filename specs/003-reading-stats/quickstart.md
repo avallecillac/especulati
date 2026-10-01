@@ -53,7 +53,7 @@ This run is on the tree merged to `main`: 003 only, without 006.
 | `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; no dependency violations |
 | `pnpm test` | ✅ 573 tests, 65 files |
 | `pnpm test:convergence` | ✅ 7/7 (1,000 runs), after the `LogEvent` abandon-at-page change |
-| `pnpm e2e` | ✅ 105/105; the new specs (`stats`, `book-pace`, `abandon-page`), plus the fixed `timezone` and `duplicates`, pass with `--repeat-each=2` |
+| `pnpm e2e` | ✅ 105/105. **Correction (2026-10-01):** the `--repeat-each=2` run listed here originally didn't repeat, because `pnpm e2e -- … --repeat-each` drops the flag. Re-run properly (`cd e2e && npx playwright test … --repeat-each=2`) on the 006 branch: `stats`, `book-pace`, `abandon-page`, `timezone` and `duplicates` all pass twice |
 | Scenarios 1–19 | ✅ all automated, at the levels listed in the table |
 | SC-001 / R8 performance | ✅ `stats(2026)` takes **25 ms** on 400 books, 10,000 events and 3,650 days (budget 100 ms). The first attempt took 130 ms; packing events as JSON in SQLite fixed it (research R8). The Stats screen shows within 200 ms in e2e |
 | SC-005: articles don't change book stats | ✅ covered by 005's `articles.test.ts` (T026) |

@@ -38,7 +38,9 @@
   });
 </script>
 
-<div class="scroll">
+<!-- A scrollable region must be keyboard-focusable (axe scrollable-region-focusable). -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<div class="scroll" role="region" aria-label="Reading heatmap" tabindex="0">
   <div class="grid">
     {#each weeks as w, i (i)}
       <div class="week">
@@ -56,7 +58,7 @@
 </div>
 
 <style>
-  .scroll { overflow-x: auto; padding-bottom: 6px; }
+  .scroll { overflow-x: auto; max-width: 100%; padding-bottom: 6px; }
   .grid {
     display: flex; gap: 3px; width: max-content;
   }

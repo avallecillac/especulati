@@ -108,9 +108,9 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
 
 ## Phase 6: Polish
 
-- [ ] T016 [P] Write `e2e/a11y.spec.ts`, adding `@axe-core/playwright` as a dev
+- [X] T016 [P] Write `e2e/a11y.spec.ts`, adding `@axe-core/playwright` as a dev
   dependency, and `e2e/layout.spec.ts` (320 px). Fix what they find.
-- [ ] T017 Size budget check: fonts plus ornaments in the precache stay under 400 KB.
+- [X] T017 Size budget check: fonts plus ornaments in the precache stay under 400 KB.
   The perf e2e stays green.
 - [ ] T018 Run the full validation (main session):
   - the full suite plus `--repeat-each=2` on the new specs;
