@@ -33,7 +33,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm e2e
 
 ## Validation results
 
-### 2026-10-01, dev container, Chromium 141 headless, version 0.7.0 (branch only, not merged)
+### 2026-10-01, dev container, Chromium 141 headless, version 0.7.0 (merged to main on 2026-10-01, with the aged-paper texture revision)
 
 | Check | Result |
 |---|---|
