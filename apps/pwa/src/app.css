@@ -190,3 +190,5 @@ button.hit { width: 100%; min-height: var(--tap); border-radius: 12px; justify-c
 .qr { width: 240px; max-width: 100%; margin: 12px 0; background: #fff; }
 .qr svg { width: 100%; height: auto; display: block; }
 code[data-testid='sync-code'] { word-break: break-all; }
+
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }

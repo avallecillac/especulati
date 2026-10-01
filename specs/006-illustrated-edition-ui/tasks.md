@@ -112,7 +112,7 @@ data-model.md, contracts/theme-tokens.md, contracts/ui-shell.md, contracts/visua
   dependency, and `e2e/layout.spec.ts` (320 px). Fix what they find.
 - [X] T017 Size budget check: fonts plus ornaments in the precache stay under 400 KB.
   The perf e2e stays green.
-- [ ] T018 Run the full validation (main session):
+- [X] T018 Run the full validation (main session):
   - the full suite plus `--repeat-each=2` on the new specs;
   - screenshots of each screen in both themes for the user's review;
   - bump the version to 0.7.0.

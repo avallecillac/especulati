@@ -30,3 +30,31 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm e2e
    web-page artefact: tap flashes, text selection, zoom, jumpy bars (SC-001).
 2. Settings → Appearance → Patriarca, then back to Automatic. Toggle iOS dark mode.
 3. Turn on Reduce Motion and check the transitions become fades.
+
+## Validation results
+
+### 2026-10-01, dev container, Chromium 141 headless, version 0.7.0 (branch only, not merged)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; no dependency violations |
+| `pnpm test` | ✅ 687 tests, 72 files: theme tokens, contrast, colour guard, pre-paint consistency, size budget, nav, appearance, coverCloth |
+| `pnpm e2e` | ✅ 117/117. The new specs (`shell`, `appearance`, `a11y`, `layout`) plus the 003 specs pass with `--repeat-each=2`, run as `cd e2e && npx playwright test … --repeat-each=2` (62/62) |
+| Scenarios 1–15 | ✅ all automated |
+| SC-002: axe | ✅ no serious or critical WCAG 2 A/AA issues on 10 screens in both themes. Two real issues were fixed: segmented-control text contrast, and the heatmap scroller not being focusable |
+| SC-003: contrast | ✅ every pair in the contract is AA in both themes |
+| SC-006: weight | ✅ precached Latin fonts plus ornaments come to about 180 KB (budget 400 KB); the stats and write perf tests are unchanged |
+| SC-007: 320 px | ✅ no horizontal overflow on any screen with a 120-character title |
+| SC-001: native feel | ⏳ manual, by the user on the iPhone (below) |
+
+**Decisions made during review:**
+- **Running agents in parallel:** Phase 1 ran alongside 003 US4 and avoided its files.
+  Both e2e runs share port 4173, so concurrent runs collide.
+- **`reducedMotion` lives under `contextOptions`:** it isn't a top-level Playwright
+  option, so setting it there was silently ignored.
+- **Unselected segmented text uses `--ink`:** `--ink-soft` on the track was 3.97:1.
+- **Patriarca heatmap:** `--heat-0` and `--heat-1` were lightened, so empty days are
+  visible on the dark card.
+- **Checkboxes and radios:** they take `accent-color: var(--accent)`.
+- **Scroll lock under sheets:** CSS `:has()` instead of a JS class.
+- **Home:** it drops the Rule, because the Sprig already separates the groups.

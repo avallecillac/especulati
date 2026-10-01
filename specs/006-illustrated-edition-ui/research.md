@@ -94,7 +94,7 @@
 | `--ornament` | `#B8904A` | ornaments |
 | `--butterfly` | `#D9B040` | yellow butterflies |
 | `--danger` | `#E27B63` | danger |
-| `--heat-0`…`--heat-4` | `#2A201B`, `#4B2724`, `#7A302B`, `#A9713A`, `#DDB56A` | heatmap levels |
+| `--heat-0`…`--heat-4` | `#33281F`, `#5A2C28`, `#7A302B`, `#A9713A`, `#DDB56A` | heatmap levels |
 | `--cloth-1`…`--cloth-6` | oxblood `#6E2424`, bottle green `#24453B`, navy `#1F3148`, brass `#6B5222`, plum `#4A2B3D`, tobacco `#5A3A22` | generated covers |
 
 All values in this table are as shipped in `src/theme/*.css`; `--on-cloth` is `#F6EEDC` (Macondo) / `#EFE3CC` (Patriarca). The contrast test checks `ink`, `ink-soft`, `accent` and `danger` on both `paper` and

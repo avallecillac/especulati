@@ -49,6 +49,12 @@ pnpm --filter @readerlog/extension build:e2e  # test build with localhost access
 - `apps/pwa`: Svelte 5 UI. The UI never touches SQLite directly; it talks to
   `src/worker/db.worker.ts` through `src/lib/dbClient.ts`
   (`specs/001-local-book-log/contracts/worker-api.md`).
+- **Themes (006):** colours, fonts and radii live only in `apps/pwa/src/theme/<id>.css`
+  as tokens (`contracts/theme-tokens.md` in 006). Screens use tokens; a guard test fails
+  on literal colours. Ornaments in `src/ornaments/` are original SVG art, `aria-hidden`.
+  Custom e2e contexts need `contextOptions: { reducedMotion: 'reduce' }`, and
+  `--repeat-each` must be passed to `npx playwright test` in `e2e/`, because
+  `pnpm e2e --` drops it.
 - Book status and the last page are **derived** from events, never stored. Removing
   anything sets `deleted_at` (a tombstone); rows are never deleted.
 - `local_date` is always explicit and computed in the shell (`apps/pwa/src/lib/clock.ts`).
