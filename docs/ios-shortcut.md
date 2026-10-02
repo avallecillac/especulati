@@ -31,23 +31,37 @@ Open the Shortcuts app, tap **+**, and name it **Log in Readerlog**. Add these a
 order:
 
 1. **Receive** *URLs* input from **Share Sheet** (if there's no input, *Stop and Respond*).
-2. **Get Article using Safari Reader** with the *Shortcut Input* (URL).
-3. **Get Details of Articles**: **Title**. Repeat for **Author**, then again for **Body**.
-   Keep each result in a variable (for example `Title`, `Author`, `Body`).
-4. **Count** the *Body* (type: **Words**). Keep the result as `Words`.
-5. **Current Date**, then **Format Date** with the format **ISO 8601**, and turn on
-   **Include ISO 8601 Time** (it's off by default; a date alone is rejected). Keep it as
-   `At`.
-6. **Dictionary** with the keys below. Each value except `v` must be a **variable**
-   (a blue pill), not typed text: tap the value field, then **Select Variable**, then
+2. **Get Article using Safari Reader** from the *Shortcut Input*. Its output is a blue
+   **Article** variable. Steps 3 and 5 read the title, author and text straight from it.
+
+   > **Don't add "Get Details of Articles" actions.** Each new action automatically takes
+   > the output of the action just above it. So a second or third *Get Details* reads the
+   > previous one's text instead of the article, and comes back empty. That gives no
+   > title, a word count of 0, and no reading time.
+3. **Count**, set to **Words**. For its input:
+   1. Tap the input field, choose **Select Variable**, and tap **Article** (step 2).
+   2. Tap the blue **Article** pill again, and choose **Body** from the list.
+
+   The pill now reads **Article › Body**.
+4. **Current Date**, then **Format Date** with the format **ISO 8601**, and turn on
+   **Include ISO 8601 Time** (it's off by default; a date alone is rejected).
+5. **Dictionary** with the keys below. Each value except `v` must be a **variable**
+   (a blue pill), not typed text: tap the value field, choose **Select Variable**, then
    tap the action whose output you want. Typing `Title` gives the word "Title".
-   - `v`: a **Number**, `1`
-   - `url`: **Text**, the *Shortcut Input*
-   - `title`: **Text**, `Title`
-   - `author`: **Text**, `Author`
-   - `words`: **Number**, `Words`
-   - `at`: **Text**, `At`
-7. **Base64 Encode** the *Dictionary* (encode, not decode). Tap **Show More** and set
+
+   | Key | Type | Value |
+   |---|---|---|
+   | `v` | Number | `1` (typed) |
+   | `url` | Text | **Shortcut Input** |
+   | `title` | Text | **Article**, then tap the pill and choose **Title** → *Article › Title* |
+   | `author` | Text | **Article**, then tap the pill and choose **Author** → *Article › Author* |
+   | `words` | Number | **Count** (step 3) |
+   | `at` | Text | **Formatted Date** (step 4) |
+6. *(Optional, to check it once.)* **Show Result** with the **Dictionary**. Share an
+   article: you should see its real title, author and a word count above 0. Remove this
+   action afterwards.
+7. **Base64 Encode** the **Dictionary** (encode, not decode). Pick the Dictionary as its
+   input with **Select Variable**, rather than relying on the action above it. Tap **Show More** and set
    **Line Breaks** to **None**: a line break ends the link, so everything after the
    first 76 characters would be lost.
 8. **URL Encode** the Base64 text.
@@ -86,7 +100,10 @@ If the address is already in your log, Readerlog asks whether to **Log again** o
   (step 7). Check that every Dictionary
   value in step 6 is a blue variable pill (a typed `At` isn't a date), that step 7 is
   *Base64 Encode* and step 8 is *URL Encode*. Use **Add article** to log it by hand.
-- **No reading time (—).** Shortcuts couldn't count the words. Paywalled pages give only a
+- **No title, and no reading time, on every article.** The Shortcut still has
+  *Get Details of Articles* actions chained one after another (setup step 3, note). Read
+  Title, Author and Body from the **Article** variable instead.
+- **No reading time (—) on some sites only.** Shortcuts couldn't count the words. Paywalled pages give only a
   preview, because Safari Reader fetches without your cookies. The article is still saved.
 - **Sync stopped after a long time unused.** Chrome may have cleared the site's data. Join
   again with your sync code (setup step 2).
