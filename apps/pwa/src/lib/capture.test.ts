@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureId, decodeCapture } from './capture.ts';
+import { captureId, decodeCapture, highlightCaptureId } from './capture.ts';
 
 const std = (o: unknown): string => Buffer.from(JSON.stringify(o), 'utf8').toString('base64');
 const AT = '2026-03-04T12:00:00Z';
@@ -102,5 +102,47 @@ describe('captureId', () => {
     expect(await captureId(a)).toBe(await captureId(b));
     expect(await captureId(a)).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(await captureId(value(std({ ...base, at: '2026-03-04T12:00:01Z' })))).not.toBe(await captureId(a));
+  });
+});
+
+describe('decodeCapture: highlight mode (007)', () => {
+  it('returns quote and note, normalised', () => {
+    const c = value(std({ ...base, quote: '  Hello \t  world \r\n\r\n\r\n\r\n next  ', note: '  my  note\n\n\n\nmore ' }));
+    expect(c.quote).toBe('Hello world\n\nnext');
+    expect(c.note).toBe('my  note\n\nmore');
+  });
+
+  it('a missing, empty or blank quote leaves the 005 behaviour: quote and note are null', () => {
+    for (const quote of [undefined, '', '   \n ', 5, null]) {
+      const c = value(std({ ...base, quote, note: 'ignored without a quote' }));
+      expect(c.quote).toBeNull();
+      expect(c.note).toBeNull();
+      expect(c.title).toBe('A title');
+      expect(c.wordCount).toBe(2380);
+    }
+    expect(value(std(base)).quote).toBeNull();
+  });
+
+  it('a quote over 5,000 characters is the reason quote; exactly 5,000 is fine', () => {
+    const r = decodeCapture(std({ ...base, quote: 'x'.repeat(5001) }));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.reason).toBe('quote');
+    expect(value(std({ ...base, quote: 'é'.repeat(5000) })).quote).toHaveLength(5000);
+    expect(decodeCapture(std({ ...base, quote: '😀'.repeat(5001) })).ok).toBe(false);
+  });
+
+  it('an over-long note is dropped; the highlight keeps its quote', () => {
+    const c = value(std({ ...base, quote: 'q', note: 'n'.repeat(5001) }));
+    expect(c.quote).toBe('q');
+    expect(c.note).toBeNull();
+  });
+});
+
+describe('highlightCaptureId', () => {
+  it('is deterministic per url and instant, and differs from the article id', async () => {
+    const a = value(std(base));
+    expect(await highlightCaptureId(a.url, a.at)).toBe(await highlightCaptureId(a.url, a.at));
+    expect(await highlightCaptureId(a.url, a.at)).not.toBe(await captureId(a));
+    expect(await highlightCaptureId(a.url, '2026-03-04T12:00:01.000Z')).not.toBe(await highlightCaptureId(a.url, a.at));
   });
 });

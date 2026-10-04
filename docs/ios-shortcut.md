@@ -109,3 +109,42 @@ If the address is already in your log, Readerlog asks whether to **Log again** o
   preview, because Safari Reader fetches without your cookies. The article is still saved.
 - **Sync stopped after a long time unused.** Chrome may have cleared the site's data. Join
   again with your sync code (setup step 2).
+
+## Highlight in Readerlog
+
+A second Shortcut keeps a passage you selected, together with the article, in one go.
+
+### Build it
+
+1. In the Shortcuts app, touch and hold **Log in Readerlog**, then tap **Duplicate**.
+2. Open the copy and rename it **Highlight in Readerlog**. It still appears in the Share
+   Sheet for **URLs** only.
+3. Add **Get Clipboard** right after *Get Article using Safari Reader*.
+4. In the **Dictionary**, add one more key: `quote`, type **Text**. For its value tap
+   **Select Variable** and choose **Clipboard**. The pill shows the clipboard icon, not
+   the share-sheet icon. Leave the other keys as they are.
+
+### Using it
+
+1. In Chrome (or Safari), select the passage and tap **Copy**.
+2. Tap Share, then **Highlight in Readerlog**.
+
+Readerlog opens and shows **Highlight saved** with the passage. If the article wasn't in
+your log yet, it is logged too. Tap **Add note** to write a note, or **Undo** within 6
+seconds to remove the highlight (and the article, if this link just logged it).
+
+The first time, iOS asks whether the Shortcut may paste from other apps. Choose **Always
+Allow**, so later runs stay at three taps.
+
+A passage over 5,000 characters isn't saved; the screen says so. Opening the same link
+twice never saves twice.
+
+### Troubleshooting
+
+- **"Highlight saved", but the quote is old.** You didn't Copy first. The Shortcut keeps
+  whatever was last on the clipboard.
+- **The article is logged but nothing is highlighted.** The clipboard was empty, so no
+  `quote` was sent. Copy the passage and run it again.
+- **"The passage is too long".** Select less text. Nothing was saved.
+- **Anything else.** The *Troubleshooting* list above applies too: the rest of the Shortcut
+  is the same.

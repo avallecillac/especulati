@@ -272,11 +272,11 @@ needed) with the highlight.
 
 ### Tests first
 
-- [ ] T018 [P] [US2] Extend `apps/pwa/src/lib/capture.test.ts`:
+- [X] T018 [P] [US2] Extend `apps/pwa/src/lib/capture.test.ts`:
   - `decodeCapture` returns `quote` and `note`, normalised;
   - a quote over 5,000 characters gives the reason `'quote'`;
   - a missing or empty quote leaves the 005 behaviour unchanged.
-- [ ] T019 [P] [US2] Write `e2e/capture-highlight.spec.ts` per
+- [X] T019 [P] [US2] Write `e2e/capture-highlight.spec.ts` per
   contracts/capture-highlight.md:
   - a link with `quote` for a new URL logs the article and shows "Highlight saved" with
     the quote;
@@ -289,14 +289,14 @@ needed) with the highlight.
 
 ### Implementation
 
-- [ ] T020 [US2] Highlight mode:
+- [X] T020 [US2] Highlight mode:
   - `apps/pwa/src/lib/capture.ts`: `quote` and `note` in `Capture`, the
     `CaptureProblem` value `'quote'`, and `highlightCaptureId(url, at)`;
   - `src/screens/Capture.svelte`: highlight mode, per contracts/capture-highlight.md
     steps 1–5.
 
   T018 and T019 must pass, and `capture-link.spec.ts` must stay green.
-- [ ] T021 [US2] `docs/ios-shortcut.md`: a new section, "Highlight in Readerlog",
+- [X] T021 [US2] `docs/ios-shortcut.md`: a new section, "Highlight in Readerlog",
   covering duplicating, **Get Clipboard**, the `quote` key, Always Allow pasting, and
   use (select, Copy, Share). Add a troubleshooting line.
 

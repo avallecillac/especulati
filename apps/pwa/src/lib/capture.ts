@@ -1,4 +1,4 @@
-import { normalizeUrl, parseWordCount, siteOf } from '@readerlog/core';
+import { normalizeNote, normalizeQuote, normalizeUrl, parseWordCount, siteOf } from '@readerlog/core';
 import { uuidFromHash } from './ids.ts';
 
 /** A capture link's payload, validated (contracts/capture.md). */
@@ -12,10 +12,14 @@ export interface Capture {
   wordCount: number | null;
   /** The capture instant as a UTC ISO string: the idempotency key with the address (research R5). */
   at: string;
+  /** The highlighted passage (007), normalized; null = an article capture (005). */
+  quote: string | null;
+  /** Only ever set together with `quote`. */
+  note: string | null;
 }
 
 /** Which part of the payload is wrong: shown on the damaged-link screen. */
-export type CaptureProblem = 'encoding' | 'v' | 'url' | 'at';
+export type CaptureProblem = 'encoding' | 'v' | 'url' | 'at' | 'quote';
 
 export interface CaptureError {
   reason: CaptureProblem;
@@ -69,6 +73,12 @@ export function decodeCapture(d: string) {
   const rawWords = typeof p['words'] === 'string' && /^\s*\d+\s*$/.test(p['words']) ? Number(p['words']) : p['words'];
   const words = typeof rawWords === 'number' ? parseWordCount(rawWords) : null;
 
+  // A quote over the limit saves nothing, not even the article (contracts/capture-highlight.md).
+  const q = normalizeQuote(typeof p['quote'] === 'string' ? p['quote'] : '');
+  if (!q.ok) return fail('quote');
+  // A note that is too long is dropped: the passage is the point, and it is added by hand later.
+  const n = q.value !== null && typeof p['note'] === 'string' ? normalizeNote(p['note']) : null;
+
   const value: Capture = {
     url: url.value,
     site,
@@ -76,6 +86,8 @@ export function decodeCapture(d: string) {
     author: author === '' ? null : author,
     wordCount: words !== null && words.ok && words.value > 0 ? words.value : null,
     at: new Date(at).toISOString(),
+    quote: q.value,
+    note: n !== null && n.ok ? n.value : null,
   };
   return { ok: true as const, value };
 }
@@ -83,3 +95,7 @@ export function decodeCapture(d: string) {
 /** The derived article id: the same link opened twice gives the same id (research R5). */
 export const captureId = (c: Pick<Capture, 'url' | 'at'>): Promise<string> =>
   uuidFromHash(`readerlog-capture-v1|${c.url}|${c.at}`);
+
+/** The derived highlight id: the same link opened twice gives "Already saved" (research 007 R6). */
+export const highlightCaptureId = (url: string, at: string): Promise<string> =>
+  uuidFromHash(`readerlog-highlight-v1|${url}|${at}`);
