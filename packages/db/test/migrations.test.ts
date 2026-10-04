@@ -9,7 +9,7 @@ describe('migration 1', () => {
   it('reaches user_version 1 with every table and index from contracts/db-schema.md', () => {
     const raw = emptyDb();
     migrate(raw, { to: 1 });
-    expect(SCHEMA_VERSION).toBe(3);
+    expect(SCHEMA_VERSION).toBe(4);
     expect(raw.selectValue('PRAGMA user_version')).toBe(1);
     expect(names(raw, 'table')).toEqual(['change_log', 'field_clock', 'item_tags', 'items', 'meta', 'reading_events', 'tags']);
     expect(names(raw, 'index')).toEqual(['idx_changelog_unpushed', 'idx_events_date', 'idx_events_item_date', 'idx_items_type_read']);

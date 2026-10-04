@@ -1,6 +1,6 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import {
-  hlcReceive, INSERT_FIELDS, mergeOp, parseRemoteOp,
+  hlcReceive, INSERT_FIELDS, mergeOp, parseRemoteOp, tierOf,
   type DeviceId, type FieldValue, type Hlc, type Instant, type OpWire, type RemoteOp, type Table,
 } from '@readerlog/core';
 import { readMeta, rollbackQuietly, upsertRow, writeMeta } from './apply.ts';
@@ -35,7 +35,8 @@ type Outcome = 'applied' | 'parked';
 function canInsert(db: Database, op: RemoteOp): boolean {
   if (!INSERT_FIELDS[op.tbl].every((f) => Object.hasOwn(op.fields, f))) return false;
   // A reading event whose item hasn't arrived yet can't be inserted (foreign key): wait for it.
-  if (op.tbl === 'reading_events') {
+  // Likewise a highlight whose item hasn't arrived.
+  if (op.tbl === 'reading_events' || op.tbl === 'highlights') {
     return db.selectValue('SELECT 1 FROM items WHERE id = ?', [op.fields.item_id]) !== undefined;
   }
   return true;
@@ -130,23 +131,36 @@ export function applyRemoteOps(db: Database, ops: readonly RemoteOp[], deviceId:
   }
 }
 
-/** Local (not yet pushed) ops in seq order, as they go into an encrypted batch (FR-004). */
-export function unpushedOps(db: Database, limit: number, upToSeq: number = Number.MAX_SAFE_INTEGER): { maxSeq: number; ops: OpWire[] } {
+/**
+ * Local (not yet pushed) ops in seq order, as they go into an encrypted batch (FR-004). A batch holds one
+ * tier only (007 contracts/sync-tiers.md): it ends before the first op whose tier differs from the first op's,
+ * so an older version that skips a batch it can't read never skips a base op with it.
+ */
+/**
+ * The next batch to push. A new batch is single-tier: it ends where `tierOf` changes, so a device
+ * that doesn't know the `highlights` table skips only highlight batches (007 research R2). A re-send
+ * (`upToSeq` given) returns every unpushed op up to that seq, so the retried batch matches the one
+ * first sent, and `completePush(maxSeq)` never marks an unsent op as pushed.
+ */
+export function unpushedOps(db: Database, limit: number, upToSeq?: number): { maxSeq: number; ops: OpWire[] } {
   const rows = db.selectObjects(
     'SELECT seq, op_id, hlc, tbl, row_id, fields_json FROM change_log WHERE pushed = 0 AND seq <= ? ORDER BY seq LIMIT ?',
-    [upToSeq, limit],
+    [upToSeq ?? Number.MAX_SAFE_INTEGER, limit],
   );
   let maxSeq = 0;
-  const ops: OpWire[] = rows.map((r) => {
+  const ops: OpWire[] = [];
+  const tier = rows.length > 0 ? tierOf(rows[0]!.tbl as Table) : null;
+  for (const r of rows) {
+    if (upToSeq === undefined && tierOf(r.tbl as Table) !== tier) break;
     maxSeq = Math.max(maxSeq, r.seq as number);
-    return {
+    ops.push({
       op: r.op_id as string,
       hlc: r.hlc as string,
       tbl: r.tbl as Table,
       row: r.row_id as string,
       fields: JSON.parse(r.fields_json as string) as OpWire['fields'],
-    };
-  });
+    });
+  }
   return { maxSeq, ops };
 }
 

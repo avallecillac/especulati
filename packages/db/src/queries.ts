@@ -4,7 +4,8 @@ import { detailsStatusFromDb } from '@readerlog/core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import { pace as computePace, readThroughs as computeReadThroughs, type Pace } from '@readerlog/core';
 import { deriveStatus, eventOrder, findDuplicates, lastActivity, lastPage, type Item, type ReadingEvent } from '@readerlog/core';
-import { intOrNull, loadBookSnapshot, mergeChainIds, rowToEvent, rowToItem, text, textOrNull } from './snapshot.ts';
+import type { Highlight } from '@readerlog/core';
+import { intOrNull, loadBookSnapshot, mergeChainIds, rowToEvent, rowToHighlight, rowToItem, text, textOrNull } from './snapshot.ts';
 
 /** Read models returned to the UI (contracts/worker-api.md). Plain JSON: nulls, no brands. */
 export interface BookCard {
@@ -300,4 +301,15 @@ export function article(db: Database, itemId: string): Article | null {
 /** Live articles with this normalized address, newest first (FR-008). */
 export function findArticleByUrl(db: Database, url: string): Article[] {
   return db.selectArrays(`SELECT ${ARTICLE_COLS} ${LIVE_ARTICLES} AND url = ? ${NEWEST_FIRST}`, [url]).map(articleFromArray);
+}
+
+/** Live highlights of a live item, oldest first (007 data-model). `[]` when the item is removed or unknown. */
+export function highlightsView(db: Database, itemId: string): Highlight[] {
+  return db
+    .selectObjects(
+      `SELECT h.* FROM highlights h JOIN items i ON i.id = h.item_id
+       WHERE h.item_id = ? AND h.deleted_at IS NULL AND i.deleted_at IS NULL ORDER BY h.created_at, h.id`,
+      [itemId],
+    )
+    .map(rowToHighlight);
 }

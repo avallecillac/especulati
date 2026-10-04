@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '@readerlog/core';
-import { migrate, ReaderlogDb, SCHEMA_VERSION } from '../src/index.ts';
+import { migrate, ReaderlogDb } from '../src/index.ts';
 import { dumpLogical, emptyDb, DEVICE, uuid } from './helpers.ts';
 
 const TABLES = ['items', 'reading_events', 'change_log', 'field_clock', 'meta'];
@@ -33,8 +33,7 @@ describe('migration 3', () => {
     const raw = v2Fixture();
     const before = dumpLogical(raw, TABLES);
     const covers = dumpLogical(raw, ['covers']);
-    migrate(raw);
-    expect(SCHEMA_VERSION).toBe(3);
+    migrate(raw, { to: 3 });
     expect(raw.selectValue('PRAGMA user_version')).toBe(3);
     // items gained a column, so compare through the new column being null everywhere.
     expect(raw.selectValue('SELECT count(*) FROM items WHERE merged_into IS NOT NULL')).toBe(0);
@@ -58,9 +57,9 @@ describe('migration 3', () => {
 
   it('is a no-op when run again', () => {
     const raw = v2Fixture();
-    migrate(raw);
+    migrate(raw, { to: 3 });
     const before = dumpLogical(raw, TABLES);
-    migrate(raw);
+    migrate(raw, { to: 3 });
     expect(raw.selectValue('PRAGMA user_version')).toBe(3);
     expect(dumpLogical(raw, TABLES)).toEqual(before);
   });

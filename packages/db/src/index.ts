@@ -1,16 +1,16 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Rejection, type Result, type StatsView } from '@readerlog/core';
+import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Highlight, type HighlightSnapshot, type Rejection, type Result, type StatsView } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
-import { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
+import { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, mergeChainIds } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { articleStatsView, statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
-import { article, articles, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type ArticleCursor, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
+import { article, articles, highlightsView, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type ArticleCursor, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
-export { loadBookSnapshot, loadBooksSnapshot, mergeChainIds } from './snapshot.ts';
+export { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, mergeChainIds } from './snapshot.ts';
 export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
 export { articleStatsView, loadArticles, loadStatsBooks, statsView } from './stats.ts';
@@ -89,6 +89,11 @@ export class ReaderlogDb {
 
   article(itemId: string): Article | null {
     return article(this.raw, itemId);
+  }
+
+  /** Live highlights of a live item, oldest first; `[]` for a removed or unknown item. */
+  highlights(itemId: string): Highlight[] {
+    return highlightsView(this.raw, itemId);
   }
 
   findArticleByUrl(url: string): Article[] {
@@ -172,18 +177,18 @@ export class ReaderlogDb {
   }
 
   /** The snapshot each command kind needs: one book, or several for merge/dismiss (contracts/commands-004.md). */
-  #snapshotFor(cmd: Command): BookSnapshot | BooksSnapshot | null {
+  #snapshotFor(cmd: Command): BookSnapshot | BooksSnapshot | HighlightSnapshot | null {
     switch (cmd.kind) {
       case 'MergeBooks':
         return loadBooksSnapshot(this.raw, [cmd.survivorId, ...mergeChainIds(this.raw, cmd.duplicateId)]);
       case 'DismissDuplicate':
         return loadBooksSnapshot(this.raw, [cmd.itemA, cmd.itemB]);
       case 'AddHighlight':
+        return loadHighlightSnapshot(this.raw, cmd.highlightId, cmd.itemId);
       case 'EditHighlightNote':
       case 'RemoveHighlight':
       case 'RestoreHighlight':
-        // TODO(007 T006): load the HighlightSnapshot (snapshot.ts) and the highlights table.
-        throw new Error('highlight commands are not supported by the db yet');
+        return loadHighlightSnapshot(this.raw, cmd.highlightId, null);
       default:
         return loadBookSnapshot(this.raw, cmd.itemId);
     }

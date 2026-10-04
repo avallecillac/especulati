@@ -102,6 +102,18 @@ describe('applyRemoteOps', () => {
     expect(raw.selectValue('SELECT deleted_at FROM duplicate_dismissals WHERE id=?', [uuid(60)])).toBe('2026-09-02T00:00:00.000Z');
   });
 
+  it('parks a highlight whose item has not arrived, then applies it once the item does', () => {
+    const { raw } = openTestDb();
+    const hl = op('highlights', uuid(70), { item_id: uuid(1), quote: 'A passage', created_at: '2026-09-01T10:00:00.000Z', local_date: '2026-09-01' }, h(T0 + 1));
+    const hlEdit = op('highlights', uuid(70), { note: 'A note' }, h(T0 + 2));
+    expect(applyRemoteOps(raw, [hlEdit, hl], DEVICE, wall).parked).toBe(2);
+    expect(raw.selectValue('SELECT count(*) FROM sync_inbox')).toBe(2);
+    expect(raw.selectValue('SELECT count(*) FROM highlights')).toBe(0);
+    expect(applyRemoteOps(raw, [itemInsert(uuid(1), h(T0))], DEVICE, wall).applied).toBe(3);
+    expect(raw.selectValue('SELECT count(*) FROM sync_inbox')).toBe(0);
+    expect(raw.selectObjects('SELECT item_id, quote, note FROM highlights WHERE id = ?', [uuid(70)])).toEqual([{ item_id: uuid(1), quote: 'A passage', note: 'A note' }]);
+  });
+
   it('advances meta.hlc past every received hlc and later local writes stamp greater', () => {
     const t = openTestDb();
     const far = h(T0 + 3_600_000, 4);

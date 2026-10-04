@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OpWire } from '@readerlog/core';
 import { pushAll, PUSH_LIMIT, type PushDeps, type PushSource } from '../src/push.ts';
 import type { RelayResult } from '../src/relayClient.ts';
+import { openTestDb, uuid } from '../../db/test/helpers.ts';
 
 const op = (i: number) => ({ i }) as unknown as OpWire;
 
@@ -91,5 +92,73 @@ describe('pushAll', () => {
     const out = await pushAll(source, deps);
     expect(out).toEqual({ pushed: 2, failure: null });
     expect(state.ops).toHaveLength(0);
+  });
+});
+
+describe('pushAll over the db source: batch tiers (007, contracts/sync-tiers.md)', () => {
+  it('[items, highlights, highlights, reading_events] goes out as three single-tier batches, in order', async () => {
+    const t = openTestDb();
+    t.tick();
+    expect(t.db.dispatch({ kind: 'AddBook', itemId: uuid(1), title: 'Dune', startNow: false, localDate: '2026-09-01' }, t.env).ok).toBe(true);
+    for (const n of [0x30, 0x31]) {
+      t.tick();
+      expect(t.db.dispatch({ kind: 'AddHighlight', highlightId: uuid(n), itemId: uuid(1), quote: `Passage ${n}`, localDate: '2026-09-01' }, t.env).ok).toBe(true);
+    }
+    t.tick();
+    expect(t.db.dispatch({ kind: 'LogEvent', itemId: uuid(1), eventId: uuid(0x40), type: 'progress', page: 5, localDate: '2026-09-02' }, t.env).ok).toBe(true);
+    const logged = t.raw.selectValues('SELECT tbl FROM change_log ORDER BY seq').map(String);
+    expect(logged).toEqual(['items', 'highlights', 'highlights', 'reading_events']);
+
+    const source: PushSource<number> = {
+      next: (limit, upTo) => {
+        const { maxSeq, ops } = t.db.unpushedOps(limit, upTo);
+        return { ops, token: maxSeq };
+      },
+      complete: (token) => t.db.completePush(token),
+      pending: () => {
+        const p = t.db.syncMeta().pendingBatch;
+        return p ? { batchId: p.batchId, token: p.maxSeq } : null;
+      },
+      setPending: (p) => t.db.setSyncMeta({ pendingBatch: p ? { batchId: p.batchId, maxSeq: p.token } : null }),
+    };
+    const sent: string[][] = [];
+    let ids = 0;
+    const deps: PushDeps = {
+      client: { postBatch: () => Promise.resolve({ ok: true, value: { seq: 1, duplicate: false } }) },
+      seal: (ops, batchId) => {
+        sent.push(ops.map((o) => o.tbl));
+        return Promise.resolve({ batchId, iv: '', ct: '' });
+      },
+      newBatchId: () => `id-${++ids}`,
+    };
+    const out = await pushAll(source, deps);
+    expect(sent).toEqual([['items'], ['highlights', 'highlights'], ['reading_events']]);
+    expect(out).toEqual({ pushed: 4, failure: null });
+    expect(t.db.pendingCount()).toBe(0);
+  });
+
+  it('a re-sent pending batch carries the same single-tier content', () => {
+    const t = openTestDb();
+    t.tick();
+    t.db.dispatch({ kind: 'AddBook', itemId: uuid(1), title: 'Dune', startNow: false, localDate: '2026-09-01' }, t.env);
+    t.tick();
+    t.db.dispatch({ kind: 'AddHighlight', highlightId: uuid(0x30), itemId: uuid(1), quote: 'Passage', localDate: '2026-09-01' }, t.env);
+    const first = t.db.unpushedOps(500);
+    expect(first.ops.map((o) => o.tbl)).toEqual(['items']);
+    const again = t.db.unpushedOps(500, first.maxSeq);
+    expect(again.ops.map((o) => o.tbl)).toEqual(['items']);
+    expect(again.maxSeq).toBe(first.maxSeq);
+  });
+
+  it('a re-send up to a seq returns every unpushed op up to it, so completing it never skips one', () => {
+    const t = openTestDb();
+    t.tick();
+    t.db.dispatch({ kind: 'AddBook', itemId: uuid(1), title: 'Dune', startNow: false, localDate: '2026-09-01' }, t.env);
+    t.tick();
+    t.db.dispatch({ kind: 'AddHighlight', highlightId: uuid(0x30), itemId: uuid(1), quote: 'Passage', localDate: '2026-09-01' }, t.env);
+    const maxSeq = Number(t.raw.selectValue('SELECT MAX(seq) FROM change_log'));
+    const resend = t.db.unpushedOps(500, maxSeq);
+    expect(resend.ops.map((o) => o.tbl)).toEqual(['items', 'highlights']);
+    expect(resend.maxSeq).toBe(maxSeq);
   });
 });

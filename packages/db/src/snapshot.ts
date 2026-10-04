@@ -1,7 +1,7 @@
 import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import { detailsStatusFromDb } from '@readerlog/core';
 import type {
-  Author, BookSnapshot, BooksSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
+  Author, Highlight, HighlightId, HighlightSnapshot, BookSnapshot, BooksSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
   NonEmptyTitle, NormalizedUrl, Page, PageCount, ReadingEvent,
 } from '@readerlog/core';
 
@@ -83,4 +83,34 @@ export function mergeChainIds(db: Database, id: string): string[] {
     if (cur !== null) out.push(cur);
   }
   return out;
+}
+
+export function rowToHighlight(r: Record<string, SqlValue>): Highlight {
+  return {
+    id: text(r['id'], 'id') as HighlightId,
+    itemId: text(r['item_id'], 'item_id') as ItemId,
+    quote: textOrNull(r['quote'], 'quote'),
+    note: textOrNull(r['note'], 'note'),
+    page: intOrNull(r['page'], 'page'),
+    createdAt: text(r['created_at'], 'created_at') as Instant,
+    localDate: text(r['local_date'], 'local_date') as LocalDate,
+    deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
+  };
+}
+
+/** The highlights row with this id, tombstoned or not; null if unknown. */
+export function loadHighlight(db: Database, id: string): Highlight | null {
+  const r = db.selectObject('SELECT * FROM highlights WHERE id = ?', [id]);
+  return r ? rowToHighlight(r) : null;
+}
+
+/** Snapshot for the highlight commands: the target item (AddHighlight only) and the named highlight. */
+export function loadHighlightSnapshot(db: Database, highlightId: string, itemId: string | null): HighlightSnapshot {
+  const row = itemId === null ? undefined : db.selectObject('SELECT id, type, deleted_at FROM items WHERE id = ?', [itemId]);
+  return {
+    item: row
+      ? { id: text(row['id'], 'id') as ItemId, type: text(row['type'], 'type') as 'book' | 'article', deletedAt: textOrNull(row['deleted_at'], 'deleted_at') as Instant | null }
+      : null,
+    highlight: loadHighlight(db, highlightId),
+  };
 }

@@ -179,3 +179,44 @@ describe('privacy audit: article capture (SC-004)', () => {
   });
 });
 
+
+describe('privacy audit: highlights and notes (007)', () => {
+  it('a quote and a note never appear in relay rows, raw or base64, but are in the decrypted batch', async () => {
+    const QUOTE = 'The vermilion lighthouse hummed Welsh lullabies at dusk';
+    const NOTE = 'Remember to ask Bartholomew about the lullabies';
+    const relay = fakeRelay();
+    const a = makePeer(1, relay);
+    expect((await a.engine.turnOn()).ok).toBe(true);
+    a.tick();
+    const item = uuid(0x740001);
+    expect(a.db.dispatch({ kind: 'AddArticle', itemId: item, url: 'https://lighthouse.example/essay', title: 'Plain Title', author: null, wordCount: 1200, readOn: '2031-03-14', detailsStatus: 'complete' }, a.env).ok).toBe(true);
+    a.tick();
+    expect(a.db.dispatch({ kind: 'AddHighlight', highlightId: uuid(0x740002), itemId: item, quote: QUOTE, note: NOTE, localDate: '2031-03-14' }, a.env).ok).toBe(true);
+    await a.engine.run('write');
+    expect(a.db.pendingCount()).toBe(0);
+
+    const k = parseSyncCode(a.engine.showCode()!.code);
+    if (!k.ok) throw new Error('code');
+    const keys = await deriveKeys(k.value);
+    const batches = await relay.store.listBatches(keys.spaceId, 0, 1000);
+    const plains = [];
+    for (const env of batches) {
+      const r = await open(env, keys.encKey, keys.spaceId);
+      expect(r.ok).toBe(true);
+      if (r.ok) plains.push(r.value);
+    }
+    const dump = relay.store.dumpAll();
+    expect(dump.length).toBeGreaterThan(0);
+    for (const needle of [QUOTE, NOTE, 'vermilion lighthouse', 'Bartholomew', '"quote"', '"note"']) {
+      for (const form of encodings(needle)) {
+        if (form.length < 4) continue;
+        expect(dump.includes(form), `relay dump must not contain ${JSON.stringify(needle)} as ${JSON.stringify(form)}`).toBe(false);
+      }
+    }
+    // Sanity: the text really is in the encrypted batch, in its own single-tier batch.
+    const text = JSON.stringify(plains);
+    expect(text).toContain(QUOTE);
+    expect(text).toContain(NOTE);
+    expect(plains.filter((p) => p.ops.some((o) => o.tbl === 'highlights')).every((p) => p.ops.every((o) => o.tbl === 'highlights'))).toBe(true);
+  });
+});

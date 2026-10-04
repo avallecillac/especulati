@@ -93,7 +93,7 @@ path and screen needs.
   - `index.ts`: exports.
 
   T001–T003 must pass, and `pnpm test:convergence` must stay green.
-- [ ] T005 [P] Write the db tests:
+- [X] T005 [P] Write the db tests:
   - `packages/db/test/migration4.test.ts` (new, matching `migration3.test.ts`): a v3 fixture with
     `meta.sync_cursor = '57'` migrates to v4; all rows are kept; `highlights` and
     `idx_highlights_item` exist; `sync_cursor` is `'0'`; and a pre-set
@@ -110,7 +110,7 @@ path and screen needs.
     is parked in `sync_inbox`, and is applied once the item arrives.
   - Extend `packages/db/test/perf.test.ts`: `highlights(itemId)` with 200 rows takes
     under 20 ms (best of 5).
-- [ ] T006 Implement db:
+- [X] T006 Implement db:
   - `migrations.ts`: migration 4, verbatim from data-model.md, so `SCHEMA_VERSION` is 4;
   - `queries.ts`: `highlightsView(db, itemId)`;
   - `index.ts`: `ReaderlogDb.highlights(itemId)`;
@@ -118,7 +118,7 @@ path and screen needs.
   - `sync.ts`: `canInsert` parks a highlight whose `item_id` is missing.
 
   T005 must pass.
-- [ ] T007 [P] Write the sync tests:
+- [X] T007 [P] Write the sync tests:
   - `packages/sync/test/push.test.ts`: change-log ops in the order
     `[items, highlights, highlights, reading_events]` produce the batches `[items]`,
     `[highlights, highlights]` and `[reading_events]`, in order (contracts/sync-tiers.md).
@@ -130,7 +130,7 @@ path and screen needs.
     - after "upgrading" (cursor reset, then full pull), all peers' dumps are identical.
   - Extend `packages/sync/test/privacy.test.ts`: a quote and a note are absent from
     relay rows, both raw and base64.
-- [ ] T008 Implement the batch tiers: `unpushedOps` in `packages/db/src/sync.ts` ends a
+- [X] T008 Implement the batch tiers: `unpushedOps` in `packages/db/src/sync.ts` ends a
   batch at a tier change, using core's `tierOf` (T004). Don't import `packages/sync`
   from db.
 

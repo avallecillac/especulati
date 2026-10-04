@@ -3,6 +3,10 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { parseRemoteOp, type EventType, type OpWire } from '@readerlog/core';
+import { parseSyncCode } from '../src/code.ts';
+import { deriveKeys } from '../src/keys.ts';
+import { open } from '../src/envelope.ts';
+import { createRelayClient } from '../src/relayClient.ts';
 import { fakeRelay, makePeer, prng, uuid, type FakeRelay, type Peer } from './harness.ts';
 
 // SC-003 requires 1,000 runs: `pnpm test:convergence`. The everyday `pnpm test` runs 200.
@@ -422,3 +426,175 @@ describe('free-tier usage (FR-023, SC-007, research R1)', () => {
   });
 });
 
+
+// 007, research R2 / contracts/sync-tiers.md. A device on 0.7.0 (v3) rejects any batch containing a
+// `highlights` op, skips it and moves its cursor on. Highlights go out in their own batches, so that
+// skipped batch never holds a base op; after the upgrade (migration 4 resets the cursor) it re-reads.
+describe('forward compatibility: a v3 peer (007 T007)', () => {
+  const V3_SEEDS = Number(process.env['V3_RUNS'] ?? 100);
+  const fullDump = (p: Peer): string =>
+    JSON.stringify(
+      ['items ORDER BY id', 'reading_events ORDER BY id', 'highlights ORDER BY id', 'duplicate_dismissals ORDER BY id', 'field_clock ORDER BY tbl, row_id, field'].map((t) =>
+        p.db.raw.selectArrays(`SELECT * FROM ${t}`),
+      ),
+    );
+  const baseDump = (p: Peer): string =>
+    JSON.stringify([
+      p.db.raw.selectArrays('SELECT * FROM items ORDER BY id'),
+      p.db.raw.selectArrays('SELECT * FROM reading_events ORDER BY id'),
+      p.db.raw.selectArrays("SELECT * FROM field_clock WHERE tbl <> 'highlights' ORDER BY tbl, row_id, field"),
+    ]);
+
+  /** What 0.7.0 does on a pull: a batch with an op it can't parse (any `highlights` op) is skipped whole, and counted. */
+  async function v3Pull(p: Peer, code: string, relay: ReturnType<typeof fakeRelay>): Promise<number> {
+    const k = parseSyncCode(code);
+    if (!k.ok) throw new Error('code');
+    const keys = await deriveKeys(k.value);
+    const client = createRelayClient(relay.fetch, keys.spaceId, keys.authToken, () => true);
+    let applied = 0;
+    for (let more = true; more; ) {
+      const cursor = p.db.syncMeta().cursor;
+      const page = await client.getBatches(cursor, 100);
+      if (!page.ok) throw new Error(`pull ${page.kind}`);
+      const ops: ReturnType<typeof parseRemoteOp> extends infer R ? (R extends { ok: true; value: infer V } ? V[] : never) : never = [];
+      let skipped = 0;
+      let last = cursor;
+      for (const b of page.value.batches) {
+        last = b.seq;
+        const opened = await open(b, keys.encKey, keys.spaceId);
+        if (!opened.ok) { skipped++; continue; }
+        if (opened.value.ops.some((w) => w.tbl === 'highlights')) { skipped++; continue; }
+        for (const w of opened.value.ops) {
+          const r = parseRemoteOp(w, opened.value.device);
+          if (!r.ok) throw new Error('v3 peer could not parse a base op');
+          ops.push(r.value);
+        }
+      }
+      if (last !== cursor) applied += p.db.applyPulledPage(ops, last, () => p.wall()).applied;
+      if (skipped > 0) {
+        const st = p.db.syncMeta().status;
+        p.db.setSyncMeta({ status: { lastOkAt: st?.lastOkAt ?? null, problem: st?.problem ?? null, undecryptable: (st?.undecryptable ?? 0) + skipped } });
+      }
+      more = page.value.more;
+    }
+    return applied;
+  }
+
+  function write(rng: () => number, p: Peer, withHighlights: boolean): void {
+    p.tick(int(rng, 1, 5000));
+    const items = ids(p, 'SELECT id FROM items WHERE deleted_at IS NULL');
+    const articles = ids(p, "SELECT id FROM items WHERE deleted_at IS NULL AND type = 'article'");
+    const books = ids(p, "SELECT id FROM items WHERE deleted_at IS NULL AND type = 'book'");
+    const k = rng();
+    if (items.length === 0 || k < 0.2) {
+      p.db.dispatch({ kind: 'AddBook', itemId: newId(), title: `Book ${int(rng, 0, 99)}`, startNow: rng() < 0.5, startEventId: newId(), localDate: '2026-09-01' }, p.env);
+    } else if (k < 0.4) {
+      const n = int(rng, 0, 9999);
+      p.db.dispatch({ kind: 'AddArticle', itemId: newId(), url: `https://site${n}.example/post`, title: `Article ${n}`, author: null, wordCount: 500, readOn: '2026-09-01', detailsStatus: 'complete' }, p.env);
+    } else if (k < 0.6 && books.length > 0) {
+      p.db.dispatch({ kind: 'LogEvent', itemId: pick(rng, books), eventId: newId(), type: pick(rng, TYPES), page: int(rng, 1, 60), localDate: '2026-09-01' }, p.env);
+    } else if (!withHighlights) {
+      p.db.dispatch({ kind: 'EditBook', itemId: pick(rng, items), title: `Title ${int(rng, 0, 999)}`, author: null }, p.env);
+    } else if (k < 0.85 && articles.length > 0) {
+      p.db.dispatch({ kind: 'AddHighlight', highlightId: newId(), itemId: pick(rng, articles), quote: `Quote ${int(rng, 0, 999)}`, note: rng() < 0.5 ? `Note ${int(rng, 0, 99)}` : null, localDate: '2026-09-01' }, p.env);
+    } else {
+      const hs = p.db.raw.selectValues('SELECT id FROM highlights').map(String);
+      if (hs.length === 0) return;
+      const id = pick(rng, hs);
+      const c = rng();
+      if (c < 0.4) p.db.dispatch({ kind: 'EditHighlightNote', highlightId: id, note: `Edited ${int(rng, 0, 99)}` }, p.env);
+      else if (c < 0.8) p.db.dispatch({ kind: 'RemoveHighlight', highlightId: id }, p.env);
+      else p.db.dispatch({ kind: 'RestoreHighlight', highlightId: id }, p.env);
+    }
+  }
+
+  async function quiet(full: Peer[], v3: Peer | null, code: string, relay: ReturnType<typeof fakeRelay>): Promise<void> {
+    let calm = 0;
+    for (let round = 0; round < 14 && calm < 2; round++) {
+      let moved = 0;
+      for (const p of full) {
+        p.tick(1000);
+        const r = await p.engine.run('manual');
+        if (r.problem) throw new Error(`run problem: ${r.problem}`);
+        moved += r.pulled + r.pushed;
+      }
+      if (v3) {
+        v3.tick(1000);
+        moved += await v3Pull(v3, code, relay);
+        const r = await v3.engine.run('write', { pushOnly: true });
+        if (r.problem) throw new Error(`run problem: ${r.problem}`);
+        moved += r.pushed;
+      }
+      calm = moved === 0 ? calm + 1 : 0;
+    }
+    if (calm < 2) throw new Error('did not go quiet in 14 rounds');
+  }
+
+  const totals = { highlights: 0, skippedBatches: 0 };
+
+  async function oneV3Run(seed: number): Promise<void> {
+    const rng = prng(seed);
+    const relay = fakeRelay();
+    const peers = [1, 2, 3].map((i) => makePeer(i, relay, prng(seed * 31 + i), T0 + int(rng, -3_600_000, 3_600_000)));
+    const [a, b, v] = [peers[0]!, peers[1]!, peers[2]!];
+    try {
+      expect((await a.engine.turnOn()).ok).toBe(true);
+      const code = a.engine.showCode()!.code;
+      expect((await b.engine.join(code)).ok).toBe(true);
+      expect((await v.engine.join(code)).ok).toBe(true); // empty space: nothing for v3 to skip yet
+
+      for (let s = 0, steps = int(rng, 25, 60); s < steps; s++) {
+        const a1 = rng();
+        if (a1 < 0.6) {
+          const p = pick(rng, peers);
+          write(rng, p, p !== v);
+        } else {
+          const p = pick(rng, peers);
+          p.tick(int(rng, 1, 3000));
+          if (p === v) {
+            await v3Pull(v, code, relay);
+            await v.engine.run('write', { pushOnly: true });
+          } else {
+            const r = await p.engine.run('manual');
+            if (r.problem) throw new Error(`run problem: ${r.problem}`);
+          }
+        }
+      }
+      // Phase 1: v3 keeps skipping highlight batches but still gets every base op.
+      await quiet([a, b], v, code, relay);
+      if (baseDump(v) !== baseDump(a)) throw new Error('v3 peer is missing base ops (items/events) while highlights are in flight');
+      if (baseDump(b) !== baseDump(a)) throw new Error('full peers disagree on base data');
+      if (v.db.raw.selectValue('SELECT COUNT(*) FROM highlights') !== 0) throw new Error('v3 peer applied a highlight');
+      const hl = Number(a.db.raw.selectValue("SELECT COUNT(*) FROM change_log WHERE tbl = 'highlights'"));
+      totals.highlights += hl;
+      const skipped = v.db.syncMeta().status?.undecryptable ?? 0;
+      totals.skippedBatches += skipped;
+      if (hl > 0 && skipped === 0) throw new Error('v3 peer should have skipped the highlight batches');
+
+      // Phase 2: the upgrade. Migration 4 resets the cursor and the counter; the real engine re-reads everything.
+      v.db.setSyncMeta({ cursor: 0, status: { lastOkAt: null, problem: null, undecryptable: 0 } });
+      await quiet(peers, null, code, relay);
+      const first = fullDump(a);
+      for (const p of [b, v]) if (fullDump(p) !== first) throw new Error(`peer ${p.n} differs after the upgrade`);
+      for (const p of peers) if (p.db.raw.selectValue('SELECT COUNT(*) FROM sync_inbox') !== 0) throw new Error(`peer ${p.n} has a stuck inbox`);
+      if (Number(v.db.raw.selectValue('SELECT COUNT(*) FROM highlights')) !== Number(a.db.raw.selectValue('SELECT COUNT(*) FROM highlights'))) throw new Error('highlight counts differ');
+    } finally {
+      for (const p of peers) p.close();
+    }
+  }
+
+  it(`${V3_SEEDS} seeded runs: the v3 peer loses no base op, and converges after upgrading`, { timeout: 600_000 }, async () => {
+    const t0 = performance.now();
+    for (let seed = 1; seed <= V3_SEEDS; seed++) {
+      try {
+        await oneV3Run(seed);
+      } catch (e) {
+        console.error(`V3 CONVERGENCE FAILED, seed=${seed}`);
+        throw new Error(`seed=${seed}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+      }
+    }
+    console.log(`v3 peer: ${V3_SEEDS} runs in ${((performance.now() - t0) / 1000).toFixed(1)} s (${JSON.stringify(totals)})`);
+    expect(totals.highlights).toBeGreaterThan(0);
+    expect(totals.skippedBatches).toBeGreaterThan(0);
+  });
+});

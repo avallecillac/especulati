@@ -96,6 +96,27 @@ const MIGRATIONS: readonly string[] = [
     fields_json TEXT NOT NULL
   );
   `,
+  /* 4 */ `
+  -- Synced (007). One row per highlight or note. Removal is a tombstone.
+  CREATE TABLE highlights (
+    id         TEXT PRIMARY KEY,
+    item_id    TEXT NOT NULL REFERENCES items(id),
+    quote      TEXT CHECK (quote IS NULL OR length(quote) BETWEEN 1 AND 5000),
+    note       TEXT CHECK (note  IS NULL OR length(note)  BETWEEN 1 AND 5000),
+    page       INTEGER CHECK (page IS NULL OR page > 0),
+    created_at TEXT NOT NULL,
+    local_date TEXT NOT NULL CHECK (local_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+    deleted_at TEXT,
+    CHECK (quote IS NOT NULL OR note IS NOT NULL)
+  );
+  CREATE INDEX idx_highlights_item ON highlights(item_id, created_at) WHERE deleted_at IS NULL;
+
+  -- Re-read the whole space once, so batches skipped before this version are applied (R2),
+  -- and clear the "couldn't be read" counter those skips left behind.
+  UPDATE meta SET value = '0' WHERE key = 'sync_cursor';
+  UPDATE meta SET value = json_set(value, '$.undecryptable', 0)
+    WHERE key = 'sync_status' AND json_valid(value);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

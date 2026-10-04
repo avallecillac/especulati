@@ -102,3 +102,27 @@ describe('stats query performance (003 T025)', () => {
     expect(best).toBeLessThan(100);
   }, 180_000);
 });
+
+/** Feature 007: an article's highlights list stays fast. */
+describe('highlights query performance (007 T005)', () => {
+  it('highlights(itemId) with 200 rows takes < 20 ms (best of 5)', () => {
+    const t = openTestDb();
+    t.tick();
+    expect(t.db.dispatch({ kind: 'AddArticle', itemId: uuid(1), url: 'https://www.example.com/long', title: 'Long read', author: null, wordCount: 9000, readOn: '2026-09-10', detailsStatus: 'complete' }, t.env).ok).toBe(true);
+    for (let i = 0; i < 200; i++) {
+      t.tick();
+      const r = t.db.dispatch({ kind: 'AddHighlight', highlightId: uuid(0x100 + i), itemId: uuid(1), quote: `A passage worth keeping, number ${i}`, note: i % 3 === 0 ? `Note ${i}` : null, localDate: '2026-09-11' }, t.env);
+      if (!r.ok) throw new Error(JSON.stringify(r));
+    }
+    t.db.highlights(uuid(1)); // warm
+    let best = Infinity;
+    for (let i = 0; i < 5; i++) {
+      const start = performance.now();
+      t.db.highlights(uuid(1));
+      best = Math.min(best, performance.now() - start);
+    }
+    console.log(`highlights(itemId) ${best.toFixed(2)} ms over 200 rows`);
+    expect(t.db.highlights(uuid(1))).toHaveLength(200);
+    expect(best).toBeLessThan(20);
+  });
+});
