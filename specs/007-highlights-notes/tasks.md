@@ -91,7 +91,7 @@ path and screen needs.
 
   T001–T003 must pass, and `pnpm test:convergence` must stay green.
 - [ ] T005 [P] Write the db tests:
-  - `packages/db/test/migrations.test.ts`: a v3 fixture with
+  - `packages/db/test/migration4.test.ts` (new, matching `migration3.test.ts`): a v3 fixture with
     `meta.sync_cursor = '57'` migrates to v4; all rows are kept; `highlights` and
     `idx_highlights_item` exist; `sync_cursor` is `'0'`.
   - `packages/db/test/highlights.test.ts`:
@@ -101,7 +101,7 @@ path and screen needs.
     - the CHECK constraints reject 5,001 characters and an empty row;
     - H-1: `stats`, `articleStats`, `home` and `library` are deep-equal before and after
       100 highlights.
-  - Extend `packages/db/test/sync.test.ts`: a remote highlight whose item hasn't arrived
+  - Extend `packages/db/test/sync.apply.test.ts`: a remote highlight whose item hasn't arrived
     is parked in `sync_inbox`, and is applied once the item arrives.
   - Extend `packages/db/test/perf.test.ts`: `highlights(itemId)` with 200 rows takes
     under 20 ms (best of 5).
