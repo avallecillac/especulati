@@ -1,7 +1,10 @@
 # Contract: Sync batch tiers (forward compatibility, research R2)
 
 - **Tier function:** `tierOf(tbl) = tbl === 'highlights' ? 'h' : 'base'`, in
-  `packages/sync/src/push.ts`, and shared.
+  `packages/core/src/merge.ts`, beside `WRITABLE_FIELDS`. Both `packages/db`
+  (`unpushedOps`) and `packages/sync` (the capture peer) import it from core.
+  - It must not live in `packages/sync`: sync already imports db, so db importing sync
+    would be circular and fail the `no-circular` lint rule.
 - **Rule:** every batch from `PushSource.next(limit, upTo?)` contains ops of **one tier
   only**. The batch ends at the first op whose tier differs from the first op's.
   - **DB source:** `unpushedOps` in `packages/db/src/sync.ts`.

@@ -9,7 +9,7 @@ cd e2e && npx playwright test highlights extension-highlight capture-highlight -
 |---|---|---|---|
 | 1 | Normalising quotes and notes: spaces, paragraphs, trimming, the 5,000 cap without truncation | R3, edge cases | core `highlight.test.ts` |
 | 2 | Add/Edit/Remove/Restore: rejections and changes, invariants HL-1 to HL-4 | contracts/commands-007 | core `decide.highlight.test.ts` |
-| 3 | `textFragment` and `passageUrl` encoding | R4, HL-3 | core |
+| 3 | `textFragment` and `passageUrl` encoding | R4, HL-3 | core; real matching on fixtures in e2e (SC-005) |
 | 4 | Migration 3 → 4: rows kept, table present, cursor reset to 0 | data-model | db `migration4.test.ts` |
 | 5 | `highlights(itemId)`: order, tombstones, a removed item hides its highlights (H-3); 200 rows under 20 ms | FR-007, SC-006 | db test plus perf |
 | 6 | Stats, home and library are unchanged by 100 highlights (H-1) | FR-014 | db test |

@@ -53,9 +53,9 @@ batches and a one-time full re-read after the migration (research R2).
 ```text
 specs/007-highlights-notes/   plan.md research.md data-model.md quickstart.md contracts/ tasks.md
 packages/core/src/highlight.ts              # types, normalizeQuote/Note, textFragment, passageUrl
-packages/core/src/{commands,decide,merge}.ts  # 4 commands, Table + allow-lists
+packages/core/src/{commands,decide,merge}.ts  # 4 commands, Table + allow-lists + tierOf
 packages/db/src/{migrations,queries,sync,index}.ts  # migration 4, highlights() query, parking, tiered unpushedOps
-packages/sync/src/{push,capturePeer}.ts     # tierOf, highlight/editNote/undoHighlight
+packages/sync/src/capturePeer.ts            # highlight/editNote/undoHighlight; single-tier flush via core's tierOf
 apps/pwa/src/screens/{Article,Capture}.svelte, src/lib/{protocol,capture}.ts, src/worker/db.worker.ts
 apps/pwa/src/screens/HighlightList.svelte, HighlightSheet.svelte   # new
 apps/extension/{manifest.json, src/sw.ts, src/toast.ts, src/selection.ts}

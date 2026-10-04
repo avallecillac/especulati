@@ -29,12 +29,17 @@
   `highlights` ops with ops on other tables.
   - The DB push source and the extension's capture peer end a batch where the table
     "tier" changes. The tiers are `highlights` versus everything else.
+  - `tierOf` lives in core, because db can't import sync.
   - An old device then skips only highlight batches.
 - **Decision, part 2: re-read after updating.** Migration 4 resets `sync_cursor` to 0,
   so the next sync re-reads the whole space.
   - Ops already applied are recognised by `op_id` in `change_log` and ignored.
   - The skipped highlight batches are applied this time.
   - **Cost:** one full pull, once. At 10,000 ops that was 4.7 s in 004's SC-004.
+- **What the user sees:** until a device updates, each skipped highlight batch adds to
+  its sync status note, "N changes couldn't be read and were skipped". After the
+  update, the re-read applies them, so migration 4 also resets that counter
+  (`undecryptable`, inside the `sync_status` JSON in `meta`) to 0. The spec states this.
 - **Tests:**
   - an old-schema peer (no `highlights` table) in the convergence harness keeps every
     article op while highlights flow, then converges after "upgrading";

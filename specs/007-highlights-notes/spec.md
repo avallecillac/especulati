@@ -161,8 +161,10 @@ on its own. Check both are listed and synced.
 - **The page changed since the highlight.** The jump link may no longer find the
   passage. The browser then opens the article at the top, and the quote is still shown
   in Readerlog.
-- **Selection inside a form field, or on a non-http(s) page.** It is refused with the
-  extension's existing "Can't log this page" behaviour.
+- **Selection inside a form field.** Nothing is saved, and the page says "Select some
+  text to highlight".
+- **A non-http(s) page.** It is refused with the extension's existing "Can't log this
+  page" behaviour.
 
 ## Requirements *(mandatory)*
 
@@ -174,9 +176,8 @@ on its own. Check both are listed and synced.
   right-click menu when text is selected, and as a keyboard command (suggested Alt+Shift+H,
   changeable in the browser).
 - **FR-002**: A capture MUST store exactly the user's selection, normalised as in the
-  edge cases. It MAY also store a short anchor (at most the few words before and after
-  the selection) to find the passage again. It MUST NOT store any other page text
-  (constitution II).
+  edge cases. No anchor or other page text is stored: the link back to the passage is
+  derived from the quote itself (constitution II).
 - **FR-003**: Saving a highlight on an article that isn't logged MUST log the article as
   read today, collecting its details as a normal capture does, in the same action and
   with one Undo.
@@ -214,7 +215,6 @@ on its own. Check both are listed and synced.
 - **Highlight**: belongs to one item (an article now, a book later). It has:
   - an optional quote (up to 5,000 characters);
   - an optional note (up to 5,000 characters), with at least one of the two present;
-  - an optional anchor to find the quote in the page;
   - an optional page (books, later);
   - when it was saved, and its local date;
   - a removed flag (tombstone).
@@ -242,7 +242,11 @@ on its own. Check both are listed and synced.
 - **Fixed caps:** 5,000 characters each for a quote and a note, as a sensible upper
   bound for a passage.
 - **Clipboard on the iPhone:** the Shortcut reads the clipboard with Shortcuts' own
-  action, so iOS shows no paste prompt. If iOS ever does prompt, it's one extra tap.
+  action. On the first run, iOS may ask whether it may paste; choosing **Always Allow**
+  keeps later runs at 3 taps.
+- **Devices that haven't updated** skip highlights rather than failing. Until they
+  update, their Sync screen may say some changes "couldn't be read and were skipped".
+  Updating re-reads the history, applies the highlights, and clears that note.
 - **Jump-to-passage** uses the web's standard text links. Chrome supports them, and so
   does Safari from iOS 16.1 and macOS 13.
 - **Out of scope:**

@@ -17,8 +17,11 @@ CREATE TABLE highlights (
 );
 CREATE INDEX idx_highlights_item ON highlights(item_id, created_at) WHERE deleted_at IS NULL;
 
--- Re-read the whole space once, so batches skipped before this version are applied (R2).
+-- Re-read the whole space once, so batches skipped before this version are applied (R2),
+-- and clear the "couldn't be read" counter those skips left behind.
 UPDATE meta SET value = '0' WHERE key = 'sync_cursor';
+UPDATE meta SET value = json_set(value, '$.undecryptable', 0)
+  WHERE key = 'sync_status' AND json_valid(value);
 ```
 
 - **`SCHEMA_VERSION`:** becomes 4.
@@ -31,6 +34,8 @@ UPDATE meta SET value = '0' WHERE key = 'sync_cursor';
 - **`WRITABLE_FIELDS.highlights`:** `item_id`, `quote`, `note`, `page`, `created_at`,
   `local_date`, `deleted_at`.
 - **`INSERT_FIELDS.highlights`:** `item_id`, `created_at`, `local_date`.
+- **`tierOf(tbl)`:** `'h'` for `highlights`, `'base'` otherwise. It's in core so db and
+  sync can share it (contracts/sync-tiers.md).
 - **`canInsert` in `packages/db/src/sync.ts`:** a highlight whose item hasn't arrived
   yet is parked, the same rule as `reading_events`.
 

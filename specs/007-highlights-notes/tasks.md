@@ -76,7 +76,8 @@ path and screen needs.
   - `parseRemoteOp` accepts `tbl: 'highlights'` with the fields `item_id`, `quote`,
     `note`, `page`, `created_at`, `local_date`, `deleted_at`;
   - it rejects any other `highlights` field;
-  - `INSERT_FIELDS.highlights` equals `['item_id', 'created_at', 'local_date']`.
+  - `INSERT_FIELDS.highlights` equals `['item_id', 'created_at', 'local_date']`;
+  - `tierOf('highlights') === 'h'`, and `'base'` for the other tables.
 
 ### Implementation
 
@@ -86,14 +87,18 @@ path and screen needs.
   - `commands.ts`: the four commands, the rejections `TooLong` and `HighlightEmpty`, and
     `Table` gains `'highlights'`;
   - `decide.ts`: the snapshot carries the highlight row for Edit, Remove and Restore;
-  - `merge.ts`: `WRITABLE_FIELDS` and `INSERT_FIELDS`;
+  - `merge.ts`: `WRITABLE_FIELDS`, `INSERT_FIELDS`, and `tierOf(tbl)` (`'h'` for
+    `highlights`, `'base'` otherwise; in core so db and sync can both import it, since
+    db importing sync is circular);
   - `index.ts`: exports.
 
   T001–T003 must pass, and `pnpm test:convergence` must stay green.
 - [ ] T005 [P] Write the db tests:
   - `packages/db/test/migration4.test.ts` (new, matching `migration3.test.ts`): a v3 fixture with
     `meta.sync_cursor = '57'` migrates to v4; all rows are kept; `highlights` and
-    `idx_highlights_item` exist; `sync_cursor` is `'0'`.
+    `idx_highlights_item` exist; `sync_cursor` is `'0'`; and a pre-set
+    `sync_status` of `{"undecryptable":3,…}` comes out with `undecryptable` 0 and its
+    other fields unchanged.
   - `packages/db/test/highlights.test.ts`:
     - `highlights(itemId)` is ordered by `created_at, id`;
     - tombstoned rows are hidden;
@@ -125,9 +130,9 @@ path and screen needs.
     - after "upgrading" (cursor reset, then full pull), all peers' dumps are identical.
   - Extend `packages/sync/test/privacy.test.ts`: a quote and a note are absent from
     relay rows, both raw and base64.
-- [ ] T008 Implement the batch tiers:
-  - `tierOf` in `packages/sync/src/push.ts`;
-  - `unpushedOps` in `packages/db/src/sync.ts` ends a batch at a tier change.
+- [ ] T008 Implement the batch tiers: `unpushedOps` in `packages/db/src/sync.ts` ends a
+  batch at a tier change, using core's `tierOf` (T004). Don't import `packages/sync`
+  from db.
 
   T007 must pass, and so must the full `pnpm test:convergence`.
 
@@ -162,7 +167,9 @@ data through US4's Add.
   - **Remove** hides the entry, and the toast's **Undo** restores it;
   - a 20-line quote is clamped with **Show all**;
   - an empty Add sheet has Save disabled;
-  - the empty state shows its text.
+  - the empty state shows its text;
+  - **SC-006:** with 200 highlights seeded, the list renders within 200 ms of navigating
+    to the article (production build, best of 3).
 - [ ] T010 [P] [US3] Extend `e2e/a11y.spec.ts` and `e2e/layout.spec.ts` (`e2e/screens.ts`
   seeding): the article screen with 2 highlights, one of them a 120-character unbroken
   quote, in both themes.
@@ -223,7 +230,13 @@ it under the article.
   - after flushing, the PWA context syncs and shows the quote and note under the
     article;
   - **SC-004:** on the 20 extract fixtures, a selected paragraph equals the saved quote,
-    after normalising.
+    after normalising;
+  - **SC-005:** for each of those quotes, opening `passageUrl(fixtureUrl, quote)` matches
+    the passage in at least 18 of 20 (Chromium: the window scrolls, or
+    `::target-text` applies);
+  - **SC-001:** the toast is visible within 1 s of the trigger;
+  - **FR-006:** offline (the relay route aborted), a save is kept pending (the badge
+    counts it), and is flushed and visible in the PWA once the relay is back.
 
 ### Implementation
 
@@ -295,7 +308,8 @@ needed) with the highlight.
 
 - [ ] T022 [P] Update the docs:
   - `README.md`: the extension's highlight command;
-  - `docs/architecture.md`: the `highlights` table, the batch tiers and the cursor reset;
+  - `docs/architecture.md`: the `highlights` table, the batch tiers and the cursor reset,
+    and add `highlights` to the 008 export row's must-include list (constitution II);
   - `CLAUDE.md`: a "Highlights" rule line.
 - [ ] T023 Run the full validation (main session):
   - `pnpm typecheck && pnpm lint && pnpm test && pnpm test:convergence && pnpm e2e`,
@@ -331,7 +345,7 @@ needed) with the highlight.
 | A | T001, T002, T003 | core tests, separate files |
 | B | T004 | core impl |
 | C | T005, T007 | db and sync tests |
-| D | T006 → T008 | one agent: both touch `packages/db/src/sync.ts` |
+| D | T006 → T008 | one agent: both touch `packages/db/src/sync.ts`; `tierOf` comes from core (T004) |
 | E | T009, T010 → T011 → T012 → T013 | one agent: the Article screen |
 | F | T014, T015 → T016 → T017 | one agent: the extension |
 | G | T018, T019 → T020 → T021 | one agent: the iPhone path (can run alongside F; e2e runs taken in turn) |
