@@ -244,3 +244,74 @@ describe('capture peer: undo and unpair', () => {
     expect(await store.get('syncKey')).toBeFalsy();
   });
 });
+
+describe('capture peer: highlights (007)', () => {
+  const at = '2026-09-28T09:05:00.000Z';
+  async function paired(relay: FakeRelay) {
+    const { code, pwa } = await host(relay);
+    const ctx = setup(relay);
+    await ctx.peer.pair(ORIGIN, code);
+    const cap = await ctx.peer.capture(page());
+    if (!cap.ok) throw new Error('capture');
+    return { ...ctx, pwa, itemId: cap.value.itemId };
+  }
+  const hl = (itemId: string, over: Record<string, unknown> = {}) => ({ itemId, quote: 'A passage worth keeping.', at, localDate: '2026-09-28', ...over });
+  const pendingOps = async (store: CaptureStore) => (await store.get<{ op: string; tbl: string; fields: Record<string, unknown> }[]>('pending')) ?? [];
+
+  it('stamps AddHighlight, EditHighlightNote and RemoveHighlight with the derived id', async () => {
+    const relay = fakeRelay();
+    const { peer, store, itemId } = await paired(relay);
+    const r = await peer.highlight(hl(itemId, { quote: '  A passage\r\n worth   keeping. ' }));
+    expect(r).toEqual({ ok: true, value: { highlightId: await uuidFromHash('readerlog-highlight-v1|https://www.example.com/post?id=7|' + at) } });
+    const id = r.ok ? r.value.highlightId : '';
+    expect((await peer.editNote(id, 'a note')).ok).toBe(true);
+    await peer.undoHighlight(id);
+    const ops = (await pendingOps(store)).filter((o) => o.tbl === 'highlights');
+    expect(ops).toHaveLength(3);
+    expect(ops[0]!.fields).toMatchObject({ item_id: itemId, quote: 'A passage\nworth keeping.', local_date: '2026-09-28' });
+    expect(ops[1]!.fields).toEqual({ note: 'a note' });
+    expect(Object.keys(ops[2]!.fields)).toEqual(['deleted_at']);
+    // a second undo adds nothing
+    await peer.undoHighlight(id);
+    expect((await pendingOps(store)).filter((o) => o.tbl === 'highlights')).toHaveLength(3);
+  });
+
+  it('rejects notPaired, tooLong, empty quote, unknown article and edits of unknown highlights', async () => {
+    const relay = fakeRelay();
+    const lone = setup(relay);
+    expect(await lone.peer.highlight(hl('11111111-1111-4111-8111-111111111111'))).toEqual({ ok: false, error: 'notPaired' });
+    const { peer, itemId } = await paired(relay);
+    expect(await peer.highlight(hl(itemId, { quote: 'x'.repeat(5001) }))).toEqual({ ok: false, error: 'tooLong' });
+    expect(await peer.highlight(hl(itemId, { quote: '   \n ' }))).toEqual({ ok: false, error: 'invalid' });
+    expect(await peer.highlight(hl('22222222-2222-4222-8222-222222222222'))).toEqual({ ok: false, error: 'invalid' });
+    const r = await peer.highlight(hl(itemId));
+    if (!r.ok) throw new Error('highlight');
+    expect(await peer.editNote(r.value.highlightId, 'n'.repeat(5001))).toEqual({ ok: false, error: 'tooLong' });
+    expect(await peer.editNote('33333333-3333-4333-8333-333333333333', 'n')).toEqual({ ok: false, error: 'invalid' });
+  });
+
+  it('flushing [AddArticle, AddHighlight] posts two batches, in order, and never GETs', async () => {
+    const relay = fakeRelay();
+    const { pwa, peer, itemId } = await paired(relay);
+    relay.log.length = 0;
+    expect((await peer.highlight(hl(itemId, { note: 'a note' }))).ok).toBe(true);
+    expect((await peer.status()).waiting).toBe(2);
+    expect((await peer.flush()).sent).toBe(2);
+    expect(posts(relay)).toHaveLength(2);
+    expect(gets(relay)).toEqual([]);
+    await pwa.engine.run('manual');
+    expect(pwa.db.articles()).toHaveLength(1);
+    expect(pwa.db.highlights(itemId)).toMatchObject([{ quote: 'A passage worth keeping.', note: 'a note' }]);
+  });
+
+  it('keeps only the newest 2,000 highlights in storage', async () => {
+    const relay = fakeRelay();
+    const { peer, store, itemId } = await paired(relay);
+    for (let i = 0; i < 2002; i++) {
+      const r = await peer.highlight(hl(itemId, { at: new Date(Date.UTC(2026, 8, 28, 10) + i * 1000).toISOString() }));
+      expect(r.ok).toBe(true);
+      if (i % 200 === 199) await peer.flush();
+    }
+    expect(Object.keys((await store.get<Record<string, unknown>>('highlights')) ?? {})).toHaveLength(2000);
+  }, 60000);
+});

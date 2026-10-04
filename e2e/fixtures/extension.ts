@@ -29,6 +29,8 @@ export interface Extension {
   openArticle(url?: string): Promise<Page>;
   /** Run the capture the way the toolbar action does, for the tab showing `url`. */
   capture(how: 'action' | 'command' | 'menu', url?: string): Promise<void>;
+  /** Save the page's selection the way the shortcut or the context menu does, for the tab showing `url`. */
+  highlight(how: 'command' | 'menu', url?: string): Promise<void>;
   /** Options page: address and sync code, Pair. */
   pair(code: string): Promise<Page>;
   waiting(): Promise<number>;
@@ -78,6 +80,17 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
             if (h === 'action') await r['captureTab']!(tab);
             else if (h === 'command') await r['onCommand']!('log-as-read', tab);
             else await r['onMenuClick']!({ menuItemId: 'log-as-read' }, tab);
+          },
+          [how, url],
+        );
+      },
+      async highlight(how, url = ARTICLE_URL) {
+        await sw.evaluate(
+          async ([h, u]) => {
+            const [tab] = await (globalThis as unknown as ChromeInSw).chrome.tabs.query({ url: u! });
+            const r = (globalThis as unknown as { readerlog: Record<string, (...a: unknown[]) => Promise<void>> }).readerlog;
+            if (h === 'command') await r['onCommand']!('save-highlight', tab);
+            else await r['onMenuClick']!({ menuItemId: 'save-highlight' }, tab);
           },
           [how, url],
         );

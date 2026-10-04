@@ -212,13 +212,13 @@ it under the article.
 
 ### Tests first
 
-- [ ] T014 [P] [US1] Extend `packages/sync/test/capturePeer.test.ts` (or create it) for
+- [X] T014 [P] [US1] Extend `packages/sync/test/capturePeer.test.ts` (or create it) for
   `highlight`, `editNote` and `undoHighlight` per contracts/extension-highlight.md:
   - the stamped ops are `AddHighlight`, `EditHighlightNote` and `RemoveHighlight`;
   - `notPaired`, `tooLong` and an empty quote are rejected;
   - flushing pending `[AddArticle, AddHighlight]` posts two batches, in order;
   - the peer never calls `GET /batches`.
-- [ ] T015 [P] [US1] Write `e2e/extension-highlight.spec.ts`, with the extension loaded
+- [X] T015 [P] [US1] Write `e2e/extension-highlight.spec.ts`, with the extension loaded
   unpacked (the `EXT_E2E` build) and the relay fixture:
   - select a paragraph on a fixture article (`page.evaluate` sets a Range);
   - trigger the context-menu handler and the command handler through the test hooks;
@@ -240,13 +240,13 @@ it under the article.
 
 ### Implementation
 
-- [ ] T016 [US1] `packages/sync/src/capturePeer.ts`:
+- [X] T016 [US1] `packages/sync/src/capturePeer.ts`:
   - `highlight`, `editNote` and `undoHighlight`;
   - the `highlights` map in storage (the newest 2,000);
   - single-tier batches in the peer's flush, using `tierOf`.
 
   T014 must pass.
-- [ ] T017 [US1] The extension:
+- [X] T017 [US1] The extension:
   - `apps/extension/manifest.json`: the `save-highlight` command (Alt+Shift+H), and the
     version becomes 0.6.0;
   - `src/selection.ts`: `readSelection()`, which returns `''` inside `input`,
@@ -322,6 +322,15 @@ needed) with the highlight.
   - record the manual device checks as pending.
 
 ---
+
+## Follow-ups found during implementation (not in this feature's scope)
+
+- **Bug, from 005:** the capture peer trims `captured` to the newest 5,000 by object key
+  order, but `chrome.storage.local` doesn't keep key order. Past 5,000 captured
+  articles, it could drop arbitrary entries instead of the oldest. This affects only
+  the extension's duplicate warning, and the fix is to trim by `at` (as the 007
+  `highlights` map does). It should be its own bug-fix commit, starting with a failing
+  test (constitution VII).
 
 ## Dependencies & Execution Order
 

@@ -14,6 +14,8 @@ export interface CapturePayload {
 export type ToastState =
   | { kind: 'logged'; title: string; site: string; minutes: number | null; itemId: string; undoMs: number }
   | { kind: 'duplicate'; title: string; readOn: string; capture: CapturePayload }
+  | { kind: 'highlighted'; highlightId: string; itemId: string; createdArticle: boolean; undoMs: number }
+  | { kind: 'noteSaved' }
   | { kind: 'error'; message: string }
   | { kind: 'undone' };
 
@@ -27,7 +29,9 @@ const CSS = `
   .title { font-weight: 600; margin: 0 0 2px; overflow-wrap: anywhere; }
   .line { margin: 0; color: #d0d7de; }
   .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row[hidden] { display: none; }
   button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; padding: 4px 10px; background: #3e4c59; color: #fff; }
+  textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; font: inherit; color: #111; background: #fff; border-radius: 6px; border: 0; padding: 6px; resize: vertical; }
   button.primary { background: #2f80ed; }
 `;
 
@@ -100,6 +104,56 @@ export function showToast(state: ToastState): void {
       ),
       button('Cancel', hideToast),
     );
+  } else if (state.kind === 'highlighted') {
+    box.append(el('p', 'title', 'Highlight saved'));
+    const { highlightId, itemId, createdArticle, undoMs } = state;
+    const addNote = button('Add note', () => openNote());
+    const undo = button('Undo', () => {
+      hideToast();
+      send({ type: 'undoHighlight', highlightId, itemId, createdArticle });
+    });
+    row.append(addNote, undo);
+    dismissMs = undoMs;
+
+    // The note box holds the toast open; Esc closes only the box and the countdown starts again.
+    const openNote = (): void => {
+      clearTimeout(timer);
+      row.hidden = true;
+      const area = el('textarea');
+      area.rows = 3;
+      area.setAttribute('aria-label', 'Note');
+      const save = (): void => {
+        const note = area.value;
+        hideToast();
+        if (note.trim() !== '') send({ type: 'editNote', highlightId, note });
+      };
+      const cancel = (): void => {
+        form.remove();
+        row.hidden = false;
+        timer = setTimeout(hideToast, undoMs);
+      };
+      area.addEventListener('keydown', (e) => {
+        e.stopPropagation(); // the page's own shortcuts must not see the user's typing
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+          e.preventDefault();
+          save();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancel();
+        }
+      });
+      area.addEventListener('keyup', (e) => e.stopPropagation());
+      area.addEventListener('keypress', (e) => e.stopPropagation());
+      const form = el('div', 'form');
+      const actions = el('div', 'row');
+      actions.append(button('Save', save, true), button('Cancel', cancel));
+      form.append(area, actions);
+      box.append(form);
+      area.focus();
+    };
+  } else if (state.kind === 'noteSaved') {
+    box.append(el('p', 'title', 'Note saved'));
+    dismissMs = 2000;
   } else if (state.kind === 'error') {
     box.append(el('p', 'title', state.message));
     dismissMs = 5000;

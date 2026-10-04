@@ -8,11 +8,14 @@ import {
   normalizeUrl,
   ok,
   stampOps,
+  tierOf,
   type BookSnapshot,
   type DeviceId,
   type Hlc,
+  type HighlightSnapshot,
   type Instant,
   type OpWire,
+  type Table,
   type Result,
 } from '@readerlog/core';
 import { parseSyncCode } from './code.ts';
@@ -55,6 +58,16 @@ export interface CapturePeer {
   unpair(): Promise<void>;
   capture(p: CaptureInput): Promise<Result<{ itemId: string; duplicateOf?: { readOn: string } }, 'notPaired' | 'invalid'>>;
   undo(itemId: string): Promise<void>;
+  /** 007: save a quote under an article already in `captured`. The id derives from the article url and `at`. */
+  highlight(p: {
+    itemId: string;
+    quote: string;
+    note?: string;
+    at: string;
+    localDate: string;
+  }): Promise<Result<{ highlightId: string }, 'notPaired' | 'invalid' | 'tooLong'>>;
+  editNote(highlightId: string, note: string): Promise<Result<void, 'invalid' | 'tooLong'>>;
+  undoHighlight(highlightId: string): Promise<void>;
   flush(): Promise<{ sent: number; problem: SyncProblem | null }>;
   status(): Promise<{ paired: boolean; waiting: number; lastSentAt: string | null; problem: SyncProblem | null }>;
 }
@@ -66,6 +79,15 @@ interface CapturedEntry {
   removed: boolean;
 }
 type Captured = Record<string, CapturedEntry>;
+interface HighlightEntry {
+  itemId: string;
+  quote: string | null;
+  note: string | null;
+  /** The save instant: chrome.storage does not keep key order, so trimming sorts on this. */
+  at: string;
+  removed?: boolean;
+}
+type Highlights = Record<string, HighlightEntry>;
 interface PendingBatch {
   batchId: string;
   count: number;
@@ -76,6 +98,7 @@ interface StatusRecord {
 }
 
 const MAX_CAPTURED = 5000;
+const MAX_HIGHLIGHTS = 2000;
 
 const b64url = (bytes: Uint8Array): string => {
   let s = '';
@@ -91,6 +114,17 @@ function problemOf(f: RelayFailure): SyncProblem {
     case 'notFound': return 'spaceGone';
     default: return 'relay';
   }
+}
+
+/** The minimal snapshot decide() needs for the highlight commands (contracts/extension-highlight.md). */
+function highlightSnapshot(itemId: string, highlightId: string, highlights: Highlights): HighlightSnapshot {
+  const h = highlights[highlightId];
+  return {
+    item: { id: itemId, type: 'article', deletedAt: null },
+    highlight: h
+      ? { id: highlightId, itemId: h.itemId, quote: h.quote, note: h.note, page: null, createdAt: '', localDate: '', deletedAt: h.removed ? '1970-01-01T00:00:00.000Z' : null }
+      : null,
+  } as unknown as HighlightSnapshot;
 }
 
 export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): CapturePeer {
@@ -149,7 +183,12 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
     const source: PushSource<number> = {
       async next(limit, upTo) {
         const pending = (await store.get<OpWire[]>('pending')) ?? [];
-        const ops = pending.slice(0, Math.min(limit, upTo ?? Infinity));
+        const max = Math.min(limit, upTo ?? Infinity);
+        // Never mix tiers in one batch (007 R2): stop at the first op of another tier.
+        const tier = pending.length > 0 ? tierOf(pending[0]!.tbl as Table) : null;
+        let n = 0;
+        while (n < pending.length && n < max && tierOf(pending[n]!.tbl as Table) === tier) n++;
+        const ops = pending.slice(0, n);
         return { ops, token: ops.length };
       },
       async complete(token) {
@@ -199,6 +238,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
           pending: [],
           pendingBatch: null,
           captured: {},
+          highlights: {},
           status: { lastSentAt: null, problem: null },
         }),
       );
@@ -207,7 +247,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
 
     unpair: () =>
       serial(() =>
-        store.set({ appOrigin: null, syncKey: null, pending: [], pendingBatch: null, captured: {}, status: { lastSentAt: null, problem: null } }),
+        store.set({ appOrigin: null, syncKey: null, pending: [], pendingBatch: null, captured: {}, highlights: {}, status: { lastSentAt: null, problem: null } }),
       ),
 
     capture: (p) =>
@@ -255,6 +295,54 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         if (!decided.ok) return;
         captured[url] = { ...captured[url]!, removed: true };
         await stampAndStore(decided.value.changes, { captured });
+      }),
+
+    highlight: (p) =>
+      serial(async () => {
+        if (!(await store.get<string>('syncKey'))) return err('notPaired' as const);
+        const captured = (await store.get<Captured>('captured')) ?? {};
+        const url = Object.keys(captured).find((u) => captured[u]!.itemId === p.itemId && !captured[u]!.removed);
+        if (url === undefined) return err('invalid' as const);
+        const highlightId = await uuidFromHash(`readerlog-highlight-v1|${url}|${p.at}`);
+        const highlights = (await store.get<Highlights>('highlights')) ?? {};
+        // An empty quote is refused here: the extension only saves selections.
+        if (p.quote.trim() === '') return err('invalid' as const);
+        const decided = decide(
+          highlightSnapshot(p.itemId, highlightId, highlights),
+          { kind: 'AddHighlight', highlightId, itemId: p.itemId, quote: p.quote, note: p.note ?? null, localDate: p.localDate },
+          new Date(deps.now()).toISOString() as Instant,
+        );
+        if (!decided.ok) return err(decided.error.kind === 'TooLong' ? ('tooLong' as const) : ('invalid' as const));
+        const f = decided.value.changes[0]!.fields;
+        highlights[highlightId] = { itemId: p.itemId, quote: f['quote'] as string | null, note: f['note'] as string | null, at: p.at };
+        const oldestFirst = Object.keys(highlights).sort((a, b) => highlights[a]!.at.localeCompare(highlights[b]!.at));
+        for (const k of oldestFirst.slice(0, Math.max(0, oldestFirst.length - MAX_HIGHLIGHTS))) delete highlights[k];
+        await stampAndStore(decided.value.changes, { highlights });
+        return ok({ highlightId });
+      }),
+
+    editNote: (highlightId, note) =>
+      serial(async () => {
+        const highlights = (await store.get<Highlights>('highlights')) ?? {};
+        const h = highlights[highlightId];
+        if (!h || h.removed) return err('invalid' as const);
+        const decided = decide(highlightSnapshot(h.itemId, highlightId, highlights), { kind: 'EditHighlightNote', highlightId, note }, new Date(deps.now()).toISOString() as Instant);
+        if (!decided.ok) return err(decided.error.kind === 'TooLong' ? ('tooLong' as const) : ('invalid' as const));
+        if (decided.value.changes.length === 0) return ok(undefined);
+        highlights[highlightId] = { ...h, note: decided.value.changes[0]!.fields['note'] as string | null };
+        await stampAndStore(decided.value.changes, { highlights });
+        return ok(undefined);
+      }),
+
+    undoHighlight: (highlightId) =>
+      serial(async () => {
+        const highlights = (await store.get<Highlights>('highlights')) ?? {};
+        const h = highlights[highlightId];
+        if (!h || h.removed) return;
+        const decided = decide(highlightSnapshot(h.itemId, highlightId, highlights), { kind: 'RemoveHighlight', highlightId }, new Date(deps.now()).toISOString() as Instant);
+        if (!decided.ok) return;
+        highlights[highlightId] = { ...h, removed: true };
+        await stampAndStore(decided.value.changes, { highlights });
       }),
 
     flush: () => serial(flushLocked),

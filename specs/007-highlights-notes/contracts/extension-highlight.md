@@ -47,7 +47,9 @@ undoHighlight(highlightId: string): Promise<void>;
 
 - **Snapshot:** the peer builds a minimal snapshot for `decide`: the item `{ id, type:
   'article', deletedAt: null }` from `captured`, and the highlight from a new
-  `highlights` map in storage (`{ [id]: { itemId, quote, note } }`, trimmed to the
-  newest 2,000).
+  `highlights` map in storage (`{ [id]: { itemId, quote, note, at, removed? } }`, trimmed
+  to the newest 2,000 **by `at`**, because `chrome.storage.local` doesn't keep key order).
+- **After Add note:** a short "Note saved" toast replaces the highlight toast (Undo is
+  no longer offered once a note has been saved).
 - **Batches (R2):** `pending` is flushed so that no batch mixes `highlights` ops with
   other tables.
