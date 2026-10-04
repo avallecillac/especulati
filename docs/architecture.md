@@ -334,4 +334,5 @@ The picker in Settings builds its rows from `THEMES`, so it needs no change.
 | 004 | encrypted-sync | Relay, pairing (QR/code), push/pull, LWW merge, convergence tests |
 | 005 | article-capture | iOS Shortcut + `/capture`, Chrome extension |
 | 006 | illustrated-edition-ui | Native-iOS shell (large titles, translucent tab bar, push/pop), illustrated-edition look (EB Garamond/Cormorant, ornaments, cloth covers), token-based themes: Macondo, Patriarca, Automatic |
-| 007 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals` and `items.merged_into` (constitution II) |
+| 007 | highlights-notes | Save passages and notes on articles: Mac extension (menu + shortcut), iPhone Shortcut (Copy → Share), by hand in the app; synced, encrypted; jump back via text links |
+| 008 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals` and `items.merged_into` (constitution II) |
