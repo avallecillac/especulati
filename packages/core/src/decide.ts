@@ -1,5 +1,6 @@
 import { err, ok, type Result } from './result.ts';
-import type { BooksSnapshot, BookSnapshot, Change, Command, Decision, FieldValue, Rejection } from './commands.ts';
+import type { BooksSnapshot, BookSnapshot, Change, Command, Decision, FieldValue, HighlightSnapshot, Rejection } from './commands.ts';
+import { isHighlightId, normalizeNote, normalizeQuote } from './highlight.ts';
 import { deriveStatus, detailsStatusToDb, maxLoggedPage, type BookStatus, type EventType, type ReadingEvent } from './book.ts';
 import { parseWordCount } from './article.ts';
 import { normalizeUrl, siteOf } from './url.ts';
@@ -426,14 +427,78 @@ function dismissDuplicate(snapshot: BooksSnapshot | null, cmd: Extract<Command, 
   return decided([{ tbl: 'duplicate_dismissals', rowId: id.value, fields: { item_a: lo, item_b: hi, created_at: now } }]);
 }
 
-/** The single write path (constitution IV): pure, deterministic, no I/O. */
-export function decide(snapshot: BookSnapshot | BooksSnapshot | null, cmd: Command, now: Instant): Decided {
-  if (cmd.kind === 'MergeBooks') return mergeBooks(snapshot && 'books' in snapshot ? snapshot : null, cmd, now);
-  if (cmd.kind === 'DismissDuplicate') return dismissDuplicate(snapshot && 'books' in snapshot ? snapshot : null, cmd, now);
-  return decideOne(snapshot && 'books' in snapshot ? null : snapshot, cmd, now);
+const highlightIdInvalid = (): Rejection => ({ kind: 'InvalidInput', field: 'highlightId', reason: 'not a lowercase uuid' });
+
+/** Contract: contracts/commands-007.md. Quote and note are normalised (R3); at least one must remain. */
+function addHighlight(snapshot: HighlightSnapshot | null, cmd: Extract<Command, { kind: 'AddHighlight' }>, now: Instant): Decided {
+  if (!isHighlightId(cmd.highlightId)) return err(highlightIdInvalid());
+  const itemId = need(parseItemId(cmd.itemId));
+  if (!itemId.ok) return itemId;
+  const localDate = need(parseLocalDate(cmd.localDate));
+  if (!localDate.ok) return localDate;
+  const item = snapshot?.item ?? null;
+  if (item === null || item.id !== itemId.value || item.deletedAt !== null) return err({ kind: 'NotFound' });
+  let page: number | null = null;
+  if (cmd.page !== undefined && cmd.page !== null) {
+    if (item.type !== 'book') return err({ kind: 'InvalidInput', field: 'page', reason: 'only books have pages' });
+    const p = need(parsePage(cmd.page));
+    if (!p.ok) return p;
+    page = p.value;
+  }
+  if (snapshot!.highlight !== null) return err({ kind: 'AlreadyExists' });
+  const quote = normalizeQuote(cmd.quote ?? '');
+  if (!quote.ok) return err({ kind: 'TooLong', field: 'quote', max: quote.error.max });
+  const note = normalizeNote(cmd.note ?? '');
+  if (!note.ok) return err({ kind: 'TooLong', field: 'note', max: note.error.max });
+  if (quote.value === null && note.value === null) return err({ kind: 'HighlightEmpty' });
+  return decided([
+    {
+      tbl: 'highlights',
+      rowId: cmd.highlightId,
+      fields: { item_id: item.id, quote: quote.value, note: note.value, page, created_at: now, local_date: localDate.value },
+    },
+  ]);
 }
 
-function decideOne(snapshot: BookSnapshot | null, cmd: Exclude<Command, { kind: 'MergeBooks' | 'DismissDuplicate' }>, now: Instant): Decided {
+function editHighlightNote(snapshot: HighlightSnapshot | null, cmd: Extract<Command, { kind: 'EditHighlightNote' }>): Decided {
+  const h = snapshot?.highlight ?? null;
+  if (h === null || h.deletedAt !== null) return err({ kind: 'NotFound' });
+  const note = normalizeNote(cmd.note);
+  if (!note.ok) return err({ kind: 'TooLong', field: 'note', max: note.error.max });
+  if (note.value === null && h.quote === null) return err({ kind: 'HighlightEmpty' });
+  if (note.value === h.note) return decided([]);
+  return decided([{ tbl: 'highlights', rowId: h.id, fields: { note: note.value } }]);
+}
+
+/** Remove and Restore are idempotent LWW writes of `deleted_at`. */
+function setHighlightRemoved(snapshot: HighlightSnapshot | null, removedAt: Instant | null): Decided {
+  const h = snapshot?.highlight ?? null;
+  if (h === null) return err({ kind: 'NotFound' });
+  if ((h.deletedAt === null) === (removedAt === null)) return decided([]);
+  return decided([{ tbl: 'highlights', rowId: h.id, fields: { deleted_at: removedAt } }]);
+}
+
+/** The single write path (constitution IV): pure, deterministic, no I/O. */
+export function decide(snapshot: BookSnapshot | BooksSnapshot | HighlightSnapshot | null, cmd: Command, now: Instant): Decided {
+  const hs = snapshot !== null && 'highlight' in snapshot ? snapshot : null;
+  switch (cmd.kind) {
+    case 'AddHighlight':
+      return addHighlight(hs, cmd, now);
+    case 'EditHighlightNote':
+      return editHighlightNote(hs, cmd);
+    case 'RemoveHighlight':
+      return setHighlightRemoved(hs, now);
+    case 'RestoreHighlight':
+      return setHighlightRemoved(hs, null);
+  }
+  if (snapshot !== null && 'highlight' in snapshot) return err({ kind: 'NotFound' });
+  const bs = snapshot && 'books' in snapshot ? snapshot : null;
+  if (cmd.kind === 'MergeBooks') return mergeBooks(bs, cmd, now);
+  if (cmd.kind === 'DismissDuplicate') return dismissDuplicate(bs, cmd, now);
+  return decideOne(snapshot && 'item' in snapshot && 'events' in snapshot ? snapshot : null, cmd, now);
+}
+
+function decideOne(snapshot: BookSnapshot | null, cmd: Exclude<Command, { kind: 'MergeBooks' | 'DismissDuplicate' | 'AddHighlight' | 'EditHighlightNote' | 'RemoveHighlight' | 'RestoreHighlight' }>, now: Instant): Decided {
   switch (cmd.kind) {
     case 'AddBook':
       return addBook(snapshot, cmd, now);

@@ -44,7 +44,7 @@ path and screen needs.
 
 ### Tests first
 
-- [ ] T001 [P] Write `packages/core/test/highlight.test.ts` for `normalizeQuote`,
+- [X] T001 [P] Write `packages/core/test/highlight.test.ts` for `normalizeQuote`,
   `normalizeNote`, `textFragment` and `passageUrl`, per research R3 and R4:
   - CRLF/CR become LF;
   - runs of spaces, tabs and NBSP collapse within a line, and each line is trimmed;
@@ -56,7 +56,7 @@ path and screen needs.
     `#:~:text=<first 4>,<last 4>`;
   - `-`, `,`, `&` and `#` are percent-encoded, and line breaks become spaces (HL-3);
   - `passageUrl(url, null) === url`.
-- [ ] T002 [P] Write `packages/core/test/decide.highlight.test.ts` per
+- [X] T002 [P] Write `packages/core/test/decide.highlight.test.ts` per
   `contracts/commands-007.md`:
   - **AddHighlight:** the change inserts `highlights` with the normalised quote and
     note, `created_at = now` and the given `local_date`.
@@ -72,7 +72,7 @@ path and screen needs.
   - **Remove and Restore:** each is idempotent (no changes when already in that state).
   - **Invariants:** HL-1 (the same id twice gives `AlreadyExists`) and HL-4 (Remove then
     Restore gives the original row).
-- [ ] T003 [P] Extend `packages/core/test/merge.test.ts`:
+- [X] T003 [P] Extend `packages/core/test/merge.test.ts`:
   - `parseRemoteOp` accepts `tbl: 'highlights'` with the fields `item_id`, `quote`,
     `note`, `page`, `created_at`, `local_date`, `deleted_at`;
   - it rejects any other `highlights` field;
@@ -81,7 +81,7 @@ path and screen needs.
 
 ### Implementation
 
-- [ ] T004 Implement core per `contracts/commands-007.md` and data-model.md:
+- [X] T004 Implement core per `contracts/commands-007.md` and data-model.md:
   - `packages/core/src/highlight.ts`, with the types (`Highlight`, `HighlightId`) and
     helpers (`QUOTE_MAX = NOTE_MAX = 5000`);
   - `commands.ts`: the four commands, the rejections `TooLong` and `HighlightEmpty`, and

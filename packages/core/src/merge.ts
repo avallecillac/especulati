@@ -15,6 +15,7 @@ export const WRITABLE_FIELDS: Readonly<Record<Table, ReadonlySet<string>>> = {
   ]),
   reading_events: new Set(['item_id', 'event_type', 'page', 'occurred_at', 'local_date', 'deleted_at']),
   duplicate_dismissals: new Set(['item_a', 'item_b', 'created_at', 'deleted_at']),
+  highlights: new Set(['item_id', 'quote', 'note', 'page', 'created_at', 'local_date', 'deleted_at']),
 };
 
 /** Fields an op must carry to create a row that does not exist yet (else it is parked). */
@@ -22,7 +23,14 @@ export const INSERT_FIELDS: Readonly<Record<Table, readonly string[]>> = {
   items: ['type', 'title', 'created_at'],
   reading_events: ['item_id', 'event_type', 'occurred_at', 'local_date'],
   duplicate_dismissals: ['item_a', 'item_b', 'created_at'],
+  highlights: ['item_id', 'created_at', 'local_date'],
 };
+
+/**
+ * Sync batch tier (007 R2): a pushed batch never mixes tiers, so a device that predates
+ * `highlights` skips only whole highlight batches. Lives in core so db and sync can share it.
+ */
+export const tierOf = (tbl: Table): 'h' | 'base' => (tbl === 'highlights' ? 'h' : 'base');
 
 /** One op as it travels inside an encrypted batch (contracts/sync-client.md). */
 export interface OpWire {

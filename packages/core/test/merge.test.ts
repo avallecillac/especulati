@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareHlc, hlcReceive, mergeOp, parseRemoteOp, WRITABLE_FIELDS, type Hlc, type OpWire } from '../src/index.ts';
+import { compareHlc, hlcReceive, INSERT_FIELDS, mergeOp, parseRemoteOp, tierOf, WRITABLE_FIELDS, type Hlc, type OpWire } from '../src/index.ts';
 import { deviceId, uuid } from './fixtures.ts';
 
 const ours = deviceId(1);
@@ -111,5 +111,34 @@ describe('mergeOp', () => {
     const clocks: Record<string, Hlc> = { title: h(3999, 9999), author: h(4000, 0), rating: h(4001, 0) };
     expect(mergeOp((f) => clocks[f] ?? null, op)).toEqual(['title']);
     expect(mergeOp(() => null, op).sort()).toEqual(['author', 'rating', 'title']);
+  });
+});
+
+describe('highlights in the sync allow-lists (007)', () => {
+  const FIELDS = ['item_id', 'quote', 'note', 'page', 'created_at', 'local_date', 'deleted_at'];
+  const wire = (fields: OpWire['fields']): OpWire => ({ op: uuid(1), hlc: h(1000, 0), tbl: 'highlights', row: uuid(2), fields });
+
+  it('parseRemoteOp accepts every writable highlights field', () => {
+    expect([...WRITABLE_FIELDS.highlights].sort()).toEqual([...FIELDS].sort());
+    const fields = Object.fromEntries(FIELDS.map((f) => [f, f === 'page' ? 3 : 'x']));
+    const r = parseRemoteOp(wire(fields), theirs);
+    expect(r.ok && r.value.tbl).toBe('highlights');
+  });
+
+  it('parseRemoteOp rejects any other highlights field', () => {
+    for (const f of ['id', 'itemId', 'text', 'merged_into', 'rating']) {
+      expect(parseRemoteOp(wire({ [f]: 'x' }), theirs).ok).toBe(false);
+    }
+  });
+
+  it('INSERT_FIELDS.highlights is item_id, created_at, local_date', () => {
+    expect(INSERT_FIELDS.highlights).toEqual(['item_id', 'created_at', 'local_date']);
+  });
+
+  it('tierOf is h for highlights and base for the other tables', () => {
+    expect(tierOf('highlights')).toBe('h');
+    expect(tierOf('items')).toBe('base');
+    expect(tierOf('reading_events')).toBe('base');
+    expect(tierOf('duplicate_dismissals')).toBe('base');
   });
 });

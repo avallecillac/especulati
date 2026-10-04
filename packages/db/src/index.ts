@@ -178,6 +178,12 @@ export class ReaderlogDb {
         return loadBooksSnapshot(this.raw, [cmd.survivorId, ...mergeChainIds(this.raw, cmd.duplicateId)]);
       case 'DismissDuplicate':
         return loadBooksSnapshot(this.raw, [cmd.itemA, cmd.itemB]);
+      case 'AddHighlight':
+      case 'EditHighlightNote':
+      case 'RemoveHighlight':
+      case 'RestoreHighlight':
+        // TODO(007 T006): load the HighlightSnapshot (snapshot.ts) and the highlights table.
+        throw new Error('highlight commands are not supported by the db yet');
       default:
         return loadBookSnapshot(this.raw, cmd.itemId);
     }

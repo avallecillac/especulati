@@ -26,6 +26,10 @@ export function errorMessage(e: ClientError): string {
       return 'That book, article or entry no longer exists.';
     case 'AlreadyExists':
       return 'That was already saved.';
+    case 'TooLong':
+      return 'That passage is too long (5,000 characters max)';
+    case 'HighlightEmpty':
+      return 'Add a quote or a note';
     case 'InvalidInput':
       return `Invalid ${e.field}: ${e.reason}.`;
     case 'Storage':

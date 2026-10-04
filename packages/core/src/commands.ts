@@ -1,5 +1,6 @@
 import type { BookStatus, DetailsStatus, EventType, Item, ReadingEvent } from './book.ts';
-import type { Instant } from './types.ts';
+import type { Highlight } from './highlight.ts';
+import type { Instant, ItemId } from './types.ts';
 
 /**
  * Commands carry raw user input plus shell-generated ids (constitution IV, v1.0.1):
@@ -81,7 +82,21 @@ export type Command =
       readonly author?: string | null;
       readonly readOn?: string;
     }
-  | { readonly kind: 'RemoveArticle'; readonly itemId: string };
+  | { readonly kind: 'RemoveArticle'; readonly itemId: string }
+  /** 007 contracts/commands-007.md. `quote` and `note` are raw input; decide() normalises them. */
+  | {
+      readonly kind: 'AddHighlight';
+      readonly highlightId: string;
+      readonly itemId: string;
+      readonly quote?: string | null;
+      readonly note?: string | null;
+      readonly page?: number | null;
+      readonly localDate: string;
+    }
+  /** An empty note clears it (rejected when the highlight has no quote). */
+  | { readonly kind: 'EditHighlightNote'; readonly highlightId: string; readonly note: string }
+  | { readonly kind: 'RemoveHighlight'; readonly highlightId: string }
+  | { readonly kind: 'RestoreHighlight'; readonly highlightId: string };
 
 export type Rejection =
   | { readonly kind: 'TitleRequired' }
@@ -95,10 +110,14 @@ export type Rejection =
   | { readonly kind: 'InvalidTransition'; readonly from: BookStatus; readonly type: EventType }
   | { readonly kind: 'NotFound' }
   | { readonly kind: 'AlreadyExists' }
+  /** 007: a quote or note over 5,000 characters; never truncated. */
+  | { readonly kind: 'TooLong'; readonly field: 'quote' | 'note'; readonly max: number }
+  /** 007: a highlight needs a quote or a note. */
+  | { readonly kind: 'HighlightEmpty' }
   /** Malformed ids, dates or over-long text: a programming or input error the UI can't normally produce. */
   | { readonly kind: 'InvalidInput'; readonly field: string; readonly reason: string };
 
-export type Table = 'items' | 'reading_events' | 'duplicate_dismissals';
+export type Table = 'items' | 'reading_events' | 'duplicate_dismissals' | 'highlights';
 export type FieldValue = string | number | null;
 
 /** One row upsert: only the fields being set. Column names are DB columns. */
@@ -128,4 +147,15 @@ export interface BooksSnapshot {
   readonly books: readonly BookSnapshot[];
   /** Dismissals among these books, for DismissDuplicate idempotence. */
   readonly dismissals?: readonly { readonly id: string; readonly deletedAt: Instant | null }[];
+}
+
+/**
+ * Snapshot for the highlight commands (007). `item` is the target item (`AddHighlight`: the item
+ * named by `itemId`; null when absent). `highlight` is the row whose id the command names, live or
+ * removed (null when absent): AddHighlight uses it for AlreadyExists; Edit, Remove and Restore need it.
+ * Edit, Remove and Restore don't read `item`.
+ */
+export interface HighlightSnapshot {
+  readonly item: { readonly id: ItemId; readonly type: 'book' | 'article'; readonly deletedAt: Instant | null } | null;
+  readonly highlight: Highlight | null;
 }

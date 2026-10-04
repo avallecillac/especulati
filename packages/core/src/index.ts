@@ -10,3 +10,4 @@ export * from './duplicates.ts';
 export * from './url.ts';
 export * from './article.ts';
 export * from './ops.ts';
+export * from './highlight.ts';
