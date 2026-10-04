@@ -33,7 +33,7 @@ cd e2e && npx playwright test highlights extension-highlight capture-highlight -
 
 ## Validation results
 
-### 2026-10-04, dev container, Chromium 141 headless, PWA 0.8.0, extension 0.6.0 (branch only, not merged)
+### 2026-10-04, dev container, Chromium 141 headless, PWA 0.8.0, extension 0.6.0 (merged to main on 2026-10-04)
 
 | Check | Result |
 |---|---|
