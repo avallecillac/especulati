@@ -56,6 +56,12 @@ pnpm --filter @readerlog/extension build:e2e  # test build with localhost access
   Custom e2e contexts need `contextOptions: { reducedMotion: 'reduce' }`, and
   `--repeat-each` must be passed to `npx playwright test` in `e2e/`, because
   `pnpm e2e --` drops it.
+- **Highlights (007):**
+  - The `highlights` table stores only the user's explicit selection (`normalizeQuote`)
+    and their note, each at most 5,000 characters.
+  - Commands go through `decide()`.
+  - Pushed batches are single-tier: `tierOf` keeps `highlights` ops apart, so devices
+    on an older version never lose base ops. Give any future table its own tier.
 - Book status and the last page are **derived** from events, never stored. Removing
   anything sets `deleted_at` (a tombstone); rows are never deleted.
 - `local_date` is always explicit and computed in the shell (`apps/pwa/src/lib/clock.ts`).

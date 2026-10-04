@@ -91,7 +91,7 @@ e2e/            Playwright scenarios
 - Types follow "parse, don't validate": `ItemId`, `LocalDate`, `Page`,
   `NonEmptyTitle`, and so on are branded and built only through smart constructors.
 
-## 6. Data model (schema v3)
+## 6. Data model (schema v4)
 
 ```sql
 CREATE TABLE items (
@@ -166,6 +166,16 @@ The spec's indexes are kept (`reading_events(item_id, local_date)`,
 - the **local-only** inbox `sync_inbox`, holding remote ops that arrived before their
   row.
 
+**Migration 4 (feature 007)** adds the synced table
+`highlights(id, item_id, quote, note, page, created_at, local_date, deleted_at)`:
+- `quote` and `note` are each at most 5,000 characters, and at least one is set;
+- `page` is for books, later;
+- removal is a tombstone.
+
+Only text the user explicitly selects is stored (constitution v1.2.0). The migration
+also resets `sync_cursor` and the "couldn't be read" counter, so a device re-reads
+the space once after updating (see §7).
+
 Sync state lives in `meta` (`sync_key`, `sync_cursor`, `pending_batch`, `sync_status`,
 `sync_old_space`), which is never synced.
 
@@ -190,7 +200,15 @@ Sync state lives in `meta` (`sync_key`, `sync_cursor`, `pending_batch`, `sync_st
   batch and applies it in a single transaction.
 - **When sync runs:** on app open, on `visibilitychange`, after writes (debounced),
   and when `online` fires. A device that is offline keeps working fully.
-- **Chrome extension:** a push-only peer that creates article items.
+- **Chrome extension:** a push-only peer that creates article items and highlights.
+- **Batch tiers (007):** a pushed batch never mixes `highlights` ops with other tables
+  (`tierOf` in core).
+  - A device on an older version rejects a whole batch that names an unknown table,
+    and moves past it. With single-tier batches, it skips only highlights and never
+    loses article or book ops.
+  - After it updates, migration 4 makes it re-read the space; ops it already has are
+    ignored by `op_id`.
+  - A future table must follow the same rule: give it its own tier.
 - **As designed in 004** (`specs/004-encrypted-sync/`):
   - The relay runs as Cloudflare **Pages Functions** on the same origin
     (`/api/v1`), with D1. It stores opaque encrypted **batches** of ops, keyed by a
@@ -259,6 +277,19 @@ Details: `specs/002-isbn-scan-metadata/`.
 - **Mac (Chrome or Brave extension), feature 005:** a push-only sync peer with no
   SQLite. It never pulls the log.
 - Sharing an article counts as reading it; there is no queue.
+
+### Save a highlight (feature 007)
+- **Mac:** select text, then press **Alt+Shift+H** or right-click → **Save highlight
+  to Readerlog**.
+  - Only the selection is read, through the existing on-click access.
+  - An article that isn't logged yet is logged in the same step, and one Undo removes
+    both.
+  - The toast offers **Add note**.
+- **iPhone:** select, **Copy**, then **Share → Highlight in Readerlog**. The Shortcut
+  adds the clipboard as `quote` to the capture link.
+- **In the app:** **Add highlight** or **Add note** on any article.
+- **Jump back:** tapping a quote opens the article at the passage, through a text
+  fragment derived from the quote. No anchor text is stored.
 - A URL typed in by hand keeps only its domain, because a browser can't fetch
   arbitrary pages due to CORS. Its status is `metadata_status = 'failed'`.
 
@@ -335,4 +366,4 @@ The picker in Settings builds its rows from `THEMES`, so it needs no change.
 | 005 | article-capture | iOS Shortcut + `/capture`, Chrome extension |
 | 006 | illustrated-edition-ui | Native-iOS shell (large titles, translucent tab bar, push/pop), illustrated-edition look (EB Garamond/Cormorant, ornaments, cloth covers), token-based themes: Macondo, Patriarca, Automatic |
 | 007 | highlights-notes | Save passages and notes on articles: Mac extension (menu + shortcut), iPhone Shortcut (Copy → Share), by hand in the app; synced, encrypted; jump back via text links |
-| 008 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals` and `items.merged_into` (constitution II) |
+| 008 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals`, `items.merged_into` and 007's `highlights` (constitution II) |

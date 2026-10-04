@@ -16,6 +16,9 @@ A personal, local-first app for logging books and web articles and seeing readin
    (Readerlog → Settings → Sync → Show code), and choose **Pair**.
 4. On an article: click the toolbar icon, press **Alt+Shift+L**, or right-click and
    choose **Log as read**.
+5. To keep a passage, select it, then press **Alt+Shift+H** or right-click → **Save
+   highlight to Readerlog**. On the iPhone, see "Highlight in Readerlog" in
+   [the Shortcut guide](docs/ios-shortcut.md).
 
 ## Docs
 

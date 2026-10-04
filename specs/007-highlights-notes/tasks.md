@@ -306,7 +306,7 @@ needed) with the highlight.
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T022 [P] Update the docs:
+- [X] T022 [P] Update the docs:
   - `README.md`: the extension's highlight command;
   - `docs/architecture.md`: the `highlights` table, the batch tiers and the cursor reset,
     and add `highlights` to the 008 export row's must-include list (constitution II);
