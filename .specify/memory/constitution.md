@@ -27,7 +27,15 @@ completeness of the log.
   dates, or any other domain data.
 - No analytics, tracking, or third-party SDKs.
 - Article text MUST NOT be stored anywhere. Only derived metadata (title, author,
-  domain, word count) is kept.
+  domain, word count) is kept, with one exception:
+  - **Highlights.** Text the user explicitly selects and saves as a highlight (a quote)
+    MAY be stored and synced. It is user data like any other: end-to-end encrypted when
+    it leaves the device, included in the export, and capped in size by its feature
+    spec.
+  - **Still never stored or sent:** the full article text, and any text the user did
+    not explicitly select. A capture MUST NOT widen a selection, or save surrounding
+    text beyond the short anchor needed to find the quote again.
+  - **Notes** the user writes are user data.
 
 Rationale: the data is personal and meant to last for decades. Any server or vendor
 may disappear; the user's export must not.
@@ -165,4 +173,4 @@ Rationale: stats that are silently wrong are worse than no stats.
 - **Runtime guidance.** `docs/architecture.md` is the runtime architecture reference.
   When the two disagree, this document wins, and the architecture doc MUST be updated.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-09-29
+**Version**: 1.2.0 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-10-04

@@ -11,7 +11,8 @@
 Readerlog is a **personal, single-user app** for logging books and web articles
 and viewing reading stats.
 
-- **It is not a reader.** Readerlog has no in-app reading and never stores article text.
+- **It is not a reader.** Readerlog has no in-app reading and never stores article text,
+  apart from passages the user explicitly saves as highlights (constitution v1.2.0).
 - **Books** are logged through progress updates. These drive the headline stat:
   *reading days per year*.
 - **Articles** are logged once, when read. They feed counts and stats only and
@@ -317,7 +318,7 @@ The picker in Settings builds its rows from `THEMES`, so it needs no change.
 
 ## 11. Out of scope (v1)
 
-- In-app reading and storing article text
+- In-app reading, and storing article text beyond explicitly saved highlights
 - Accounts and auth, beyond the pairing key
 - Social features
 - Home-screen widgets and push reminders, deferred

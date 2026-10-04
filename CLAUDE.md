@@ -38,7 +38,8 @@ pnpm --filter @readerlog/extension build:e2e  # test build with localhost access
 - `apps/extension`: the Chrome/Brave MV3 extension. It must not import `packages/db` or
   `apps/pwa`. It writes through core `decide()` + `stampOps`, and pushes through
   `packages/sync/src/capturePeer.ts`, which never pulls. The extractor returns only
-  `{ url, title, author, words }`; article text is never stored or sent. Test hooks exist
+  `{ url, title, author, words }`; article text is never stored or sent, except text the
+  user explicitly saves as a highlight (constitution v1.2.0). Test hooks exist
   only in the `EXT_E2E` build.
 - Articles are `items` with `type = 'article'`, and have no events. Book queries and
   stats stay books-only.
