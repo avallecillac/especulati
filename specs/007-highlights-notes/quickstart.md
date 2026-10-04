@@ -30,3 +30,33 @@ cd e2e && npx playwright test highlights extension-highlight capture-highlight -
 2. **iPhone:** build "Highlight in Readerlog" (guide). In Chrome, select, Copy, then
    Share. Check in Readerlog.
 3. **Jump back:** tap a quote and check the page scrolls to the passage.
+
+## Validation results
+
+### 2026-10-04, dev container, Chromium 141 headless, PWA 0.8.0, extension 0.6.0 (branch only, not merged)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; no dependency violations (the core `tierOf` avoids a db→sync cycle) |
+| `pnpm test` | ✅ 756 tests, 76 files |
+| `pnpm test:convergence` | ✅ 8 tests: the 1,000-run test, plus a simulated 0.7.0 peer (100 seeds). It loses no base op before upgrading, and dumps are identical after it. Disabling the tier break makes the scenario fail, as it should |
+| `pnpm e2e` | ✅ 144/144. `highlights`, `extension-highlight` and `capture-highlight` pass with `--repeat-each=2` (54/54) |
+| Extension release build | ✅ `check-manifest`: no new permissions, and no test hooks |
+| SC-001: Mac toast under 1 s | ✅ 135–180 ms, including logging the article first |
+| SC-003: synced, unreadable at the relay | ✅ privacy.test (quote and note absent, raw and base64); e2e A→B |
+| SC-004: quote equals selection | ✅ 20/20 fixtures |
+| SC-005: jump to passage | ✅ 18/20, measured by Chromium's own `::target-text` match. Misses: the two product-grid fixtures, which aren't articles |
+| SC-006: 200 highlights under 200 ms | ✅ best of 3: 38–55 ms (db query 3 ms) |
+| Scenarios 1–15 | ✅ all automated |
+| Manual device checks | ⏳ Pending: the Mac extension 0.6.0 (⌥⇧H, Add note); the iPhone "Highlight in Readerlog" Shortcut; tapping a quote to jump back |
+
+**Decisions made during review:**
+- `tierOf` moved to core, which avoids a db→sync cycle (found by the analysis).
+- A re-sent batch returns exactly what it first sent, so nothing is marked pushed
+  without being sent.
+- The extension's `highlights` map trims by `at`, because `chrome.storage.local`
+  doesn't keep key order. The same bug in 005's `captured` map is recorded as a
+  follow-up.
+- After a note is saved, the extension shows "Note saved" in place of Undo.
+- A capture-link note over 5,000 characters is dropped, and the highlight is kept.
+- Reopening a link after Undo shows "Already saved", mirroring 005.

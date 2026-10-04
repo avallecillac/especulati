@@ -311,7 +311,7 @@ needed) with the highlight.
   - `docs/architecture.md`: the `highlights` table, the batch tiers and the cursor reset,
     and add `highlights` to the 008 export row's must-include list (constitution II);
   - `CLAUDE.md`: a "Highlights" rule line.
-- [ ] T023 Run the full validation (main session):
+- [X] T023 Run the full validation (main session):
   - `pnpm typecheck && pnpm lint && pnpm test && pnpm test:convergence && pnpm e2e`,
     plus `--repeat-each=2` on the new specs;
   - quickstart scenarios 1–15;
