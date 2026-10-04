@@ -1,4 +1,4 @@
-import type { Article, ArticleStats, Command, Rejection, Result, StatsView } from '@readerlog/core';
+import type { Article, ArticleStats, Command, Highlight, Rejection, Result, StatsView } from '@readerlog/core';
 import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
@@ -10,6 +10,7 @@ export type Query =
   | { name: 'articles'; limit?: number; before?: { readOn: string; createdAt: string; id: string } }
   | { name: 'article'; itemId: string }
   | { name: 'findArticleByUrl'; url: string }
+  | { name: 'highlights'; itemId: string }
   | { name: 'articleStats'; year: number; today: string }
   | { name: 'book'; itemId: string; today: string }
   | { name: 'stats'; year: number; today: string }
@@ -35,6 +36,7 @@ export interface QueryResult {
   articles: Article[];
   article: Article | null;
   findArticleByUrl: Article[];
+  highlights: Highlight[];
   articleStats: ArticleStats;
   book: BookView | null;
   stats: StatsView;

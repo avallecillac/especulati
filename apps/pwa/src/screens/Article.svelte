@@ -7,6 +7,7 @@
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast } from '../lib/toast.svelte.ts';
   import Confirm from './Confirm.svelte';
+  import HighlightList from './HighlightList.svelte';
 
   let props: { id: string } = $props();
   // The route is keyed on the id ({#key} in App.svelte).
@@ -100,6 +101,7 @@
       <button type="button" onclick={() => startEditing(a)}>Edit</button>
       <button class="danger" type="button" onclick={() => (removing = true)}>Remove article</button>
     </div>
+    <HighlightList itemId={a.id} url={a.url} />
   {/if}
   {#if removing}
     <Confirm title="Remove this article?" body="It disappears from every view." confirmLabel="Remove" danger onconfirm={() => void remove()} oncancel={() => (removing = false)} />

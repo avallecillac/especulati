@@ -163,6 +163,8 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.article(q.itemId);
     case 'findArticleByUrl':
       return d.findArticleByUrl(q.url);
+    case 'highlights':
+      return d.highlights(q.itemId);
     case 'articleStats': {
       const today = parseLocalDate(q.today);
       if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);

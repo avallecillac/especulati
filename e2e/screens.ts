@@ -16,6 +16,22 @@ export async function captureArticle(page: Page, o: { url: string; title: string
   await expect(page.getByText(/^Logged: /)).toBeVisible();
 }
 
+/** Two highlights on the article: one with a 120-character unbroken quote and a note, one note on its own. */
+async function seedHighlights(page: Page, articleHash: string): Promise<void> {
+  await page.goto(`/${articleHash}`);
+  const sheet = page.getByRole('dialog');
+  await page.getByRole('button', { name: 'Add highlight' }).click();
+  await sheet.getByLabel('Quote').fill('Q'.repeat(120));
+  await sheet.getByLabel('Note').fill('A thought that is worth keeping.');
+  await sheet.getByRole('button', { name: 'Save' }).click();
+  await expect(sheet).toBeHidden();
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await sheet.getByLabel('Note').fill('Only a note, no quote.');
+  await sheet.getByRole('button', { name: 'Save' }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole('article', { name: /^(Highlight|Note)$/ })).toHaveCount(2);
+}
+
 export interface Seeded {
   bookHash: string;
   articleHash: string;
@@ -39,6 +55,7 @@ export async function seedScreens(
   const bookHash = (await page.locator('a[href^="#/book/"]').first().getAttribute('href'))!;
   await page.getByRole('tab', { name: 'Articles' }).click();
   const articleHash = (await page.locator('a[href^="#/article/"]').first().getAttribute('href'))!;
+  await seedHighlights(page, articleHash);
   return { bookHash, articleHash };
 }
 

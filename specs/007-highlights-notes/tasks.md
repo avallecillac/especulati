@@ -155,7 +155,7 @@ data through US4's Add.
 
 ### Tests first
 
-- [ ] T009 [P] [US3] Write `e2e/highlights.spec.ts`, per contracts/ui-highlights.md and
+- [X] T009 [P] [US3] Write `e2e/highlights.spec.ts`, per contracts/ui-highlights.md and
   using its accessible names:
   - log an article by URL (005 Add article);
   - **Add highlight** with Quote "First passage" and Note "my thought";
@@ -170,26 +170,26 @@ data through US4's Add.
   - the empty state shows its text;
   - **SC-006:** with 200 highlights seeded, the list renders within 200 ms of navigating
     to the article (production build, best of 3).
-- [ ] T010 [P] [US3] Extend `e2e/a11y.spec.ts` and `e2e/layout.spec.ts` (`e2e/screens.ts`
+- [X] T010 [P] [US3] Extend `e2e/a11y.spec.ts` and `e2e/layout.spec.ts` (`e2e/screens.ts`
   seeding): the article screen with 2 highlights, one of them a 120-character unbroken
   quote, in both themes.
 
 ### Implementation
 
-- [ ] T011 [US3] Worker API:
+- [X] T011 [US3] Worker API:
   - `apps/pwa/src/lib/protocol.ts`: the query `{ name: 'highlights'; itemId }` and the
     four commands;
   - `src/worker/db.worker.ts`: the query and the command dispatch;
   - `src/lib/errors.ts`: messages for `TooLong` ("That passage is too long (5,000
     characters max)") and `HighlightEmpty` ("Add a quote or a note").
-- [ ] T012 [US3] `apps/pwa/src/screens/HighlightList.svelte`:
+- [X] T012 [US3] `apps/pwa/src/screens/HighlightList.svelte`:
   - entries as specified in contracts/ui-highlights.md (blockquote with an ochre rule,
     note, small-caps date, More sheet);
   - Remove shows the toast "Highlight removed · Undo", which runs `RestoreHighlight`;
   - wired into `Article.svelte` under the running head "Highlights", with the empty
     state;
   - reloads on change notifications.
-- [ ] T013 [US4] `apps/pwa/src/screens/HighlightSheet.svelte`:
+- [X] T013 [US4] `apps/pwa/src/screens/HighlightSheet.svelte`:
   - **Add highlight** (Quote and Note) and **Add note** (Note), plus **Edit note**
     (reusing the sheet);
   - character counter past 4,500, Save disabled when both are empty, the server's
