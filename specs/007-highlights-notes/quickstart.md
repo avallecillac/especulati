@@ -10,10 +10,10 @@ cd e2e && npx playwright test highlights extension-highlight capture-highlight -
 | 1 | Normalising quotes and notes: spaces, paragraphs, trimming, the 5,000 cap without truncation | R3, edge cases | core `highlight.test.ts` |
 | 2 | Add/Edit/Remove/Restore: rejections and changes, invariants HL-1 to HL-4 | contracts/commands-007 | core `decide.highlight.test.ts` |
 | 3 | `textFragment` and `passageUrl` encoding | R4, HL-3 | core |
-| 4 | Migration 3 → 4: rows kept, table present, cursor reset to 0 | data-model | db `migrations.test.ts` |
+| 4 | Migration 3 → 4: rows kept, table present, cursor reset to 0 | data-model | db `migration4.test.ts` |
 | 5 | `highlights(itemId)`: order, tombstones, a removed item hides its highlights (H-3); 200 rows under 20 ms | FR-007, SC-006 | db test plus perf |
 | 6 | Stats, home and library are unchanged by 100 highlights (H-1) | FR-014 | db test |
-| 7 | Remote highlight before its item is parked, then applied | data-model | db sync test |
+| 7 | Remote highlight before its item is parked, then applied | data-model | db `sync.apply.test.ts` |
 | 8 | Batches are single-tier; a v3 peer loses no article op and converges after upgrading | R2, sync-tiers | sync `push.test.ts` plus convergence |
 | 9 | Relay rows don't contain the quote or the note (raw or base64) | SC-003, constitution II | sync `privacy.test.ts` |
 | 10 | Extension: select on a fixture page, then the menu and the command each save; the toast's Add note saves a note; Undo removes the highlight and the article it created; with no selection, nothing is saved | US1, FR-001 to FR-004 | e2e `extension-highlight.spec.ts` |
