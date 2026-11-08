@@ -45,7 +45,7 @@ re-runs all checks, and commits after each phase.
 
 ### Tests first
 
-- [ ] T001 [P] Write `packages/core/test/tags.test.ts` and
+- [X] T001 [P] Write `packages/core/test/tags.test.ts` and
   `packages/core/test/search.test.ts`:
   - **`tagKey`:** NFKC, trim, collapse spaces, lower-case; empty gives `null`.
   - **`tagName`:** trimmed, 1 to 40 characters, otherwise `InvalidInput`.
@@ -54,14 +54,14 @@ re-runs all checks, and commits after each phase.
   - **`tierOf(tbl, fields)`:** `highlights` gives `h`; `tags` and `item_tags` give `t`;
     an `items` op with `read_on: null` gives `s`; an `items` op with a date, or without
     `read_on`, gives `base`; `reading_events` gives `base`.
-- [ ] T002 [P] Write `packages/core/test/decide.saved.test.ts` (contracts/commands-008):
+- [X] T002 [P] Write `packages/core/test/decide.saved.test.ts` (contracts/commands-008):
   - `AddArticle` without `readOn` inserts with the field **explicitly** present
     (`'read_on' in change.fields` and its value is `null`), and `tierOf` of that change
     is `s` (F2);
   - `MarkArticleRead` emits **every** article insert field plus `read_on` (S-2), and
     gives `AlreadyRead` on a read article and `NotFound` on a book or a removed item;
   - `MarkArticleUnread` sets `read_on: null`, and gives `NotRead` on a saved article.
-- [ ] T003 [P] Write `packages/core/test/decide.tags.test.ts`:
+- [X] T003 [P] Write `packages/core/test/decide.tags.test.ts`:
   - **`TagArticle`:** on a new tag it inserts both the tag and the assignment; with an
     existing tag, only the assignment; a tombstoned assignment is restored; already
     tagged gives no changes.
@@ -72,7 +72,7 @@ re-runs all checks, and commits after each phase.
     to equal the source's live assignments, and produces insert/restore `to` plus
     tombstone `from` plus tombstone the source.
   - **`DeleteTag`:** tombstones the tag and every live assignment.
-- [ ] T004 [P] Write `packages/core/test/decide.reconcile.test.ts`, and extend
+- [X] T004 [P] Write `packages/core/test/decide.reconcile.test.ts`, and extend
   `packages/core/test/merge.property.test.ts`:
   - `ReconcileSavedArticle` checks: same URL, the survivor older, both live articles;
   - the survivor gets the duplicate's `read_on`;
@@ -81,12 +81,12 @@ re-runs all checks, and commits after each phase.
   - the duplicate gets `deleted_at` plus `merged_into`;
   - **property:** two peers deciding the same reconcile produce deep-equal changes (R-1);
   - **R-2:** the survivor's change carries every article insert field.
-- [ ] T005 Extend `packages/core/test/merge.test.ts` for the `tags` and `item_tags`
+- [X] T005 Extend `packages/core/test/merge.test.ts` for the `tags` and `item_tags`
   allow-lists and `INSERT_FIELDS` (data-model.md).
 
 ### Implementation
 
-- [ ] T006 Implement core:
+- [X] T006 Implement core:
   - `packages/core/src/tags.ts`: `tagKey`, `tagName`, `TAG_NAME_MAX = 40`,
     `TAGS_PER_ARTICLE_MAX = 20`;
   - `packages/core/src/search.ts`: `searchKey`;

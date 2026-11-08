@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { compareHlc, hlcReceive, mergeOp, parseHlc, type Hlc, type RemoteOp } from '../src/index.ts';
-import { deviceId, uuid } from './fixtures.ts';
+import {
+  compareHlc, decide, hlcReceive, mergeOp, parseHlc, type Hlc, type Highlight, type HighlightId, type Instant, type Item, type ItemId,
+  type ItemTagRow, type LocalDate, type ReconcileSnapshot, type RemoteOp,
+} from '../src/index.ts';
+import { book, deviceId, NOW, uuid } from './fixtures.ts';
 
 /** mulberry32: small seeded PRNG so failures reproduce. */
 function prng(seed: number) {
@@ -83,6 +86,61 @@ describe('merge properties', () => {
           [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
         }
         expect(applyAll(shuffled)).toEqual(baseline);
+      }
+    }
+  });
+});
+
+describe('ReconcileSavedArticle properties (R-1, R-2)', () => {
+  const S = uuid(50);
+  const D = uuid(51);
+  const art = (id: string, p: Partial<Item>): Item =>
+    book({
+      id: id as ItemId, type: 'article', title: 'T' as Item['title'], author: null, totalPages: null,
+      url: 'https://e.com/a' as Item['url'], domain: 'e.com', wordCount: 10, readOn: null, ...p,
+    });
+
+  it('peers loading rows and copies in different orders decide deep-equal changes; the survivor change is the full row', () => {
+    const rnd = prng(808);
+    const shuffle = <T,>(xs: readonly T[]): T[] => {
+      const a = [...xs];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rnd() * (i + 1));
+        [a[i], a[j]] = [a[j]!, a[i]!];
+      }
+      return a;
+    };
+    for (let round = 0; round < 200; round++) {
+      const nh = Math.floor(rnd() * 6);
+      const na = Math.floor(rnd() * 6);
+      const hs: Highlight[] = Array.from({ length: nh }, (_, i) => ({
+        id: uuid(1000 + i) as HighlightId, itemId: D as ItemId, quote: `q${i}`, note: null, page: null,
+        createdAt: '2026-09-05T10:00:00.000Z' as Instant, localDate: '2026-09-05' as LocalDate, deletedAt: rnd() < 0.2 ? ('2026-09-06T10:00:00.000Z' as Instant) : null,
+      }));
+      const as: ItemTagRow[] = Array.from({ length: na }, (_, i) => ({
+        id: uuid(2000 + i), itemId: D, tagId: uuid(3000 + i), createdAt: '2026-09-05T10:00:00.000Z' as Instant, deletedAt: rnd() < 0.2 ? ('2026-09-06T10:00:00.000Z' as Instant) : null,
+      }));
+      const readOn = rnd() < 0.7 ? ('2026-09-05' as LocalDate) : null;
+      const base = (): ReconcileSnapshot => ({
+        survivor: art(S, { createdAt: '2026-09-01T10:00:00.000Z' as Instant }),
+        duplicate: art(D, { createdAt: '2026-09-05T10:00:00.000Z' as Instant, readOn }),
+        duplicateHighlights: hs, survivorHighlightIds: [], duplicateAssignments: as, survivorAssignments: [],
+      });
+      const copies = hs.filter((h) => h.deletedAt === null).map((h, i) => ({ from: h.id, to: uuid(4000 + i) }));
+      const moves = as.filter((a) => a.deletedAt === null).map((a, i) => ({ from: a.id, to: uuid(5000 + i), itemId: S }));
+      const peerA = decide(base(), { kind: 'ReconcileSavedArticle', survivorId: S, duplicateId: D, copies, tagMoves: moves }, NOW);
+      const peerB = decide(
+        { ...base(), duplicateHighlights: shuffle(hs), duplicateAssignments: shuffle(as) },
+        { kind: 'ReconcileSavedArticle', survivorId: S, duplicateId: D, copies: shuffle(copies), tagMoves: shuffle(moves) },
+        NOW,
+      );
+      expect(peerA.ok).toBe(true);
+      expect(peerB).toEqual(peerA);
+      if (peerA.ok) {
+        // R-2: the survivor change carries every article insert field
+        const f = peerA.value.changes[0]!.fields;
+        for (const k of ['type', 'title', 'url', 'domain', 'author', 'word_count', 'metadata_status', 'created_at', 'read_on']) expect(k in f).toBe(true);
+        expect(f['read_on']).toBe(readOn);
       }
     }
   });

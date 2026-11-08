@@ -30,6 +30,12 @@ export function errorMessage(e: ClientError): string {
       return 'That passage is too long (5,000 characters max)';
     case 'HighlightEmpty':
       return 'Add a quote or a note';
+    case 'AlreadyRead':
+      return 'That article is already marked as read.';
+    case 'NotRead':
+      return "That article isn't marked as read.";
+    case 'TooManyTags':
+      return `An article can have at most ${e.max} tags.`;
     case 'InvalidInput':
       return `Invalid ${e.field}: ${e.reason}.`;
     case 'Storage':

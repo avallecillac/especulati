@@ -185,9 +185,9 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         const pending = (await store.get<OpWire[]>('pending')) ?? [];
         const max = Math.min(limit, upTo ?? Infinity);
         // Never mix tiers in one batch (007 R2): stop at the first op of another tier.
-        const tier = pending.length > 0 ? tierOf(pending[0]!.tbl as Table) : null;
+        const tier = pending.length > 0 ? tierOf(pending[0]!.tbl as Table, pending[0]!.fields) : null;
         let n = 0;
-        while (n < pending.length && n < max && tierOf(pending[n]!.tbl as Table) === tier) n++;
+        while (n < pending.length && n < max && tierOf(pending[n]!.tbl as Table, pending[n]!.fields) === tier) n++;
         const ops = pending.slice(0, n);
         return { ops, token: ops.length };
       },

@@ -149,16 +149,17 @@ export function unpushedOps(db: Database, limit: number, upToSeq?: number): { ma
   );
   let maxSeq = 0;
   const ops: OpWire[] = [];
-  const tier = rows.length > 0 ? tierOf(rows[0]!.tbl as Table) : null;
+  const fieldsOf = (r: (typeof rows)[number]) => JSON.parse(r.fields_json as string) as OpWire['fields'];
+  const tier = rows.length > 0 ? tierOf(rows[0]!.tbl as Table, fieldsOf(rows[0]!)) : null;
   for (const r of rows) {
-    if (upToSeq === undefined && tierOf(r.tbl as Table) !== tier) break;
+    if (upToSeq === undefined && tierOf(r.tbl as Table, fieldsOf(r)) !== tier) break;
     maxSeq = Math.max(maxSeq, r.seq as number);
     ops.push({
       op: r.op_id as string,
       hlc: r.hlc as string,
       tbl: r.tbl as Table,
       row: r.row_id as string,
-      fields: JSON.parse(r.fields_json as string) as OpWire['fields'],
+      fields: fieldsOf(r),
     });
   }
   return { maxSeq, ops };

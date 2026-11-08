@@ -136,9 +136,42 @@ describe('highlights in the sync allow-lists (007)', () => {
   });
 
   it('tierOf is h for highlights and base for the other tables', () => {
-    expect(tierOf('highlights')).toBe('h');
-    expect(tierOf('items')).toBe('base');
-    expect(tierOf('reading_events')).toBe('base');
-    expect(tierOf('duplicate_dismissals')).toBe('base');
+    expect(tierOf('highlights', {})).toBe('h');
+    expect(tierOf('items', {})).toBe('base');
+    expect(tierOf('reading_events', {})).toBe('base');
+    expect(tierOf('duplicate_dismissals', {})).toBe('base');
+  });
+});
+
+describe('tags and item_tags in the sync allow-lists (008)', () => {
+  const TAG_FIELDS = ['name', 'name_key', 'created_at', 'deleted_at'];
+  const IT_FIELDS = ['item_id', 'tag_id', 'created_at', 'deleted_at'];
+  const wire = (tbl: string, fields: OpWire['fields']): OpWire => ({ op: uuid(1), hlc: h(1000, 0), tbl, row: uuid(2), fields });
+
+  it('WRITABLE_FIELDS and INSERT_FIELDS match data-model.md', () => {
+    expect([...WRITABLE_FIELDS.tags].sort()).toEqual([...TAG_FIELDS].sort());
+    expect([...WRITABLE_FIELDS.item_tags].sort()).toEqual([...IT_FIELDS].sort());
+    expect(INSERT_FIELDS.tags).toEqual(['name', 'name_key', 'created_at']);
+    expect(INSERT_FIELDS.item_tags).toEqual(['item_id', 'tag_id', 'created_at']);
+  });
+
+  it('parseRemoteOp accepts every writable field of tags and item_tags', () => {
+    const t = parseRemoteOp(wire('tags', Object.fromEntries(TAG_FIELDS.map((f) => [f, 'x']))), theirs);
+    expect(t.ok && t.value.tbl).toBe('tags');
+    const it = parseRemoteOp(wire('item_tags', Object.fromEntries(IT_FIELDS.map((f) => [f, 'x']))), theirs);
+    expect(it.ok && it.value.tbl).toBe('item_tags');
+  });
+
+  it('parseRemoteOp rejects any other field', () => {
+    for (const f of ['id', 'item_id', 'color', 'merged_into']) expect(parseRemoteOp(wire('tags', { [f]: 'x' }), theirs).ok).toBe(false);
+    for (const f of ['id', 'name', 'merged_into']) expect(parseRemoteOp(wire('item_tags', { [f]: 'x' }), theirs).ok).toBe(false);
+  });
+
+  it('tierOf: t for tags and item_tags, s for read_on null, base otherwise', () => {
+    expect(tierOf('tags', { name: 'x' })).toBe('t');
+    expect(tierOf('item_tags', { deleted_at: 'x' })).toBe('t');
+    expect(tierOf('items', { read_on: null })).toBe('s');
+    expect(tierOf('items', { read_on: '2026-09-01' })).toBe('base');
+    expect(tierOf('items', { title: 'x' })).toBe('base');
   });
 });

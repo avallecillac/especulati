@@ -189,6 +189,12 @@ export class ReaderlogDb {
       case 'RemoveHighlight':
       case 'RestoreHighlight':
         return loadHighlightSnapshot(this.raw, cmd.highlightId, null);
+      case 'TagArticle':
+      case 'UntagArticle':
+      case 'RenameTag':
+      case 'DeleteTag':
+      case 'ReconcileSavedArticle':
+        throw new Error(`${cmd.kind} is not supported until T008`);
       default:
         return loadBookSnapshot(this.raw, cmd.itemId);
     }

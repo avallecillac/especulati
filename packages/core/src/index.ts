@@ -11,3 +11,5 @@ export * from './url.ts';
 export * from './article.ts';
 export * from './ops.ts';
 export * from './highlight.ts';
+export * from './tags.ts';
+export * from './search.ts';
