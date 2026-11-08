@@ -1,18 +1,23 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Highlight, type HighlightSnapshot, type Rejection, type Result, type StatsView } from '@readerlog/core';
+import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Highlight, type HighlightSnapshot, type ReconcileSnapshot, type Rejection, type Result, type StatsView, type TagSnapshot } from '@readerlog/core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
-import { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, mergeChainIds } from './snapshot.ts';
+import { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, loadReconcileSnapshot, loadTagSnapshot, mergeChainIds } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { articleStatsView, statsView } from './stats.ts';
 import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
-import { article, articles, highlightsView, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type ArticleCursor, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type StragglerView } from './queries.ts';
+import { SearchIndex, type SearchHit, type SearchOptions } from './search.ts';
+import { allTags, resolveTagId, tagSuggestions, tagsFor, type ItemTagView, type TagSummary } from './tags.ts';
+import { article, articles, findSavedByUrl, savedArticle, savedArticles, savedCount, highlightsView, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type ArticleCursor, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type SavedArticle, type StragglerView } from './queries.ts';
 
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
-export { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, mergeChainIds } from './snapshot.ts';
+export { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, loadReconcileSnapshot, loadTagSnapshot, mergeChainIds } from './snapshot.ts';
 export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
+export { SearchIndex } from './search.ts';
+export type { SearchHit, SearchOptions, SearchPassage } from './search.ts';
+export type { ItemTagView, TagSummary } from './tags.ts';
 export { articleStatsView, loadArticles, loadStatsBooks, statsView } from './stats.ts';
 
 /** Everything impure the write path needs, injected by the shell (or a test). */
@@ -28,6 +33,7 @@ export interface DispatchOutcome {
 
 export class ReaderlogDb {
   #deviceId: DeviceId | null = null;
+  readonly #search = new SearchIndex();
 
   constructor(readonly raw: Database) {}
 
@@ -100,6 +106,52 @@ export class ReaderlogDb {
     return findArticleByUrl(this.raw, url);
   }
 
+  /** Live saved articles (no read date), newest saved first (008). */
+  savedArticles(opts?: { limit?: number }): SavedArticle[] {
+    return savedArticles(this.raw, opts);
+  }
+
+  savedCount(): number {
+    return savedCount(this.raw);
+  }
+
+  savedArticle(itemId: string): SavedArticle | null {
+    return savedArticle(this.raw, itemId);
+  }
+
+  findSavedByUrl(url: string): SavedArticle[] {
+    return findSavedByUrl(this.raw, url);
+  }
+
+  /** Live tags on a live article, by name. */
+  tagsFor(itemId: string): ItemTagView[] {
+    return tagsFor(this.raw, itemId);
+  }
+
+  /** Every live tag grouped by name key, with counts. */
+  allTags(): TagSummary[] {
+    return allTags(this.raw);
+  }
+
+  tagSuggestions(prefix: string, limit?: number): TagSummary[] {
+    return tagSuggestions(this.raw, prefix, limit);
+  }
+
+  /** The tag id to use for a name (research R3 steps 1-4). `hash` is the shell's `uuidFromHash`. */
+  resolveTagId(name: string, hash: (label: string) => Promise<string>): Promise<string | null> {
+    return resolveTagId(this.raw, name, hash);
+  }
+
+  /** Read and saved articles matching every term (and every tag chip); see `SearchIndex`. */
+  search(query: string, opts?: SearchOptions): SearchHit[] {
+    return this.#search.search(this.raw, query, opts);
+  }
+
+  /** Drop the search index; it is rebuilt on the next query. Called after every change. */
+  invalidateSearch(): void {
+    this.#search.invalidate();
+  }
+
   findByIsbn(isbn: string): BookCard | null {
     return findByIsbn(this.raw, isbn);
   }
@@ -133,6 +185,7 @@ export class ReaderlogDb {
   applyRemoteOps(ops: readonly RemoteOp[], wallMs: () => number): ApplyResult {
     const deviceId = this.#deviceId;
     if (!deviceId) throw new Error('ensureDeviceId() must run before applyRemoteOps()');
+    this.#search.invalidate();
     return applyRemoteOps(this.raw, ops, deviceId, wallMs);
   }
 
@@ -140,6 +193,7 @@ export class ReaderlogDb {
   applyPulledPage(ops: readonly RemoteOp[], cursor: number, wallMs: () => number): ApplyResult {
     const deviceId = this.#deviceId;
     if (!deviceId) throw new Error('ensureDeviceId() must run before applyPulledPage()');
+    this.#search.invalidate();
     return applyPulledPage(this.raw, ops, cursor, deviceId, wallMs);
   }
 
@@ -177,7 +231,7 @@ export class ReaderlogDb {
   }
 
   /** The snapshot each command kind needs: one book, or several for merge/dismiss (contracts/commands-004.md). */
-  #snapshotFor(cmd: Command): BookSnapshot | BooksSnapshot | HighlightSnapshot | null {
+  #snapshotFor(cmd: Command): BookSnapshot | BooksSnapshot | HighlightSnapshot | TagSnapshot | ReconcileSnapshot | null {
     switch (cmd.kind) {
       case 'MergeBooks':
         return loadBooksSnapshot(this.raw, [cmd.survivorId, ...mergeChainIds(this.raw, cmd.duplicateId)]);
@@ -193,8 +247,9 @@ export class ReaderlogDb {
       case 'UntagArticle':
       case 'RenameTag':
       case 'DeleteTag':
+        return loadTagSnapshot(this.raw, cmd);
       case 'ReconcileSavedArticle':
-        throw new Error(`${cmd.kind} is not supported until T008`);
+        return loadReconcileSnapshot(this.raw, cmd.survivorId, cmd.duplicateId);
       default:
         return loadBookSnapshot(this.raw, cmd.itemId);
     }
@@ -213,6 +268,7 @@ export class ReaderlogDb {
       }
       applyChanges(this.raw, decision.value.changes, deviceId, env.wallMs, env.newOpId);
       this.raw.exec('COMMIT');
+      this.#search.invalidate();
       return ok({ offerFinish: decision.value.offerFinish });
     } catch (e) {
       rollbackQuietly(this.raw, 'ROLLBACK');
@@ -221,5 +277,5 @@ export class ReaderlogDb {
   }
 }
 export { rowToArticle } from './queries.ts';
-export type { ArticleCursor } from './queries.ts';
+export type { ArticleCursor, SavedArticle } from './queries.ts';
 export type { BookCard, BookEventView, BookView, DuplicateBookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from './queries.ts';

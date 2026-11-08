@@ -39,6 +39,11 @@ function canInsert(db: Database, op: RemoteOp): boolean {
   if (op.tbl === 'reading_events' || op.tbl === 'highlights') {
     return db.selectValue('SELECT 1 FROM items WHERE id = ?', [op.fields.item_id]) !== undefined;
   }
+  // A tag assignment needs both its item and its tag (008): either missing would break a foreign key.
+  if (op.tbl === 'item_tags') {
+    return db.selectValue('SELECT 1 FROM items WHERE id = ?', [op.fields.item_id]) !== undefined
+      && db.selectValue('SELECT 1 FROM tags WHERE id = ?', [op.fields.tag_id]) !== undefined;
+  }
   return true;
 }
 

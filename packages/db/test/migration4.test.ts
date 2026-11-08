@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '@readerlog/core';
-import { migrate, ReaderlogDb, SCHEMA_VERSION } from '../src/index.ts';
+import { migrate, ReaderlogDb } from '../src/index.ts';
 import { dumpLogical, emptyDb, DEVICE, uuid } from './helpers.ts';
 
 const TABLES = ['items', 'reading_events', 'change_log', 'field_clock', 'duplicate_dismissals', 'sync_inbox', 'covers'];
@@ -31,8 +31,7 @@ describe('migration 4', () => {
   it('upgrades a v3 database: rows kept, highlights table and index added, cursor reset, undecryptable cleared', () => {
     const raw = v3Fixture();
     const before = dumpLogical(raw, TABLES);
-    migrate(raw);
-    expect(SCHEMA_VERSION).toBe(4);
+    migrate(raw, { to: 4 });
     expect(raw.selectValue('PRAGMA user_version')).toBe(4);
     expect(dumpLogical(raw, TABLES)).toEqual(before);
     expect(raw.selectValue('SELECT count(*) FROM items')).toBe(2);
@@ -52,9 +51,9 @@ describe('migration 4', () => {
 
   it('is a no-op when run again', () => {
     const raw = v3Fixture();
-    migrate(raw);
+    migrate(raw, { to: 4 });
     const before = dumpLogical(raw, [...TABLES, 'meta', 'highlights']);
-    migrate(raw);
+    migrate(raw, { to: 4 });
     expect(raw.selectValue('PRAGMA user_version')).toBe(4);
     expect(dumpLogical(raw, [...TABLES, 'meta', 'highlights'])).toEqual(before);
   });

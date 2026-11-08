@@ -137,6 +137,45 @@ describe('pushAll over the db source: batch tiers (007, contracts/sync-tiers.md)
     expect(t.db.pendingCount()).toBe(0);
   });
 
+  it('[items(read), tags, item_tags, items(read_on:null), highlights, items(read)] goes out as 5 single-tier batches, in order (008)', async () => {
+    const t = openTestDb();
+    const run = (cmd: Parameters<typeof t.db.dispatch>[0]) => { t.tick(); expect(t.db.dispatch(cmd, t.env)).toMatchObject({ ok: true }); };
+    run({ kind: 'AddArticle', itemId: uuid(1), url: 'https://a.example/1', title: 'One', author: null, wordCount: 100, readOn: '2026-09-01', detailsStatus: 'complete' });
+    run({ kind: 'TagArticle', itemId: uuid(1), tagId: uuid(0x50), itemTagId: uuid(0x51), name: 'ai' });
+    run({ kind: 'MarkArticleUnread', itemId: uuid(1) });
+    run({ kind: 'AddHighlight', highlightId: uuid(0x30), itemId: uuid(1), quote: 'Passage', localDate: '2026-09-01' });
+    run({ kind: 'MarkArticleRead', itemId: uuid(1), readOn: '2026-09-02' });
+    const logged = t.raw.selectValues('SELECT tbl FROM change_log ORDER BY seq').map(String);
+    expect(logged).toEqual(['items', 'tags', 'item_tags', 'items', 'highlights', 'items']);
+
+    const source: PushSource<number> = {
+      next: (limit, upTo) => {
+        const { maxSeq, ops } = t.db.unpushedOps(limit, upTo);
+        return { ops, token: maxSeq };
+      },
+      complete: (token) => t.db.completePush(token),
+      pending: () => {
+        const p = t.db.syncMeta().pendingBatch;
+        return p ? { batchId: p.batchId, token: p.maxSeq } : null;
+      },
+      setPending: (p) => t.db.setSyncMeta({ pendingBatch: p ? { batchId: p.batchId, maxSeq: p.token } : null }),
+    };
+    const sent: string[][] = [];
+    let ids = 0;
+    const deps: PushDeps = {
+      client: { postBatch: () => Promise.resolve({ ok: true, value: { seq: 1, duplicate: false } }) },
+      seal: (ops, batchId) => {
+        sent.push(ops.map((o) => `${o.tbl}${o.tbl === 'items' ? (Object.prototype.hasOwnProperty.call(o.fields, 'read_on') && o.fields['read_on'] === null ? ':saved' : ':read') : ''}`));
+        return Promise.resolve({ batchId, iv: '', ct: '' });
+      },
+      newBatchId: () => `id-${++ids}`,
+    };
+    const out = await pushAll(source, deps);
+    expect(sent).toEqual([['items:read'], ['tags', 'item_tags'], ['items:saved'], ['highlights'], ['items:read']]);
+    expect(out).toEqual({ pushed: 6, failure: null });
+    expect(t.db.pendingCount()).toBe(0);
+  });
+
   it('a re-sent pending batch carries the same single-tier content', () => {
     const t = openTestDb();
     t.tick();

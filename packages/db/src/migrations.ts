@@ -117,6 +117,36 @@ const MIGRATIONS: readonly string[] = [
   UPDATE meta SET value = json_set(value, '$.undecryptable', 0)
     WHERE key = 'sync_status' AND json_valid(value);
   `,
+  /* 5 */ `
+  -- Tags (008). The v1 tables were never written (verified), so they are rebuilt with
+  -- row ids for sync.
+  DROP TABLE item_tags;
+  DROP TABLE tags;
+  CREATE TABLE tags (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 40),
+    name_key   TEXT NOT NULL CHECK (length(name_key) BETWEEN 1 AND 40),
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
+  );
+  CREATE INDEX idx_tags_key ON tags(name_key) WHERE deleted_at IS NULL;
+  CREATE TABLE item_tags (
+    id         TEXT PRIMARY KEY,
+    item_id    TEXT NOT NULL REFERENCES items(id),
+    tag_id     TEXT NOT NULL REFERENCES tags(id),
+    created_at TEXT NOT NULL,
+    deleted_at TEXT
+  );
+  CREATE INDEX idx_item_tags_item ON item_tags(item_id) WHERE deleted_at IS NULL;
+  CREATE INDEX idx_item_tags_tag  ON item_tags(tag_id)  WHERE deleted_at IS NULL;
+
+  -- Saved articles (read_on IS NULL) list newest first.
+  CREATE INDEX idx_items_saved ON items(created_at) WHERE type = 'article' AND read_on IS NULL AND deleted_at IS NULL;
+
+  -- Re-read once, so batches skipped before this version are applied (R2, as in migration 4).
+  UPDATE meta SET value = '0' WHERE key = 'sync_cursor';
+  UPDATE meta SET value = json_set(value, '$.undecryptable', 0) WHERE key = 'sync_status' AND json_valid(value);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

@@ -78,7 +78,14 @@
   2. the derived id is free → use it;
   3. the derived id is a tombstone → restore it with the new name;
   4. otherwise → use `uuidFromHash("readerlog-tag-v1|" + name_key + "|" + n)` for the
-     first free n.
+     first n whose id is free **or a tombstone** (a tombstone is restored), so deleted
+     names don't pile up ids. Implemented as `ReaderlogDb.resolveTagId(name, hash)`,
+     with the hash injected by the shell.
+
+  **Known limit:** two live tags with one key can only come from a concurrent step-4
+  collision. In that case, removing that tag from an article removes one of the two
+  assignments, and the tag can stay shown until removed again. This is rare and
+  accepted.
 
   Lists group live tags by `name_key`, so a rare concurrent duplicate still shows as
   one tag.

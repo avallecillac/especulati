@@ -1,6 +1,7 @@
 import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import { detailsStatusFromDb } from '@readerlog/core';
 import type {
+  ItemTagRow, ReconcileSnapshot, TagRow, TagSnapshot,
   Author, Highlight, HighlightId, HighlightSnapshot, BookSnapshot, BooksSnapshot, CoverUrl, Isbn13, EventId, EventType, Genre, Instant, Item, ItemId, ItemType, LocalDate,
   NonEmptyTitle, NormalizedUrl, Page, PageCount, ReadingEvent,
 } from '@readerlog/core';
@@ -112,5 +113,79 @@ export function loadHighlightSnapshot(db: Database, highlightId: string, itemId:
       ? { id: text(row['id'], 'id') as ItemId, type: text(row['type'], 'type') as 'book' | 'article', deletedAt: textOrNull(row['deleted_at'], 'deleted_at') as Instant | null }
       : null,
     highlight: loadHighlight(db, highlightId),
+  };
+}
+
+function rowToTag(r: Record<string, SqlValue>): TagRow {
+  return { id: text(r['id'], 'id'), name: text(r['name'], 'name'), nameKey: text(r['name_key'], 'name_key'), deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null };
+}
+
+function rowToItemTag(r: Record<string, SqlValue>): ItemTagRow {
+  return {
+    id: text(r['id'], 'id'),
+    itemId: text(r['item_id'], 'item_id'),
+    tagId: text(r['tag_id'], 'tag_id'),
+    createdAt: text(r['created_at'], 'created_at') as Instant,
+    deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
+  };
+}
+
+const loadTag = (db: Database, id: string | null): TagRow | null => {
+  const r = id === null ? undefined : db.selectObject('SELECT * FROM tags WHERE id = ?', [id]);
+  return r ? rowToTag(r) : null;
+};
+const itemTagsOfItem = (db: Database, itemId: string): ItemTagRow[] =>
+  db.selectObjects('SELECT * FROM item_tags WHERE item_id = ? ORDER BY id', [itemId]).map(rowToItemTag);
+const itemTagsOfTag = (db: Database, tagId: string): ItemTagRow[] =>
+  db.selectObjects('SELECT * FROM item_tags WHERE tag_id = ? ORDER BY id', [tagId]).map(rowToItemTag);
+
+type TagCommand =
+  | { kind: 'TagArticle'; itemId: string; tagId: string; itemTagId: string }
+  | { kind: 'UntagArticle'; itemTagId: string }
+  | { kind: 'RenameTag'; tagId: string; merge?: { targetTagId: string } | undefined }
+  | { kind: 'DeleteTag'; tagId: string };
+
+/** Snapshot for the tag commands, as documented on `TagSnapshot` in core. Unused fields are null / []. */
+export function loadTagSnapshot(db: Database, cmd: TagCommand): TagSnapshot {
+  const empty: TagSnapshot = { item: null, tag: null, mergeTarget: null, assignments: [], targetAssignments: [] };
+  switch (cmd.kind) {
+    case 'TagArticle': {
+      const row = db.selectObject('SELECT id, type, deleted_at FROM items WHERE id = ?', [cmd.itemId]);
+      return {
+        ...empty,
+        item: row ? { id: text(row['id'], 'id') as ItemId, type: text(row['type'], 'type') as 'book' | 'article', deletedAt: textOrNull(row['deleted_at'], 'deleted_at') as Instant | null } : null,
+        tag: loadTag(db, cmd.tagId),
+        assignments: itemTagsOfItem(db, cmd.itemId),
+      };
+    }
+    case 'UntagArticle': {
+      const r = db.selectObject('SELECT * FROM item_tags WHERE id = ?', [cmd.itemTagId]);
+      return { ...empty, assignments: r ? [rowToItemTag(r)] : [] };
+    }
+    case 'RenameTag':
+      return {
+        ...empty,
+        tag: loadTag(db, cmd.tagId),
+        assignments: itemTagsOfTag(db, cmd.tagId),
+        ...(cmd.merge ? { mergeTarget: loadTag(db, cmd.merge.targetTagId), targetAssignments: itemTagsOfTag(db, cmd.merge.targetTagId) } : {}),
+      };
+    case 'DeleteTag':
+      return { ...empty, tag: loadTag(db, cmd.tagId), assignments: itemTagsOfTag(db, cmd.tagId) };
+  }
+}
+
+/** Snapshot for `ReconcileSavedArticle`, as documented on `ReconcileSnapshot` in core. */
+export function loadReconcileSnapshot(db: Database, survivorId: string, duplicateId: string): ReconcileSnapshot {
+  const item = (id: string): Item | null => {
+    const r = db.selectObject('SELECT * FROM items WHERE id = ?', [id]);
+    return r ? rowToItem(r) : null;
+  };
+  return {
+    survivor: item(survivorId),
+    duplicate: item(duplicateId),
+    duplicateHighlights: db.selectObjects('SELECT * FROM highlights WHERE item_id = ? ORDER BY id', [duplicateId]).map(rowToHighlight),
+    survivorHighlightIds: db.selectValues('SELECT id FROM highlights WHERE item_id = ? ORDER BY id', [survivorId]).map(String),
+    duplicateAssignments: itemTagsOfItem(db, duplicateId),
+    survivorAssignments: itemTagsOfItem(db, survivorId),
   };
 }

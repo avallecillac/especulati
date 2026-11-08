@@ -99,7 +99,7 @@ re-runs all checks, and commits after each phase.
   - `index.ts`.
 
   T001–T005 must pass, and so must `pnpm test:convergence`.
-- [ ] T007 [P] Write the db tests:
+- [X] T007 [P] Write the db tests:
   - **`packages/db/test/migration5.test.ts`:** a v4 fixture with an article, a highlight,
     `sync_cursor` and `sync_status`. After migrating: rows kept; the new `tags` and
     `item_tags` with their indexes; `idx_items_saved`; the cursor is `'0'` and
@@ -127,7 +127,7 @@ re-runs all checks, and commits after each phase.
       including the index build takes under 300 ms.
   - **Extend `packages/db/test/sync.apply.test.ts`:** `item_tags` is parked until both
     its item and its tag exist.
-- [ ] T008 Implement db:
+- [X] T008 Implement db:
   - `migrations.ts`: migration 5, verbatim from data-model.md, so `SCHEMA_VERSION` is 5;
     update `e2e/settings.spec.ts` to expect version 5;
   - `queries.ts`: S-1 filters, `savedArticles`, `findSavedByUrl`, `tagsFor`, `allTags`,
@@ -138,7 +138,7 @@ re-runs all checks, and commits after each phase.
   - `index.ts`: `ReaderlogDb` methods.
 
   T007 must pass.
-- [ ] T009 [P] Write the sync tests:
+- [X] T009 [P] Write the sync tests:
   - **Extend `packages/sync/test/push.test.ts`:** `[items(read), tags, item_tags,
     items(read_on:null), highlights, items(read)]` produces 5 single-tier batches, in
     order.
@@ -157,7 +157,7 @@ re-runs all checks, and commits after each phase.
     peers gives one tag id (T-2); concurrent reconcile gives identical changes (R-1).
   - **Extend `packages/sync/test/privacy.test.ts`:** tag names are absent from relay
     rows.
-- [ ] T010 Fix whatever T009 exposes in the db and sync sources. It must pass with the
+- [X] T010 Fix whatever T009 exposes in the db and sync sources. It must pass with the
   full `pnpm test:convergence`.
 
 **Checkpoint:** the data, commands and safe sync are complete, with no UI yet.

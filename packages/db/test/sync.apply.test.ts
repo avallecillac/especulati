@@ -114,6 +114,32 @@ describe('applyRemoteOps', () => {
     expect(raw.selectObjects('SELECT item_id, quote, note FROM highlights WHERE id = ?', [uuid(70)])).toEqual([{ item_id: uuid(1), quote: 'A passage', note: 'A note' }]);
   });
 
+  it('parks an item_tags op until both its item and its tag exist (008)', () => {
+    const { raw } = openTestDb();
+    const link = op('item_tags', uuid(80), { item_id: uuid(1), tag_id: uuid(81), created_at: '2026-09-01T10:00:00.000Z' }, h(T0 + 1));
+    const linkRestore = op('item_tags', uuid(80), { deleted_at: null }, h(T0 + 2));
+    const tagInsert = op('tags', uuid(81), { name: 'AI', name_key: 'ai', created_at: '2026-09-01T10:00:00.000Z' }, h(T0 + 3));
+    expect(applyRemoteOps(raw, [linkRestore, link], DEVICE, wall).parked).toBe(2);
+    expect(raw.selectValue('SELECT count(*) FROM item_tags')).toBe(0);
+    // The item arrives, the tag has not: still parked (no foreign-key failure).
+    expect(applyRemoteOps(raw, [itemInsert(uuid(1), h(T0, 0, REMOTE), { type: 'article', url: 'https://a.example/x', domain: 'a.example', read_on: '2026-09-01' })], DEVICE, wall).applied).toBe(1);
+    expect(raw.selectValue('SELECT count(*) FROM item_tags')).toBe(0);
+    expect(raw.selectValue('SELECT count(*) FROM sync_inbox')).toBe(2);
+    // The tag arrives: both parked ops apply, in hlc order.
+    expect(applyRemoteOps(raw, [tagInsert], DEVICE, wall).applied).toBe(3);
+    expect(raw.selectValue('SELECT count(*) FROM sync_inbox')).toBe(0);
+    expect(raw.selectObjects('SELECT item_id, tag_id, deleted_at FROM item_tags WHERE id = ?', [uuid(80)])).toEqual([{ item_id: uuid(1), tag_id: uuid(81), deleted_at: null }]);
+  });
+
+  it('a tag arriving before its assignment is applied at once; an assignment whose tag came first waits only for the item', () => {
+    const { raw } = openTestDb();
+    const tagInsert = op('tags', uuid(81), { name: 'AI', name_key: 'ai', created_at: '2026-09-01T10:00:00.000Z' }, h(T0));
+    const link = op('item_tags', uuid(80), { item_id: uuid(1), tag_id: uuid(81), created_at: '2026-09-01T10:00:00.000Z' }, h(T0 + 1));
+    expect(applyRemoteOps(raw, [tagInsert, link], DEVICE, wall)).toMatchObject({ applied: 1, parked: 1 });
+    expect(applyRemoteOps(raw, [itemInsert(uuid(1), h(T0 + 2), { type: 'article' })], DEVICE, wall).applied).toBe(2);
+    expect(raw.selectValue('SELECT count(*) FROM item_tags')).toBe(1);
+  });
+
   it('advances meta.hlc past every received hlc and later local writes stamp greater', () => {
     const t = openTestDb();
     const far = h(T0 + 3_600_000, 4);

@@ -126,3 +126,51 @@ describe('highlights query performance (007 T005)', () => {
     expect(best).toBeLessThan(20);
   });
 });
+
+/** Feature 008 SC-004 (research R5): search over 5,000 articles and 2,000 highlights. */
+describe('article search performance (008 T007)', () => {
+  it('a query takes < 100 ms with the index built (best of 5), and < 300 ms the first time including the build', () => {
+    const t = openTestDb();
+    const raw = t.raw;
+    // Bulk-load through SQL (the write path is covered elsewhere): 5,000 articles, 2,000 highlights, 500 tag links.
+    raw.exec('BEGIN');
+    for (let i = 0; i < 5000; i++) {
+      const day = new Date(Date.UTC(2016, 0, 1) + i * 86_400_000 / 2).toISOString();
+      raw.exec(
+        `INSERT INTO items (id, type, title, author, url, domain, word_count, read_on, metadata_status, created_at)
+         VALUES (?, 'article', ?, ?, ?, ?, ?, ?, 'ok', ?)`,
+        { bind: [uuid(i + 1), `Article ${i} about subject ${i % 97}`, `Author ${i % 300} Pérez`, `https://site${i % 200}.example/post-${i}`, `site${i % 200}.example`, 1000 + i, i % 10 === 0 ? null : day.slice(0, 10), day] },
+      );
+    }
+    for (let i = 0; i < 2000; i++) {
+      raw.exec('INSERT INTO highlights (id, item_id, quote, note, created_at, local_date) VALUES (?, ?, ?, ?, ?, ?)', {
+        bind: [uuid(0x100000 + i), uuid((i * 2) + 1), `Quote ${i} with some words about topic${i % 50} and more text to be searched through`, i % 3 === 0 ? `A note ${i}` : null, '2026-09-01T00:00:00.000Z', '2026-09-01'],
+      });
+    }
+    for (let k = 0; k < 40; k++) raw.exec('INSERT INTO tags (id, name, name_key, created_at) VALUES (?, ?, ?, ?)', { bind: [uuid(0x200000 + k), `tag${k}`, `tag${k}`, 'x'] });
+    for (let i = 0; i < 500; i++) raw.exec('INSERT INTO item_tags (id, item_id, tag_id, created_at) VALUES (?, ?, ?, ?)', { bind: [uuid(0x300000 + i), uuid(i * 7 + 1), uuid(0x200000 + (i % 40)), 'x'] });
+    raw.exec('COMMIT');
+
+    const first = performance.now();
+    const hits = t.db.search('subject 42 perez');
+    const firstMs = performance.now() - first;
+    expect(hits.length).toBeGreaterThan(0);
+
+    const time = (fn: () => unknown) => {
+      let best = Infinity;
+      for (let i = 0; i < 5; i++) {
+        const start = performance.now();
+        fn();
+        best = Math.min(best, performance.now() - start);
+      }
+      return best;
+    };
+    const warm = time(() => t.db.search('topic7 words'));
+    const tagged = time(() => t.db.search('author', { tagKeys: ['tag3'] }));
+    const noMatch = time(() => t.db.search('zzzzqqq'));
+    console.log(`search first (with build) ${firstMs.toFixed(1)} ms · warm ${warm.toFixed(1)} ms · tag filter ${tagged.toFixed(1)} ms · no match ${noMatch.toFixed(1)} ms`);
+    expect(t.db.search('topic7 words').length).toBeGreaterThan(0);
+    expect(firstMs).toBeLessThan(300);
+    for (const ms of [warm, tagged, noMatch]) expect(ms).toBeLessThan(100);
+  }, 120_000);
+});

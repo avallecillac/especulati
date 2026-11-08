@@ -243,7 +243,9 @@ export function rowToArticle(r: Record<string, SqlValue>): Article {
   };
 }
 
-const LIVE_ARTICLES = `FROM items WHERE type = 'article' AND deleted_at IS NULL`;
+/** Read articles only (008 S-1): a saved article has no read date, and no stat, list or lookup of read articles may see it. */
+const LIVE_ARTICLES = `FROM items WHERE type = 'article' AND deleted_at IS NULL AND read_on IS NOT NULL`;
+const LIVE_SAVED = `FROM items WHERE type = 'article' AND deleted_at IS NULL AND read_on IS NULL`;
 const NEWEST_FIRST = 'ORDER BY read_on DESC, created_at DESC, id';
 /** Only the `Article` columns: copying whole rows across the WASM boundary dominates the cost (research R10b). */
 const ARTICLE_COLS = 'id, title, author, url, domain, word_count, read_on, metadata_status, created_at, deleted_at';
@@ -292,7 +294,7 @@ export function articles(db: Database, opts: { limit?: number; before?: ArticleC
   return db.selectArrays(`SELECT ${ARTICLE_COLS} ${LIVE_ARTICLES}${after} ${NEWEST_FIRST} LIMIT ?`, bind).map(articleFromArray);
 }
 
-/** One live article, or null (unknown, removed, or a book). */
+/** One live read article, or null (unknown, removed, a book, or saved: see `savedArticle`). */
 export function article(db: Database, itemId: string): Article | null {
   const row = db.selectObject(`SELECT * ${LIVE_ARTICLES} AND id = ?`, [itemId]);
   return row ? rowToArticle(row) : null;
@@ -312,4 +314,42 @@ export function highlightsView(db: Database, itemId: string): Highlight[] {
       [itemId],
     )
     .map(rowToHighlight);
+}
+
+/** A saved article (008): an article with no read date. Its saved date is `createdAt`. */
+export type SavedArticle = Omit<Article, 'readOn'> & { readonly readOn: null };
+
+const SAVED_COLS = 'id, title, author, url, domain, word_count, metadata_status, created_at, deleted_at';
+const savedFromArray = (r: readonly SqlValue[]): SavedArticle => ({
+  id: text(r[0], 'id') as ItemId,
+  title: text(r[1], 'title') as NonEmptyTitle,
+  author: textOrNull(r[2], 'author') as Author | null,
+  url: text(r[3], 'url') as NormalizedUrl,
+  domain: text(r[4], 'domain'),
+  wordCount: intOrNull(r[5], 'word_count') as WordCount | null,
+  readOn: null,
+  detailsStatus: detailsStatusFromDb(text(r[6], 'metadata_status')),
+  createdAt: text(r[7], 'created_at') as Instant,
+  deletedAt: textOrNull(r[8], 'deleted_at') as Instant | null,
+});
+
+/** Live saved articles, newest saved first (created_at desc, then id); uses idx_items_saved. */
+export function savedArticles(db: Database, opts: { limit?: number } = {}): SavedArticle[] {
+  const limit = Math.max(1, Math.floor(opts.limit ?? Number.MAX_SAFE_INTEGER));
+  return db.selectArrays(`SELECT ${SAVED_COLS} ${LIVE_SAVED} ORDER BY created_at DESC, id LIMIT ?`, [limit]).map(savedFromArray);
+}
+
+export function savedCount(db: Database): number {
+  return Number(db.selectValue(`SELECT COUNT(*) ${LIVE_SAVED}`));
+}
+
+/** One live saved article, or null. */
+export function savedArticle(db: Database, itemId: string): SavedArticle | null {
+  const r = db.selectArrays(`SELECT ${SAVED_COLS} ${LIVE_SAVED} AND id = ?`, [itemId])[0];
+  return r ? savedFromArray(r) : null;
+}
+
+/** Live saved articles with this normalized address, oldest first (the one a Mark as read should take). */
+export function findSavedByUrl(db: Database, url: string): SavedArticle[] {
+  return db.selectArrays(`SELECT ${SAVED_COLS} ${LIVE_SAVED} AND url = ? ORDER BY created_at, id`, [url]).map(savedFromArray);
 }

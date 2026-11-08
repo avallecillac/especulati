@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import sqlite3InitModule, { type Database } from '@sqlite.org/sqlite-wasm';
 import type { DeviceId, Instant, LocalDate } from '@readerlog/core';
 import { ReaderlogDb, type DispatchEnv } from '../src/index.ts';
@@ -55,3 +56,16 @@ export function dumpLogical(raw: Database, tables: readonly string[] = DUMP_TABL
   }
   return out;
 }
+
+/** Same derivation as apps/pwa/src/lib/ids.ts `uuidFromHash` (SHA-256, first 16 bytes, v4/variant bits), via node:crypto. */
+export function hashId(label: string): string {
+  const b = createHash('sha256').update(label).digest().subarray(0, 16);
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = b.toString('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+/** Async, like the shell's WebCrypto version, so tests exercise the injected-hash path. */
+export const hashIdAsync = (label: string): Promise<string> => Promise.resolve(hashId(label));
+export const tagIdOf = (nameKey: string): string => hashId(`readerlog-tag-v1|${nameKey}`);
+export const itemTagIdOf = (itemId: string, tagId: string): string => hashId(`readerlog-item-tag-v1|${itemId}|${tagId}`);
