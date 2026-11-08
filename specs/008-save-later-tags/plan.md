@@ -50,7 +50,7 @@
 packages/core/src/{commands,decide,merge,article,tags(new),search(new)}.ts
 packages/db/src/{migrations,queries,snapshot,sync,index,search(new)}.ts
 packages/sync/src/{capturePeer,ids}.ts
-apps/pwa/src/screens/{Library,Articles,Saved(new),Article,Capture}.svelte, TagInput.svelte(new), TagsSheet.svelte(new), SearchBar.svelte(new)
+apps/pwa/src/screens/{Library,Articles,Saved(new),Article,Capture}.svelte, TagInput.svelte(new), TagsSheet.svelte(new), ArticleSearch.svelte(new; Search.svelte is the 002 book search)
 apps/pwa/src/lib/{protocol,capture,reconcile(new)}.ts, src/worker/db.worker.ts
 apps/extension/{manifest.json, src/sw.ts, src/toast.ts}
 docs/ios-shortcut.md
