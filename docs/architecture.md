@@ -366,4 +366,5 @@ The picker in Settings builds its rows from `THEMES`, so it needs no change.
 | 005 | article-capture | iOS Shortcut + `/capture`, Chrome extension |
 | 006 | illustrated-edition-ui | Native-iOS shell (large titles, translucent tab bar, push/pop), illustrated-edition look (EB Garamond/Cormorant, ornaments, cloth covers), token-based themes: Macondo, Patriarca, Automatic |
 | 007 | highlights-notes | Save passages and notes on articles: Mac extension (menu + shortcut), iPhone Shortcut (Copy → Share), by hand in the app; synced, encrypted; jump back via text links |
-| 008 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals`, `items.merged_into` and 007's `highlights` (constitution II) |
+| 008 | save-later-tags | Save web articles for later (Mac menu/shortcut, iPhone Shortcut, in-app), mark as read; tags with rename/merge/delete; Library search and tag filter |
+| 009 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals`, `items.merged_into` and 007's `highlights` (constitution II) |
