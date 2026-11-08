@@ -11,6 +11,16 @@ the ability to tag articles so I can search them easier."
 
 Export/import, previously numbered 008, becomes **009**.
 
+## Clarifications
+
+### Session 2026-11-08
+
+- Q: Tags on books too? → A: **No, articles only.** For books the user would rather
+  have **shelves**, a separate future feature. Tags stay article-only, and nothing here
+  should block shelves later.
+- Q: Should search include highlights and notes (007)? → A: **Yes.** A match in a
+  highlight or a note finds its article, and the result shows the matching passage.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Save an article for later (Priority: P1)
@@ -125,9 +135,8 @@ tag, then filter by two tags, and check the results each time.
 2. **Given** tag chips, **When** I select one or more, **Then** only articles having
    **all** the selected tags are shown. Combined with the search text, both must match.
 3. **Given** no results, **Then** the screen says so and offers to clear the search.
-4. **Given** search text, **Then** searching also covers [NEEDS CLARIFICATION: should
-   search include the text of highlights and notes (007), or only titles, authors,
-   sites and tags?].
+4. **Given** search text that matches a highlight's quote or a note, **Then** its
+   article is listed with the matching passage shown under it, with the match marked.
 
 ### Edge Cases
 
@@ -173,8 +182,9 @@ tag, then filter by two tags, and check the results each time.
 **Tags**
 
 - **FR-008**: Users MUST be able to add and remove tags on an article from its screen,
-  with suggestions from existing tags, and create new tags inline. The scope is
-  [NEEDS CLARIFICATION: articles only, or books too?].
+  with suggestions from existing tags, and create new tags inline. Tags apply to
+  **articles only**. Books are out of scope, because shelves are planned for them
+  instead.
 - **FR-009**: Tag names MUST be matched case-insensitively and with surrounding spaces
   trimmed. They are at most 40 characters, and an article has at most 20 tags.
 - **FR-010**: Users MUST be able to rename a tag, merging it if the name exists, and to
@@ -184,7 +194,8 @@ tag, then filter by two tags, and check the results each time.
 
 **Search**
 
-- **FR-012**: The Library MUST offer a search over titles, authors, sites and tag names,
+- **FR-012**: The Library MUST offer a search over titles, authors, sites, tag names, and
+  the quotes and notes of highlights (007),
   matching as the user types, ignoring case and accents, across read and saved
   articles.
 - **FR-013**: The Library MUST offer tag filtering (all selected tags must match),
@@ -202,7 +213,7 @@ tag, then filter by two tags, and check the results each time.
 - **Article** (existing): gains a "saved" state. A saved article is one with no read date
   yet, plus the date it was saved.
 - **Tag**: a name (unique ignoring case), plus whether it was deleted.
-- **Tag assignment**: links one tag to one item, and can be removed.
+- **Tag assignment**: links one tag to one article, and can be removed.
 
 ## Success Criteria *(mandatory)*
 
@@ -214,8 +225,8 @@ tag, then filter by two tags, and check the results each time.
   read, in 100% of tests.
 - **SC-003**: Saved articles change no statistic, as checked deep-equal with and
   without 100 saved articles.
-- **SC-004**: With 5,000 articles and 100 tags, search results update within 100 ms of
-  each keystroke.
+- **SC-004**: With 5,000 articles, 100 tags and 2,000 highlights, search results update
+  within 100 ms of each keystroke.
 - **SC-005**: Adding a tag takes at most 3 taps when the tag exists (open the field,
   pick the suggestion, done).
 - **SC-006**: A device that hasn't updated keeps 100% of its non-tag, non-saved data
@@ -235,4 +246,5 @@ tag, then filter by two tags, and check the results each time.
   - "read later" for books (that's the existing *queued* state);
   - smart or nested tags;
   - colour-coded tags;
-  - full-text search of article bodies, which are never stored (constitution II).
+  - full-text search of article bodies, which are never stored (constitution II);
+  - tags on books, which will get **shelves** in a future feature.

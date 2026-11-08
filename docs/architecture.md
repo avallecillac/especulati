@@ -368,3 +368,4 @@ The picker in Settings builds its rows from `THEMES`, so it needs no change.
 | 007 | highlights-notes | Save passages and notes on articles: Mac extension (menu + shortcut), iPhone Shortcut (Copy → Share), by hand in the app; synced, encrypted; jump back via text links |
 | 008 | save-later-tags | Save web articles for later (Mac menu/shortcut, iPhone Shortcut, in-app), mark as read; tags with rename/merge/delete; Library search and tag filter |
 | 009 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals`, `items.merged_into` and 007's `highlights` (constitution II) |
+| later | book-shelves | User-named shelves for books (the user prefers shelves to tags for books) |

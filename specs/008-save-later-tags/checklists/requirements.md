@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,5 +31,5 @@
 
 ## Notes
 
-- Two [NEEDS CLARIFICATION] markers remain (tag scope: books too; search: include
-  highlights and notes). They are put to the user before planning.
+- Both clarifications were answered on 2026-11-08 (tags are articles only, with shelves
+  for books later; search includes highlights and notes).
