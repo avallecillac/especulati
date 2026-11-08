@@ -55,7 +55,9 @@ re-runs all checks, and commits after each phase.
     an `items` op with `read_on: null` gives `s`; an `items` op with a date, or without
     `read_on`, gives `base`; `reading_events` gives `base`.
 - [ ] T002 [P] Write `packages/core/test/decide.saved.test.ts` (contracts/commands-008):
-  - `AddArticle` without `readOn` inserts `read_on: null`;
+  - `AddArticle` without `readOn` inserts with the field **explicitly** present
+    (`'read_on' in change.fields` and its value is `null`), and `tierOf` of that change
+    is `s` (F2);
   - `MarkArticleRead` emits **every** article insert field plus `read_on` (S-2), and
     gives `AlreadyRead` on a read article and `NotFound` on a book or a removed item;
   - `MarkArticleUnread` sets `read_on: null`, and gives `NotRead` on a saved article.
@@ -77,7 +79,8 @@ re-runs all checks, and commits after each phase.
   - highlight copies use content-addressed ids;
   - tag moves;
   - the duplicate gets `deleted_at` plus `merged_into`;
-  - **property:** two peers deciding the same reconcile produce deep-equal changes (R-1).
+  - **property:** two peers deciding the same reconcile produce deep-equal changes (R-1);
+  - **R-2:** the survivor's change carries every article insert field.
 - [ ] T005 Extend `packages/core/test/merge.test.ts` for the `tags` and `item_tags`
   allow-lists and `INSERT_FIELDS` (data-model.md).
 
@@ -119,8 +122,9 @@ re-runs all checks, and commits after each phase.
       matched passage;
     - the tag filter is AND;
     - read and saved are both included, each labelled;
-    - perf: under 100 ms at 5,000 articles plus 2,000 highlights (best of 5), in
-      `packages/db/test/perf.test.ts`.
+    - perf, in `packages/db/test/perf.test.ts`: at 5,000 articles plus 2,000 highlights,
+      a query with the index built takes under 100 ms (best of 5), and the first query
+      including the index build takes under 300 ms.
   - **Extend `packages/db/test/sync.apply.test.ts`:** `item_tags` is parked until both
     its item and its tag exist.
 - [ ] T008 Implement db:
@@ -142,6 +146,9 @@ re-runs all checks, and commits after each phase.
     whole batches containing `tags`, `item_tags`, or an `items` op with `read_on: null`,
     and parks unknown rows. Across seeds:
     - it never holds an article with `read_on NULL`;
+    - R-2: it ends up holding a live, read survivor after a reconcile of a pair where it
+      only had the read copy, with no window where the article is missing once the
+      reconcile batch is applied;
     - its read models (`articles`, `articleStats`, `home`, `library`, `stats`) never
       throw;
     - it keeps every `base` op;
@@ -216,7 +223,9 @@ duplicating it. Duplicates from other devices reconcile automatically.
   - **Mark as read** moves the article to Articles, dated today; stats now include it;
     the toast's Undo puts it back in Saved;
   - on the Article screen, a saved article shows "Saved <date>" and a **Mark as read**
-    button.
+    button;
+  - **Add highlight** on a saved article marks it read and adds the highlight (FR-006,
+    US2 AS5).
 - [ ] T017 [P] [US2] Extend `e2e/capture-save.spec.ts`:
   - a log-mode link on a saved URL marks it read ("Logged"), with no new article and no
     "Already logged" prompt;
@@ -229,6 +238,8 @@ duplicating it. Duplicates from other devices reconcile automatically.
     the "ai" tag (SC-002).
 - [ ] T019 [US2] Implement:
   - Mark as read, and Mark as unread for Undo (`Saved.svelte`, `Article.svelte`);
+  - `HighlightSheet.svelte`: on a saved article, dispatch `MarkArticleRead` before
+    `AddHighlight`;
   - `Capture.svelte` log and highlight modes check `findSavedByUrl` first;
   - `apps/pwa/src/lib/reconcile.ts`: after each applied pull page and each local
     article write, find saved/read or saved/saved pairs with the same URL, derive the
@@ -247,7 +258,10 @@ duplicating it. Duplicates from other devices reconcile automatically.
 Log as read on a URL the extension saved marks it read.
 
 - [ ] T020 [P] [US1] Extend `packages/sync/test/capturePeer.test.ts`:
-  - `save()` stamps `AddArticle` without `readOn`, and records `captured.saved`;
+  - `save()` stamps `AddArticle` with `read_on: null` explicitly (F2), and records
+    `captured.saved`;
+  - `highlight()` on a `captured.saved` entry stamps `MarkArticleRead` (full row) before
+    `AddHighlight` (FR-006);
   - `capture()` on a saved entry stamps `MarkArticleRead` with the full row;
   - `tag()` stamps `TagArticle`, with ids derived in the shell;
   - flushes are single-tier per `tierOf`.
@@ -258,6 +272,8 @@ Log as read on a URL the extension saved marks it read.
   - **Add tags** "ai, design" adds both;
   - **Undo** removes it;
   - Log as read on the same page marks it read (one article);
+  - ⌥⇧H on a page the extension saved marks it read and adds the highlight;
+  - the **Log as read** toast also offers **Add tags** (FR-011);
   - the PWA context shows the results after sync;
   - offline, it stays pending, then flushes.
 - [ ] T022 [US1] Implement:
@@ -266,7 +282,8 @@ Log as read on a URL the extension saved marks it read.
     Alt+Shift+S;
   - `src/sw.ts`: the menu item "Save for later", `contexts: ['page', 'link']`;
   - `src/toast.ts`: the "Saved for later" state with **Add tags** (a comma-separated
-    input) and **Undo**.
+    input) and **Undo**, plus **Add tags** on the existing "Logged" state;
+  - in the highlight path: a saved entry is marked read first.
 
   `check-manifest` must pass (no new permissions, no hooks in the release build), and
   so must T020 and T021.

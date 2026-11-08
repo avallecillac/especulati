@@ -41,6 +41,10 @@ Duplicate "Log in Readerlog", then add the Dictionary key `later` (**Number**) =
 - **The toast:** "Saved for later" with **Add tags** (a comma-separated input) and
   **Undo**. Add tags stamps `TagArticle` ops, with ids derived in the service worker.
 - **Log as read:** when `captured[url].saved` is set, it runs `MarkArticleRead`. The
-  extension sends the full row it captured.
+  extension sends the full row it captured. The "Logged" toast also offers **Add tags**
+  (FR-011).
+- **Highlight (⌥⇧H):** on a `captured.saved` entry, it runs `MarkArticleRead` first
+  (FR-006).
+- **Saving** emits `read_on: null` explicitly (research R2).
 - **Batches:** the extension's batches follow `tierOf`, so saved and tag ops never share
   a batch with `base` ops.

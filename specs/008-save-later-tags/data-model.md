@@ -54,6 +54,9 @@ UPDATE meta SET value = json_set(value, '$.undecryptable', 0) WHERE key = 'sync_
 - **T-1.** At most 20 live tags per article. `name_key` is unique among live tags as
   seen in lists, which group by key.
 - **T-2.** Concurrent creation of the same name on two peers converges to one tag id.
+- **R-2.** On a peer that has no survivor row (a 0.8.0 peer that never saw the saved
+  copy), applying a reconcile yields a complete, live, read survivor. The reconcile
+  never leaves such a peer without the article.
 - **R-1.** Reconcile is deterministic: two peers reconciling the same pair produce
   identical changes.
 - **C-1.** A 0.8.0 peer never holds an article with `read_on NULL`, and never fails to

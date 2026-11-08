@@ -143,13 +143,12 @@ tag, then filter by two tags, and check the results each time.
 - **Saving a page with no readable article** (a product page, for example). It is saved
   with the site as its title and no reading time, as capture does today.
 - **Saving offline.** It is kept and synced later, on every path.
-- **The same URL saved on two devices before syncing.** Both copies are kept. The
-  Saved list shows the earlier one, plus the duplicates prompt that already exists
-  for articles, if any.
-- **Marking as read on two devices at once.** The article ends up read, dated with the
-  later of the two dates (last writer wins).
-- **A deleted tag being added on another device at the same time.** The tag is deleted
-  everywhere, and an add made before the delete synced is undone with it.
+- **The same URL saved on two devices before syncing.** The copies are merged
+  automatically into the earliest saved one, keeping their tags. No prompt is shown.
+- **Marking as read on two devices at once.** The article ends up read, and the last
+  change wins for its date.
+- **A tag deleted on one device and added to an article on another.** Whichever action
+  happened later wins: a later add brings the tag back, and a later delete removes it.
 - **Very many tags.** Tag names are at most 40 characters, and an article has at most 20
   tags.
 - **Removing an article.** Its tags are kept on the tag (the count drops), and its
@@ -226,7 +225,8 @@ tag, then filter by two tags, and check the results each time.
 - **SC-003**: Saved articles change no statistic, as checked deep-equal with and
   without 100 saved articles.
 - **SC-004**: With 5,000 articles, 100 tags and 2,000 highlights, search results update
-  within 100 ms of each keystroke.
+  within 100 ms of each keystroke, and the first search of a session shows results
+  within 300 ms.
 - **SC-005**: Adding a tag takes at most 3 taps when the tag exists (open the field,
   pick the suggestion, done).
 - **SC-006**: A device that hasn't updated keeps 100% of its non-tag, non-saved data

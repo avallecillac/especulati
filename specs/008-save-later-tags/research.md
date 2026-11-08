@@ -33,12 +33,18 @@
 
   A pushed batch never mixes tiers (007 contracts/sync-tiers.md). A 0.8.0 device skips
   `t` and `s` batches whole, as 0.7.0 skipped `h`.
+- **A saved insert names `read_on` explicitly.** It always carries `read_on: null`, from
+  core's `AddArticle` and from the extension's capture peer. `tierOf` keys on that
+  field, so leaving it out would send the row to 0.8.0 devices in the `base` tier.
 - **Marking as read carries the whole row.** `MarkArticleRead` emits every insert field
   of the article (`type`, `title`, `url`, `domain`, `author`, `word_count`,
   `metadata_status`, `created_at`, `read_on`) as one `base` op.
   - A 0.8.0 device that never saw the saved row receives a **complete read article**,
     and shows it correctly.
   - A device on the new version applies it as an ordinary update (LWW per field).
+- **Undoing Mark as read** (`MarkArticleUnread`, `read_on: null`) is in the `s` tier. A
+  0.8.0 device keeps the article as read until it updates. That's harmless; it
+  catches up on updating.
 - **Edits to a saved article** before it's read (title, tags) can reach a 0.8.0 device
   that has no row for it. Those ops are parked in `sync_inbox`, which is harmless; the
   old device's status may mention changes "waiting".
@@ -106,6 +112,12 @@
     - its tags are added through the derived assignment ids, which makes them
       idempotent.
   - **The read one** gets `deleted_at` plus `merged_into = survivor` (004 column).
+  - **The survivor's change carries the full row**, like `MarkArticleRead` (S-2):
+    `type`, `title`, `url`, `domain`, `author`, `word_count`, `metadata_status`,
+    `created_at` and `read_on`.
+    - A 0.8.0 peer that has only the read duplicate would otherwise apply the tombstone
+      but park the survivor's update, and lose the article until it updates.
+    - With the full row, it inserts the survivor as a complete read article (R-2).
   - **Two saved copies** of one URL (saved on two devices) merge the same way into the
     earliest.
   - **Determinism:** every id is derived, so devices doing this concurrently produce
