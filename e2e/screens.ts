@@ -32,6 +32,29 @@ async function seedHighlights(page: Page, articleHash: string): Promise<void> {
   await expect(page.getByRole('article', { name: /^(Highlight|Note)$/ })).toHaveCount(2);
 }
 
+const tagInput = (page: Page) => page.getByRole('combobox', { name: 'Add tag', exact: true });
+
+/** Tag the article on screen; each tag is confirmed by its remove button. */
+async function addTags(page: Page, tags: string[]): Promise<void> {
+  for (const t of tags) {
+    await tagInput(page).fill(t);
+    await tagInput(page).press('Enter');
+    await expect(page.getByRole('button', { name: `Remove tag ${t}`, exact: true })).toBeVisible();
+  }
+}
+
+/** Save an article for later, as the Shortcut's `later` link does, and tag it from its Details screen. */
+async function seedSaved(page: Page, a: { url: string; title: string; author: string }, tags: string[]): Promise<void> {
+  const json = JSON.stringify({ v: 1, words: 2380, at: new Date().toISOString(), ...a, later: 1 });
+  await page.goto(`/#/capture?d=${encodeURIComponent(Buffer.from(json, 'utf8').toString('base64'))}`);
+  await expect(page.getByText('Saved for later')).toBeVisible();
+  await page.goto('/#/library');
+  await page.getByRole('tab', { name: 'Saved' }).click();
+  await page.getByTestId('saved-row').first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('link', { name: 'Details' }).click();
+  await addTags(page, tags);
+}
+
 export interface Seeded {
   bookHash: string;
   articleHash: string;
@@ -56,6 +79,10 @@ export async function seedScreens(
   await page.getByRole('tab', { name: 'Articles' }).click();
   const articleHash = (await page.locator('a[href^="#/article/"]').first().getAttribute('href'))!;
   await seedHighlights(page, articleHash);
+  // Tags: the read article has two, a saved article has one shared and one of its own (so the article's suggestions are not empty).
+  await page.goto(`/${articleHash}`);
+  await addTags(page, ['ai', 'ml']);
+  await seedSaved(page, { ...o.article, url: `${o.article.url}-saved`, title: `Saved ${o.article.title}` }, ['ai', 'reference']);
   return { bookHash, articleHash };
 }
 
@@ -84,8 +111,45 @@ export function screens(s: Seeded): { name: string; go: (page: Page) => Promise<
         await page.getByRole('tab', { name: 'Articles' }).click();
       },
     },
+    {
+      name: 'library saved',
+      go: async (page) => {
+        await page.goto('/#/library');
+        await page.getByRole('tab', { name: 'Saved' }).click();
+        await expect(page.getByTestId('saved-row')).toHaveCount(1);
+      },
+    },
+    {
+      name: 'library search',
+      go: async (page) => {
+        await page.goto('/#/library');
+        await page.getByRole('tab', { name: 'Articles' }).click();
+        await page.getByRole('button', { name: 'ai', exact: true }).click();
+        await page.getByRole('searchbox', { name: 'Search articles' }).fill('worth');
+        await expect(page.getByTestId('search-row')).toHaveCount(1);
+        await expect(page.getByTestId('search-row').locator('mark')).toBeVisible();
+      },
+    },
+    {
+      name: 'all tags sheet',
+      go: async (page) => {
+        await page.goto('/#/library');
+        await page.getByRole('tab', { name: 'Articles' }).click();
+        await page.getByRole('button', { name: 'All tags…' }).click();
+        await expect(page.getByRole('dialog', { name: 'All tags' })).toBeVisible();
+      },
+    },
     hash('book', s.bookHash),
     hash('article', s.articleHash),
+    {
+      name: 'article tag suggestions',
+      go: async (page) => {
+        await page.goto(`/${s.articleHash}`);
+        await expect(page.getByTestId('ready')).toBeAttached();
+        await tagInput(page).click();
+        await expect(page.getByRole('listbox', { name: 'Tag suggestions' })).toBeVisible();
+      },
+    },
     hash('add', '#/add'),
     hash('stats', '#/stats'),
     hash('settings', '#/settings'),

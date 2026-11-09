@@ -359,7 +359,7 @@ an AND tag filter.
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T027 [P] Extend `e2e/screens.ts` and the a11y and layout specs: Saved, search with
+- [X] T027 [P] Extend `e2e/screens.ts` and the a11y and layout specs: Saved, search with
   results, the tags sheet, and the article with tags, in both themes and at 320 px.
 - [X] T028 [P] Update the docs:
   - `README.md`: Save for later (⌥⇧S, menu), tags and search;
@@ -377,14 +377,16 @@ an AND tag filter.
 
 ## Follow-ups found during implementation (not in this feature's scope)
 
-- **Bug (hardening):** `apps/pwa/src/lib/dbClient.ts` `send()` doesn't guard a
+- ~~**Bug (hardening):**~~ **Fixed** in its own commit. In practice the throw rejected
+  the promise (an unhandled rejection, plus a leaked pending entry); it didn't hang.
+  It now settles as a Storage error. `apps/pwa/src/lib/dbClient.ts` `send()` didn't guard a
   synchronous `postMessage` throw. A `DataCloneError`, for example from passing a
   Svelte `$state` proxy, leaves the request promise pending forever. Fix: reject the
   pending request when `postMessage` throws. This should be its own bug-fix commit,
   starting with a failing test (constitution VII). Found in T024; the call site was
   fixed there.
 - ~~**T026:** move the "All tags…" button next to the tag-filter chips.~~ Done in T026.
-- **Polish:** the search field's native clear (×) shows the browser's blue. Style it with tokens, or replace it with the component's own clear (T027).
+- ~~**Polish:** the search field's native clear (×)~~ **Done:** a themed "Clear search" button.
 
 ## Dependencies & Execution Order
 
