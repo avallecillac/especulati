@@ -1,11 +1,11 @@
 <script lang="ts">
   import { readingMinutes } from '@readerlog/core';
   import type { SavedArticle } from '@readerlog/db';
-  import { dispatch, onChanged, query } from '../lib/dbClient.ts';
+  import { onChanged, query } from '../lib/dbClient.ts';
   import { todayLocal } from '../lib/clock.ts';
   import { longDate } from '../lib/dates.ts';
   import { reportError } from '../lib/errors.ts';
-  import { showToast } from '../lib/toast.svelte.ts';
+  import { markArticleRead, removeArticle } from '../lib/actions.ts';
   import Butterfly from '../ornaments/Butterfly.svelte';
 
   let saved = $state<SavedArticle[] | null>(null);
@@ -31,11 +31,14 @@
     return m === null ? a.domain : `${a.domain} · ~${m} min`;
   }
 
+  async function markRead(id: string) {
+    menu = null;
+    await markArticleRead(id);
+  }
+
   async function remove(id: string) {
     menu = null;
-    const r = await dispatch({ kind: 'RemoveArticle', itemId: id });
-    if (!r.ok) return reportError(r.error);
-    showToast('Removed from Saved');
+    await removeArticle(id, 'Removed from Saved');
   }
 </script>
 
@@ -70,6 +73,8 @@
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="saved-more-title">
       <h1 id="saved-more-title">{m.title}</h1>
       <div class="actions">
+        <button class="primary" type="button" onclick={() => void markRead(m.id)}>Mark as read</button>
+        <a class="button" href={`#/article/${m.id}`}>Details</a>
         <button class="danger" type="button" onclick={() => void remove(m.id)}>Remove</button>
         <button type="button" onclick={() => (menu = null)}>Cancel</button>
       </div>

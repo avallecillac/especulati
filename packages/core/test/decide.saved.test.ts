@@ -106,3 +106,22 @@ describe('MarkArticleUnread', () => {
     expect(decide(snap(article({ deletedAt: NOW, readOn: '2026-09-01' as Item['readOn'] })), cmd, NOW)).toEqual({ ok: false, error: { kind: 'NotFound' } });
   });
 });
+
+describe('RestoreArticle', () => {
+  const cmd: Command = { kind: 'RestoreArticle', itemId: ID };
+  it('clears deleted_at on a removed article, as a base op', () => {
+    for (const readOn of [null, '2026-09-01' as Item['readOn']]) {
+      const [c, ...rest] = changesOf(decide(snap(article({ deletedAt: NOW, readOn })), cmd, NOW));
+      expect(rest).toEqual([]);
+      expect(c).toEqual({ tbl: 'items', rowId: ID, fields: { deleted_at: null } });
+      expect(tierOf(c!.tbl, c!.fields)).toBe('base');
+    }
+  });
+  it('is idempotent: a live article gives no changes', () => {
+    expect(changesOf(decide(snap(article()), cmd, NOW))).toEqual([]);
+  });
+  it('NotFound on a book or nothing', () => {
+    expect(decide(snap(book({ id: ID, deletedAt: NOW })), cmd, NOW)).toEqual({ ok: false, error: { kind: 'NotFound' } });
+    expect(decide(null, cmd, NOW)).toEqual({ ok: false, error: { kind: 'NotFound' } });
+  });
+});

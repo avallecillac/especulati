@@ -89,6 +89,34 @@ test('a quote wins over later: it is a highlight capture', async ({ page }) => {
   await expect(savedRows(page)).toHaveCount(0);
 });
 
+test('a log-mode link on a saved URL marks it read: Logged, no new article, no Already logged prompt', async ({ page }) => {
+  await openApp(page);
+  await page.goto(`/${link({}, '2026-03-04T12:00:00Z')}`);
+  await expect(page.getByText('Saved for later')).toBeVisible();
+  await page.goto(`/${link({ later: undefined }, '2026-03-05T12:00:00Z')}`);
+  await expect(page.getByText(/^Logged: /)).toBeVisible();
+  await expect(page.getByText(/Already logged/)).toHaveCount(0);
+  await openSaved(page);
+  await expect(savedRows(page)).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Articles' }).click();
+  await expect(articleRows(page)).toHaveCount(1);
+});
+
+test('a highlight-mode link on a saved URL marks it read and adds the highlight', async ({ page }) => {
+  await openApp(page);
+  await page.goto(`/${link({}, '2026-03-04T12:00:00Z')}`);
+  await expect(page.getByText('Saved for later')).toBeVisible();
+  await page.goto(`/${link({ later: undefined, quote: 'A passage worth keeping.' }, '2026-03-05T12:00:00Z')}`);
+  await expect(page.getByText('Highlight saved')).toBeVisible();
+  await openSaved(page);
+  await expect(savedRows(page)).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Articles' }).click();
+  await expect(articleRows(page)).toHaveCount(1);
+  await articleRows(page).first().getByRole('link').first().click();
+  await expect(page.getByRole('article', { name: 'Highlight' })).toHaveCount(1);
+  await expect(page.getByText('A passage worth keeping.')).toBeVisible();
+});
+
 test('offline it saves locally, then syncs to the other device', async ({ twoDevices, relay }) => {
   const { a, b } = twoDevices;
   const code = await turnOn(a.page);

@@ -219,24 +219,24 @@ duplicating it. Duplicates from other devices reconcile automatically.
 - Two contexts: save on A, then log the same URL as a new article on B. After syncing,
   there's one read article carrying both sides' highlights and tags.
 
-- [ ] T016 [P] [US2] Extend `e2e/saved.spec.ts`:
+- [X] T016 [P] [US2] Extend `e2e/saved.spec.ts`:
   - **Mark as read** moves the article to Articles, dated today; stats now include it;
     the toast's Undo puts it back in Saved;
   - on the Article screen, a saved article shows "Saved <date>" and a **Mark as read**
     button;
   - **Add highlight** on a saved article marks it read and adds the highlight (FR-006,
     US2 AS5).
-- [ ] T017 [P] [US2] Extend `e2e/capture-save.spec.ts`:
+- [X] T017 [P] [US2] Extend `e2e/capture-save.spec.ts`:
   - a log-mode link on a saved URL marks it read ("Logged"), with no new article and no
     "Already logged" prompt;
   - a highlight-mode link on a saved URL marks it read and adds the highlight (007).
-- [ ] T018 [P] [US2] Write `e2e/reconcile.spec.ts` (relay fixture, two contexts):
+- [X] T018 [P] [US2] Write `e2e/reconcile.spec.ts` (relay fixture, two contexts):
   - A saves a URL and tags it "ai";
   - B logs the same URL as read, with a highlight;
   - both sync;
   - each has exactly one live article, read with B's date, holding the highlight and
     the "ai" tag (SC-002).
-- [ ] T019 [US2] Implement:
+- [X] T019 [US2] Implement:
   - `RestoreArticle` (contracts/commands-008, decided in review): core command and
     test, db snapshot, and the **Undo** on Remove in `Saved.svelte` (also on the read
     Article screen's Remove, if it has a toast); extend `e2e/saved.spec.ts` Remove with
@@ -310,7 +310,9 @@ merge and delete; optional Add tags after capture.
   - rename into an existing name merges them;
   - delete it everywhere, with the articles kept;
   - the 21st tag is refused, with its message;
-  - the capture screen's **Add tags**.
+  - the capture screen's **Add tags**;
+  - extend `e2e/reconcile.spec.ts` with the tag step deferred from T018: A tags the saved
+    copy "ai", and after the merge the survivor carries "ai".
 - [ ] T024 [US3] Implement:
   - `apps/pwa/src/screens/TagInput.svelte`: chips plus an input with a suggestions
     listbox;

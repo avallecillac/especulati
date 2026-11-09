@@ -69,6 +69,20 @@ test('Remove takes the row off the list and the count', async ({ page }) => {
   await expect(savedTab(page)).toContainText('1');
 });
 
+test('Remove shows a toast whose Undo puts the row back', async ({ page }) => {
+  await openApp(page);
+  await saveLater(page, 'https://www.example.com/a', 'Keep me');
+  await saveLater(page, 'https://www.example.com/b', 'Drop me');
+  await openSaved(page);
+  await rows(page).filter({ hasText: 'Drop me' }).getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+  await expect(rows(page)).toHaveCount(1);
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(rows(page).filter({ hasText: 'Drop me' })).toHaveCount(1);
+  await expect(savedTab(page)).toContainText('2');
+});
+
 test('the empty state shows the vignette and the hint', async ({ page }) => {
   await openApp(page);
   await openSaved(page);
@@ -92,4 +106,91 @@ test('saving for later changes nothing in Stats (SC-003)', async ({ page }) => {
   await saveLater(page, 'https://www.example.com/later', 'Later one');
   await saveLater(page, 'https://other.example.net/later2', 'Later two');
   expect(await stats()).toBe(before);
+});
+
+const todayIso = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
+async function statsText(page: Page): Promise<string> {
+  await page.goto('/#/stats');
+  const section = page.getByRole('region', { name: 'Articles' });
+  await expect(section).toBeVisible();
+  return await section.innerText();
+}
+
+test('Mark as read moves the article to Articles dated today, counts in Stats, and Undo puts it back', async ({ page }) => {
+  await openApp(page);
+  await saveLater(page, 'https://www.example.com/later', 'Later one');
+  const before = await statsText(page);
+  await openSaved(page);
+  await rows(page).first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mark as read' }).click();
+  await expect(rows(page)).toHaveCount(0);
+  await expect(page.locator('.toast')).toContainText('Marked as read');
+
+  // Undo while the toast is up: back in Saved, not in Articles.
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  await expect(rows(page).filter({ hasText: 'Later one' })).toHaveCount(1);
+  await page.getByRole('tab', { name: 'Articles' }).click();
+  await expect(page.getByTestId('article-row')).toHaveCount(0);
+  expect(await statsText(page)).toBe(before);
+
+  // Mark as read again and keep it.
+  await openSaved(page);
+  await rows(page).first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mark as read' }).click();
+  await expect(rows(page)).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Articles' }).click();
+  await expect(page.getByTestId('article-row')).toHaveCount(1);
+  await expect(page.getByTestId('article-row').first()).toContainText('Later one');
+  await expect(page.getByTestId('article-row').first()).toContainText(todayIso());
+  expect(await statsText(page)).not.toBe(before);
+});
+
+test('the Article screen of a saved article shows Saved <date> and a Mark as read button', async ({ page }) => {
+  await openApp(page);
+  await saveLater(page, 'https://www.example.com/later', 'Later one');
+  await openSaved(page);
+  await rows(page).first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog').getByRole('link', { name: 'Details' }).click();
+  await expect(page.getByRole('heading', { name: 'Later one' })).toBeVisible();
+  await expect(page.getByText(`Saved ${todayLong()}`)).toBeVisible();
+  await expect(page.getByText('Read on', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mark as read' }).click();
+  await expect(page.getByRole('button', { name: 'Mark as read' })).toHaveCount(0);
+  await expect(page.getByText('Read on', { exact: true })).toBeVisible();
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByText(`Saved ${todayLong()}`)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark as read' })).toBeVisible();
+});
+
+test('Add highlight on a saved article marks it read and keeps the highlight (FR-006)', async ({ page }) => {
+  await openApp(page);
+  await saveLater(page, 'https://www.example.com/later', 'Later one');
+  await openSaved(page);
+  await rows(page).first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog').getByRole('link', { name: 'Details' }).click();
+  await page.getByRole('button', { name: 'Add highlight' }).click();
+  await page.getByRole('dialog').getByLabel('Quote').fill('A passage worth keeping.');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByRole('article', { name: 'Highlight' })).toHaveCount(1);
+  await expect(page.getByText('Read on', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark as read' })).toHaveCount(0);
+  await openSaved(page);
+  await expect(rows(page)).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Articles' }).click();
+  await expect(page.getByTestId('article-row')).toHaveCount(1);
+});
+
+test('removing a saved article from its screen shows Undo, which restores it', async ({ page }) => {
+  await openApp(page);
+  await saveLater(page, 'https://www.example.com/later', 'Later one');
+  await openSaved(page);
+  await rows(page).first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog').getByRole('link', { name: 'Details' }).click();
+  await page.getByRole('button', { name: 'Remove article' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Remove' }).click();
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  await openSaved(page);
+  await expect(rows(page)).toHaveCount(1);
 });

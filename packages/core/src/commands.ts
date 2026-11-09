@@ -84,6 +84,8 @@ export type Command =
       readonly readOn?: string;
     }
   | { readonly kind: 'RemoveArticle'; readonly itemId: string }
+  /** 008: Undo for RemoveArticle (saved or read). Needs a BookSnapshot; idempotent on a live article. */
+  | { readonly kind: 'RestoreArticle'; readonly itemId: string }
   /** 007 contracts/commands-007.md. `quote` and `note` are raw input; decide() normalises them. */
   | {
       readonly kind: 'AddHighlight';

@@ -1,12 +1,14 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { readingMinutes, type Article } from '@readerlog/core';
+  import type { SavedArticle } from '@readerlog/db';
   import { dispatch, onChanged, query } from '../lib/dbClient.ts';
+  import { todayLocal } from '../lib/clock.ts';
+  import { markArticleRead, removeArticle } from '../lib/actions.ts';
   import { longDate } from '../lib/dates.ts';
   import { errorMessage, reportError } from '../lib/errors.ts';
   import { navigate } from '../lib/router.svelte.ts';
-  import { showToast } from '../lib/toast.svelte.ts';
-  import Confirm from './Confirm.svelte';
+    import Confirm from './Confirm.svelte';
   import HighlightList from './HighlightList.svelte';
 
   let props: { id: string } = $props();
@@ -14,6 +16,8 @@
   const id = untrack(() => props.id);
 
   let article = $state<Article | null | undefined>(undefined);
+  /** Set instead of `article` while this item is saved (no read date yet, 008). */
+  let saved = $state<SavedArticle | null>(null);
   let editing = $state(false);
   let removing = $state(false);
   let title = $state('');
@@ -23,8 +27,16 @@
 
   async function load() {
     const r = await query({ name: 'article', itemId: id });
-    if (r.ok) article = r.value;
-    else reportError(r.error);
+    if (!r.ok) return reportError(r.error);
+    if (r.value) {
+      article = r.value;
+      saved = null;
+      return;
+    }
+    const s = await query({ name: 'savedArticle', itemId: id });
+    if (!s.ok) return reportError(s.error);
+    saved = s.value;
+    article = null;
   }
 
   $effect(() => {
@@ -57,20 +69,38 @@
 
   async function remove() {
     removing = false;
-    const r = await dispatch({ kind: 'RemoveArticle', itemId: id });
-    if (!r.ok) return reportError(r.error);
-    showToast('Article removed');
-    navigate('/articles');
+    if (await removeArticle(id, 'Article removed')) navigate('/articles');
   }
 
-  function minutesLabel(a: Article): string {
+  /** The saved date is `createdAt`, shown as a local calendar date. */
+  const savedOn = (a: SavedArticle): string => longDate(todayLocal(new Date(a.createdAt)));
+
+  function minutesLabel(a: Article | SavedArticle): string {
     const m = readingMinutes(a.wordCount);
     return m === null ? '—' : `~${m} min`;
   }
 </script>
 
-{#if article === null}
+{#if article === null && saved === null}
   <p class="muted">This article no longer exists. <a href="#/articles">Back to articles</a></p>
+{:else if saved}
+  {@const s = saved}
+  <h1>{s.title}</h1>
+  <p class="muted smallcaps">Saved {savedOn(s)}</p>
+  <dl class="card">
+    {#if s.author}<dt class="muted smallcaps">Author</dt><dd>{s.author}</dd>{/if}
+    <dt class="muted smallcaps">Site</dt><dd>{s.domain}</dd>
+    <dt class="muted smallcaps">Reading time</dt><dd data-testid="reading-time">{minutesLabel(s)}</dd>
+  </dl>
+  <div class="actions">
+    <button class="primary" type="button" onclick={() => void markArticleRead(s.id)}>Mark as read</button>
+    <a class="button" href={s.url} target="_blank" rel="noopener noreferrer">Open page</a>
+    <button class="danger" type="button" onclick={() => (removing = true)}>Remove article</button>
+  </div>
+  <HighlightList itemId={s.id} url={s.url} />
+  {#if removing}
+    <Confirm title="Remove this article?" body="It disappears from every view." confirmLabel="Remove" danger onconfirm={() => void remove()} oncancel={() => (removing = false)} />
+  {/if}
 {:else if article}
   {@const a = article}
   {#if editing}

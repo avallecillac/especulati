@@ -3,6 +3,7 @@ import sqlite3InitModule, { type SAHPoolUtil, type Sqlite3Static } from '@sqlite
 import { ReaderlogDb, type DispatchEnv } from '@readerlog/db';
 import { parseLocalDate, type Instant } from '@readerlog/core';
 import { createSyncEngine, type SyncEngine } from '@readerlog/sync';
+import { reconcileAll } from '../lib/reconcile.ts';
 import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo, type SyncOp } from '../lib/protocol.ts';
 
 /**
@@ -100,33 +101,46 @@ function syncEngine(d: ReaderlogDb): SyncEngine {
   return engine.engine;
 }
 
+/**
+ * After remote ops were applied (research R4): fold a saved article and its later read copy into one.
+ * Anything it wrote is pushed by one more run. Bounded: each pass needs the previous run to have pulled
+ * something new, so it cannot loop.
+ */
+async function reconcileAfterPull(d: ReaderlogDb, e: SyncEngine, pulled: boolean): Promise<boolean> {
+  let touched = false;
+  for (let pass = 0; pass < 3 && pulled; pass++) {
+    if ((await reconcileAll(d, env)) === 0) break;
+    touched = true;
+    pulled = (await e.run('write')).changed;
+  }
+  return touched;
+}
+
 async function runSync(d: ReaderlogDb, op: SyncOp): Promise<unknown> {
   const e = syncEngine(d);
+  const changed = async (pulled: boolean): Promise<void> => {
+    const touched = await reconcileAfterPull(d, e, pulled);
+    if (pulled || touched) {
+      d.invalidateSearch();
+      channel.postMessage({ type: 'changed' });
+    }
+  };
   switch (op.action) {
     case 'run': {
       const r = await e.run(op.reason);
-      if (r.changed) {
-        d.invalidateSearch();
-        channel.postMessage({ type: 'changed' });
-      }
+      await changed(r.changed);
       return r;
     }
     case 'status':
       return e.status();
     case 'turnOn': {
       const r = await e.turnOn();
-      if (r.ok) {
-        d.invalidateSearch();
-        channel.postMessage({ type: 'changed' });
-      }
+      await changed(r.ok);
       return r;
     }
     case 'join': {
       const r = await e.join(op.code);
-      if (r.ok) {
-        d.invalidateSearch();
-        channel.postMessage({ type: 'changed' });
-      }
+      await changed(r.ok);
       return r;
     }
     case 'showCode':
@@ -136,10 +150,7 @@ async function runSync(d: ReaderlogDb, op: SyncOp): Promise<unknown> {
       return null;
     case 'reset': {
       const r = await e.reset();
-      if (r.ok) {
-        d.invalidateSearch();
-        channel.postMessage({ type: 'changed' });
-      }
+      await changed(r.ok);
       return r;
     }
   }
@@ -163,6 +174,9 @@ function env(): DispatchEnv {
   };
 }
 
+/** Local writes that can create a live saved/read pair of one URL. */
+const RECONCILES: ReadonlySet<string> = new Set(['AddArticle', 'MarkArticleRead', 'MarkArticleUnread', 'RestoreArticle']);
+
 function runQuery(d: ReaderlogDb, q: Query): unknown {
   switch (q.name) {
     case 'home':
@@ -181,6 +195,8 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.savedArticles(q.limit !== undefined ? { limit: q.limit } : {});
     case 'savedCount':
       return d.savedCount();
+    case 'savedArticle':
+      return d.savedArticle(q.itemId);
     case 'findSavedByUrl':
       return d.findSavedByUrl(q.url);
     case 'articleStats': {
@@ -274,6 +290,7 @@ async function handle(req: Request): Promise<Response> {
         const r = d.dispatch(req.cmd, env());
         if (!r.ok) return { id: req.id, ok: false, error: r.error };
         if (req.cmd.kind === 'RemoveBook') d.deleteCover(req.cmd.itemId); // cache maintenance (R5)
+        if (RECONCILES.has(req.cmd.kind)) await reconcileAll(d, env); // a local write can complete a saved/read pair (R4)
         d.invalidateSearch();
         channel.postMessage({ type: 'changed' });
         return { id: req.id, ok: true, result: r.value };

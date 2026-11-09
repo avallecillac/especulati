@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import type { Highlight } from '@readerlog/core';
   import type { ClientError } from '../lib/protocol.ts';
-  import { dispatch } from '../lib/dbClient.ts';
+  import { dispatch, query } from '../lib/dbClient.ts';
   import { todayLocal } from '../lib/clock.ts';
   import { errorMessage } from '../lib/errors.ts';
 
@@ -35,6 +35,17 @@
     ev.preventDefault();
     if (empty || busy) return;
     busy = true;
+    // A highlight on a saved article means it was read (FR-006): mark it read first.
+    if (!editing) {
+      const saved = await query({ name: 'savedArticle', itemId });
+      if (saved.ok && saved.value) {
+        const read = await dispatch({ kind: 'MarkArticleRead', itemId, readOn: todayLocal() });
+        if (!read.ok && read.error.kind !== 'AlreadyRead') {
+          busy = false;
+          return void (error = read.error);
+        }
+      }
+    }
     const r = editing
       ? await dispatch({ kind: 'EditHighlightNote', highlightId: editing.id, note })
       : await dispatch({

@@ -18,11 +18,12 @@
     | { kind: 'damaged'; problem: CaptureProblem }
     | { kind: 'error'; message: string }
     | { kind: 'duplicate'; capture: Capture; id: string; loggedOn: string }
-    | { kind: 'saved'; capture: Capture; id: string; fresh: boolean }
+    /** `fromSaved`: a saved article was marked read, so Undo marks it unread instead of removing it. */
+    | { kind: 'saved'; capture: Capture; id: string; fresh: boolean; fromSaved?: boolean }
     /** Save mode (008). `readOn`: the date this URL was already read, when it was. */
     | { kind: 'later'; capture: Capture; id: string; fresh: boolean; readOn: string | null }
     /** Highlight mode (007). `articleNew`: this link logged the article, so Undo removes it too. */
-    | { kind: 'highlighted'; capture: Capture; hid: string; itemId: string; articleNew: boolean; fresh: boolean; note: string | null };
+    | { kind: 'highlighted'; capture: Capture; hid: string; itemId: string; articleNew: boolean; fromSaved?: boolean; fresh: boolean; note: string | null };
 
   const UNDO_MS = 6000;
 
@@ -104,14 +105,32 @@
     await push();
   }
 
+  /** Log mode, contracts/capture-008.md: a live saved match is marked read instead of logging a new article. */
+  async function markSaved(c: Capture, savedId: string) {
+    const r = await dispatch({ kind: 'MarkArticleRead', itemId: savedId, readOn: todayLocal() });
+    if (!r.ok) return void (phase = { kind: 'error', message: errorMessage(r.error) });
+    phase = { kind: 'saved', capture: c, id: savedId, fresh: true, fromSaved: true };
+    canUndo = true;
+    undoTimer = setTimeout(() => (canUndo = false), UNDO_MS);
+    await push();
+  }
+
   /** Highlight mode, steps 2-5 of contracts/capture-highlight.md. */
   async function runHighlight(c: Capture, quote: string) {
+    const saved = await query({ name: 'findSavedByUrl', url: c.url });
+    if (!saved.ok) return void (phase = { kind: 'error', message: errorMessage(saved.error) });
     const found = await query({ name: 'findArticleByUrl', url: c.url });
     if (!found.ok) return void (phase = { kind: 'error', message: errorMessage(found.error) });
     // A live match is used, with no prompt; a removed one is not in the result, so it is logged anew.
-    let itemId = found.value[0]?.id ?? '';
+    // A saved match is marked read first (FR-006).
+    let itemId = saved.value[0]?.id ?? found.value[0]?.id ?? '';
     let articleNew = false;
+    const fromSaved = saved.value[0] !== undefined;
     const hid = await highlightCaptureId(c.url, c.at);
+    if (fromSaved) {
+      const read = await dispatch({ kind: 'MarkArticleRead', itemId, readOn: todayLocal() });
+      if (!read.ok && read.error.kind !== 'AlreadyRead') return void (phase = { kind: 'error', message: errorMessage(read.error) });
+    }
     if (itemId === '') {
       itemId = await captureId(c);
       const added = await dispatch({
@@ -135,9 +154,10 @@
     const r = await dispatch({ kind: 'AddHighlight', highlightId: hid, itemId, quote, note: c.note, localDate: todayLocal() });
     if (!r.ok && r.error.kind !== 'AlreadyExists') {
       if (articleNew) await dispatch({ kind: 'RemoveArticle', itemId });
+      else if (fromSaved) await dispatch({ kind: 'MarkArticleUnread', itemId });
       return void (phase = { kind: 'error', message: errorMessage(r.error) });
     }
-    phase = { kind: 'highlighted', capture: c, hid, itemId, articleNew, fresh: r.ok, note: c.note };
+    phase = { kind: 'highlighted', capture: c, hid, itemId, articleNew, fromSaved, fresh: r.ok, note: c.note };
     if (r.ok) {
       canUndo = true;
       undoTimer = setTimeout(() => (canUndo = false), UNDO_MS);
@@ -162,11 +182,13 @@
     const hid = p.hid;
     const itemId = p.itemId;
     const articleNew = p.articleNew;
+    const fromSaved = p.fromSaved === true;
     clearTimeout(undoTimer);
     canUndo = false;
     noting = false;
     let r = await dispatch({ kind: 'RemoveHighlight', highlightId: hid });
     if (r.ok && articleNew) r = await dispatch({ kind: 'RemoveArticle', itemId });
+    else if (r.ok && fromSaved) r = await dispatch({ kind: 'MarkArticleUnread', itemId });
     if (r.ok) removed = true;
     else phase = { kind: 'error', message: errorMessage(r.error) };
     await push();
@@ -179,6 +201,9 @@
     if (c.quote !== null) return runHighlight(c, c.quote);
     if (c.later) return runSave(c);
     const id = await captureId(c);
+    const saved = await query({ name: 'findSavedByUrl', url: c.url });
+    if (!saved.ok) return void (phase = { kind: 'error', message: errorMessage(saved.error) });
+    if (saved.value[0]) return markSaved(c, saved.value[0].id);
     const found = await query({ name: 'findArticleByUrl', url: c.url });
     if (!found.ok) return void (phase = { kind: 'error', message: errorMessage(found.error) });
     const matches: Article[] = found.value;
@@ -193,10 +218,10 @@
   }
   void run();
 
-  async function undo(id: string) {
+  async function undo(id: string, fromSaved = false) {
     clearTimeout(undoTimer);
     canUndo = false;
-    const r = await dispatch({ kind: 'RemoveArticle', itemId: id });
+    const r = await dispatch(fromSaved ? { kind: 'MarkArticleUnread', itemId: id } : { kind: 'RemoveArticle', itemId: id });
     if (r.ok) removed = true;
     else phase = { kind: 'error', message: errorMessage(r.error) };
     await refreshStatus();
@@ -294,7 +319,7 @@
   {@const p = phase}
   <section class="card">
     {#if removed}
-      <p role="status"><strong>Removed</strong></p>
+      <p role="status"><strong>{p.fromSaved ? 'Back in Saved' : 'Removed'}</strong></p>
     {:else if p.fresh}
       <p role="status"><strong>Logged: {p.capture.title} · {p.capture.site}{minutes(p.capture)}</strong></p>
     {:else}
@@ -308,7 +333,7 @@
       </p>
     {/if}
     <div class="actions">
-      {#if canUndo && !removed}<button type="button" onclick={() => void undo(p.id)}>Undo</button>{/if}
+      {#if canUndo && !removed}<button type="button" onclick={() => void undo(p.id, p.fromSaved === true)}>Undo</button>{/if}
       <button class="primary" type="button" onclick={() => navigate('/library')}>Done</button>
     </div>
   </section>

@@ -325,6 +325,13 @@ function removeArticle(snapshot: BookSnapshot | null, now: Instant): Decided {
   return decided([{ tbl: 'items', rowId: snapshot.item.id, fields: { deleted_at: now } }]);
 }
 
+/** 008: Undo for Remove. Keeps the id and the saved date; a live article is a no-op. */
+function restoreArticle(snapshot: BookSnapshot | null): Decided {
+  if (!snapshot || snapshot.item.type !== 'article') return err({ kind: 'NotFound' });
+  if (snapshot.item.deletedAt === null) return decided([]);
+  return decided([{ tbl: 'items', rowId: snapshot.item.id, fields: { deleted_at: null } }]);
+}
+
 /** Removal tombstones the event; it is never erased (FR-009, constitution III). */
 function removeEvent(snapshot: BookSnapshot | null, cmd: Extract<Command, { kind: 'RemoveEvent' }>, now: Instant): Decided {
   const book = liveBook(snapshot);
@@ -761,6 +768,8 @@ function decideOne(snapshot: BookSnapshot | null, cmd: Exclude<BookCommand, { ki
       return editArticle(snapshot, cmd);
     case 'RemoveArticle':
       return removeArticle(snapshot, now);
+    case 'RestoreArticle':
+      return restoreArticle(snapshot);
     case 'MarkArticleRead':
       return markArticleRead(snapshot, cmd);
     case 'MarkArticleUnread':

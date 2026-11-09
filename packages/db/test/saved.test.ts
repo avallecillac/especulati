@@ -111,3 +111,29 @@ describe('saved articles (008 S-1)', () => {
     expect(snapshot()).toEqual(before);
   });
 });
+
+describe('RestoreArticle through dispatch', () => {
+  it('Remove then Restore brings a saved article back with its id and saved date', () => {
+    const t = openTestDb();
+    save(t, 1);
+    const created = t.db.savedArticle(uuid(1))!.createdAt;
+    t.tick();
+    expect(t.db.dispatch({ kind: 'RemoveArticle', itemId: uuid(1) }, t.env)).toMatchObject({ ok: true });
+    expect(t.db.savedArticle(uuid(1))).toBeNull();
+    t.tick();
+    expect(t.db.dispatch({ kind: 'RestoreArticle', itemId: uuid(1) }, t.env)).toMatchObject({ ok: true });
+    expect(t.db.savedArticle(uuid(1))).toMatchObject({ id: uuid(1), createdAt: created });
+    expect(t.db.dispatch({ kind: 'RestoreArticle', itemId: uuid(1) }, t.env)).toMatchObject({ ok: true }); // idempotent
+  });
+  it('restores a read article, and answers NotFound for an unknown id', () => {
+    const t = openTestDb();
+    read(t, 2);
+    t.tick();
+    t.db.dispatch({ kind: 'RemoveArticle', itemId: uuid(2) }, t.env);
+    expect(t.db.articles()).toHaveLength(0);
+    t.tick();
+    expect(t.db.dispatch({ kind: 'RestoreArticle', itemId: uuid(2) }, t.env)).toMatchObject({ ok: true });
+    expect(t.db.articles().map((a) => a.id)).toEqual([uuid(2)]);
+    expect(t.db.dispatch({ kind: 'RestoreArticle', itemId: uuid(9) }, t.env)).toEqual({ ok: false, error: { kind: 'NotFound' } });
+  });
+});

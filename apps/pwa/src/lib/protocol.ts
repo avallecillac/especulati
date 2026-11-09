@@ -14,6 +14,7 @@ export type Query =
   /** 008: saved articles, newest saved first. */
   | { name: 'savedArticles'; limit?: number }
   | { name: 'savedCount' }
+  | { name: 'savedArticle'; itemId: string }
   | { name: 'findSavedByUrl'; url: string }
   | { name: 'articleStats'; year: number; today: string }
   | { name: 'book'; itemId: string; today: string }
@@ -43,6 +44,7 @@ export interface QueryResult {
   highlights: Highlight[];
   savedArticles: SavedArticle[];
   savedCount: number;
+  savedArticle: SavedArticle | null;
   findSavedByUrl: SavedArticle[];
   articleStats: ArticleStats;
   book: BookView | null;
