@@ -8,7 +8,7 @@
   import Fish from '../ornaments/Fish.svelte';
   import Articles from './Articles.svelte';
   import Saved from './Saved.svelte';
-  import TagsSheet from './TagsSheet.svelte';
+  import ArticleSearch from './ArticleSearch.svelte';
 
   let { initialTab = 'books' }: { initialTab?: 'books' | 'articles' | 'saved' } = $props();
   let view = $state<LibraryView | null>(null);
@@ -21,7 +21,7 @@
     else reportError(r.error);
   }
 
-  let tagsOpen = $state(false);
+  let searching = $state(false);
   let savedCount = $state(0);
   async function loadSaved() {
     const r = await query({ name: 'savedCount' });
@@ -55,11 +55,13 @@
 </div>
 
 {#if tab !== 'books'}
-  <div class="tools"><button type="button" class="link" aria-haspopup="dialog" onclick={() => (tagsOpen = true)}>All tags…</button></div>
+  <ArticleSearch bind:active={searching} />
 {/if}
 
 <div id="panel-library" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-{#if tab === 'articles'}
+{#if tab !== 'books' && searching}
+  <!-- the search results (above) replace the lists -->
+{:else if tab === 'articles'}
   <Articles onsaved={() => (tab = 'saved')} />
 {:else if tab === 'saved'}
   <Saved />
@@ -96,12 +98,7 @@
 {/if}
 </div>
 
-{#if tagsOpen}
-  <TagsSheet onclose={() => (tagsOpen = false)} />
-{/if}
-
 <style>
-  .tools { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
   .book-main { display: grid; min-width: 0; }
   .book-title { font-weight: 500; overflow-wrap: anywhere; color: var(--ink); }
   .status { font-style: italic; font-size: 0.9rem; text-align: right; }

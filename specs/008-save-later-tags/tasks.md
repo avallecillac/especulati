@@ -334,7 +334,7 @@ merge and delete; optional Add tags after capture.
 **Goal:** a Library search over titles, authors, sites, tags, highlights and notes, plus
 an AND tag filter.
 
-- [ ] T025 [P] [US4] Write `e2e/search.spec.ts`:
+- [X] T025 [P] [US4] Write `e2e/search.spec.ts`:
   - matches on a title word, a site, a tag, and a highlight phrase (the passage is shown
     with `<mark>`);
   - "cafe" finds "Café";
@@ -344,7 +344,7 @@ an AND tag filter.
   - "No results" offers Clear;
   - SC-004 in the UI: with 500 seeded articles, results appear within 200 ms of the last
     keystroke (best of 3). The 100 ms target at 5,000 is proved at the db level (T007).
-- [ ] T026 [US4] Implement:
+- [X] T026 [US4] Implement:
   - `apps/pwa/src/screens/ArticleSearch.svelte`: the searchbox (labelled "Search
     articles"), the 80 ms debounce, results with labels and `<mark>`, and the tag chips
     (`aria-pressed`, AND, plus "All tags…");
@@ -383,7 +383,8 @@ an AND tag filter.
   pending request when `postMessage` throws. This should be its own bug-fix commit,
   starting with a failing test (constitution VII). Found in T024; the call site was
   fixed there.
-- **T026:** move the "All tags…" button next to the tag-filter chips.
+- ~~**T026:** move the "All tags…" button next to the tag-filter chips.~~ Done in T026.
+- **Polish:** the search field's native clear (×) shows the browser's blue. Style it with tokens, or replace it with the component's own clear (T027).
 
 ## Dependencies & Execution Order
 

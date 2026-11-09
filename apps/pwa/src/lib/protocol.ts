@@ -1,5 +1,5 @@
 import type { Article, ArticleStats, Command, Highlight, Rejection, Result, StatsView } from '@readerlog/core';
-import type { BookCard, BookView, DuplicatePairView, HomeView, ItemTagView, LibraryView, SavedArticle, StragglerView, TagSummary } from '@readerlog/db';
+import type { BookCard, BookView, DuplicatePairView, HomeView, ItemTagView, LibraryView, SavedArticle, SearchHit, StragglerView, TagSummary } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
 /** UI ↔ DB worker messages (contracts/worker-api.md). */
@@ -20,6 +20,8 @@ export type Query =
   | { name: 'tagsFor'; itemId: string }
   | { name: 'allTags' }
   | { name: 'tagSuggestions'; prefix: string; limit?: number }
+  /** 008: article search; `tagKeys` are name keys that must all match. */
+  | { name: 'search'; query: string; tagKeys?: string[]; limit?: number }
   | { name: 'articleStats'; year: number; today: string }
   | { name: 'book'; itemId: string; today: string }
   | { name: 'stats'; year: number; today: string }
@@ -53,6 +55,7 @@ export interface QueryResult {
   tagsFor: ItemTagView[];
   allTags: TagSummary[];
   tagSuggestions: TagSummary[];
+  search: SearchHit[];
   articleStats: ArticleStats;
   book: BookView | null;
   stats: StatsView;

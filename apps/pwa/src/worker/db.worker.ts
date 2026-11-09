@@ -262,6 +262,8 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.tagsFor(q.itemId);
     case 'allTags':
       return d.allTags();
+    case 'search':
+      return d.search(q.query, { ...(q.tagKeys ? { tagKeys: q.tagKeys } : {}), ...(q.limit !== undefined ? { limit: q.limit } : {}) });
     case 'tagSuggestions':
       return d.tagSuggestions(q.prefix, q.limit);
     case 'savedArticles':
