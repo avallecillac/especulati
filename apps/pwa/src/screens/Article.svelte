@@ -8,8 +8,9 @@
   import { longDate } from '../lib/dates.ts';
   import { errorMessage, reportError } from '../lib/errors.ts';
   import { navigate } from '../lib/router.svelte.ts';
-    import Confirm from './Confirm.svelte';
+  import Confirm from './Confirm.svelte';
   import HighlightList from './HighlightList.svelte';
+  import TagInput from './TagInput.svelte';
 
   let props: { id: string } = $props();
   // The route is keyed on the id ({#key} in App.svelte).
@@ -92,6 +93,7 @@
     <dt class="muted smallcaps">Site</dt><dd>{s.domain}</dd>
     <dt class="muted smallcaps">Reading time</dt><dd data-testid="reading-time">{minutesLabel(s)}</dd>
   </dl>
+  <TagInput itemId={s.id} />
   <div class="actions">
     <button class="primary" type="button" onclick={() => void markArticleRead(s.id)}>Mark as read</button>
     <a class="button" href={s.url} target="_blank" rel="noopener noreferrer">Open page</a>
@@ -126,6 +128,7 @@
       <dt class="muted smallcaps">Reading time</dt><dd data-testid="reading-time">{minutesLabel(a)}</dd>
     </dl>
     {#if a.detailsStatus === 'notFound'}<p class="muted">Details not fetched</p>{/if}
+    <TagInput itemId={a.id} />
     <div class="actions">
       <a class="button" href={a.url} target="_blank" rel="noopener noreferrer">Open page</a>
       <button type="button" onclick={() => startEditing(a)}>Edit</button>

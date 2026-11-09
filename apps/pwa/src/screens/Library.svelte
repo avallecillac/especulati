@@ -8,6 +8,7 @@
   import Fish from '../ornaments/Fish.svelte';
   import Articles from './Articles.svelte';
   import Saved from './Saved.svelte';
+  import TagsSheet from './TagsSheet.svelte';
 
   let { initialTab = 'books' }: { initialTab?: 'books' | 'articles' | 'saved' } = $props();
   let view = $state<LibraryView | null>(null);
@@ -20,6 +21,7 @@
     else reportError(r.error);
   }
 
+  let tagsOpen = $state(false);
   let savedCount = $state(0);
   async function loadSaved() {
     const r = await query({ name: 'savedCount' });
@@ -51,6 +53,10 @@
   <button role="tab" id="tab-articles" aria-selected={tab === 'articles'} aria-controls="panel-library" onclick={() => (tab = 'articles')}>Articles</button>
   <button role="tab" id="tab-saved" aria-selected={tab === 'saved'} aria-controls="panel-library" aria-label="Saved" onclick={() => (tab = 'saved')}>Saved{savedCount > 0 ? ` (${savedCount})` : ''}</button>
 </div>
+
+{#if tab !== 'books'}
+  <div class="tools"><button type="button" class="link" aria-haspopup="dialog" onclick={() => (tagsOpen = true)}>All tags…</button></div>
+{/if}
 
 <div id="panel-library" role="tabpanel" aria-labelledby={`tab-${tab}`}>
 {#if tab === 'articles'}
@@ -90,7 +96,12 @@
 {/if}
 </div>
 
+{#if tagsOpen}
+  <TagsSheet onclose={() => (tagsOpen = false)} />
+{/if}
+
 <style>
+  .tools { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
   .book-main { display: grid; min-width: 0; }
   .book-title { font-weight: 500; overflow-wrap: anywhere; color: var(--ink); }
   .status { font-style: italic; font-size: 0.9rem; text-align: right; }

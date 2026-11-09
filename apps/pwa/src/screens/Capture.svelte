@@ -8,6 +8,7 @@
   import { errorMessage } from '../lib/errors.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { refreshStatus, runSync, syncState } from '../lib/sync.svelte.ts';
+  import TagInput from './TagInput.svelte';
 
   /** The `#/capture?d=…` screen (contracts/capture.md). The route is keyed on `d` in App.svelte. */
   let props: { d: string } = $props();
@@ -44,6 +45,8 @@
   let noteText = $state('');
   let noteBusy = $state(false);
   let noteError = $state('');
+  /** The optional Add tags row (008) is open. */
+  let tagging = $state(false);
   let undoTimer: ReturnType<typeof setTimeout> | undefined;
 
   async function save(c: Capture, id: string) {
@@ -234,6 +237,14 @@
   };
 </script>
 
+{#snippet tagRow(itemId: string)}
+  {#if tagging}
+    <TagInput {itemId} />
+  {:else}
+    <div class="actions"><button type="button" onclick={() => (tagging = true)}>Add tags</button></div>
+  {/if}
+{/snippet}
+
 <h1>Capture</h1>
 
 {#if phase.kind === 'working'}
@@ -286,6 +297,7 @@
         <a href="#/settings/sync">join your sync space</a> to send this to your other devices.
       </p>
     {/if}
+    {#if !removed && !noting}{@render tagRow(p.itemId)}{/if}
     {#if !noting}
       <div class="actions">
         {#if !removed && p.fresh && !p.note}<button type="button" onclick={() => { noteText = ''; noting = true; }}>Add note</button>{/if}
@@ -310,6 +322,7 @@
         <a href="#/settings/sync">join your sync space</a> to send this to your other devices.
       </p>
     {/if}
+    {#if !removed}{@render tagRow(p.id)}{/if}
     <div class="actions">
       {#if canUndo && !removed}<button type="button" onclick={() => void undo(p.id)}>Undo</button>{/if}
       <button class="primary" type="button" onclick={() => navigate('/library')}>Done</button>
@@ -332,6 +345,7 @@
         <a href="#/settings/sync">join your sync space</a> to send this to your other devices.
       </p>
     {/if}
+    {#if !removed}{@render tagRow(p.id)}{/if}
     <div class="actions">
       {#if canUndo && !removed}<button type="button" onclick={() => void undo(p.id, p.fromSaved === true)}>Undo</button>{/if}
       <button class="primary" type="button" onclick={() => navigate('/library')}>Done</button>

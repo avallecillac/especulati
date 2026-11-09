@@ -31,11 +31,11 @@ export function errorMessage(e: ClientError): string {
     case 'HighlightEmpty':
       return 'Add a quote or a note';
     case 'AlreadyRead':
-      return 'That article is already marked as read.';
+      return 'Already read';
     case 'NotRead':
-      return "That article isn't marked as read.";
+      return 'Not read yet';
     case 'TooManyTags':
-      return `An article can have at most ${e.max} tags.`;
+      return `An article can have up to ${e.max} tags`;
     case 'InvalidInput':
       return `Invalid ${e.field}: ${e.reason}.`;
     case 'Storage':

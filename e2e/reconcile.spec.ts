@@ -48,16 +48,29 @@ async function expectMerged(page: Page): Promise<void> {
   await page.getByTestId('article-row').first().getByRole('link').first().click();
   await expect(page.getByRole('article', { name: 'Highlight' })).toHaveCount(1);
   await expect(page.getByText(QUOTE)).toBeVisible();
+  // SC-002: the tag A put on the saved copy survives the merge.
+  await expect(page.getByRole('button', { name: 'Remove tag ai', exact: true })).toBeVisible();
 }
 
-// The "ai" tag of SC-002 is asserted at the db level (apps/pwa/src/lib/reconcile.test.ts): the tag UI
-// arrives with T024, and this spec has no other way to tag an article.
+/** Tag the saved copy "ai" through its screen (Saved → More → Details). */
+async function tagSaved(page: Page): Promise<void> {
+  await page.goto('/#/library');
+  await page.getByRole('tab', { name: 'Saved' }).click();
+  await page.getByTestId('saved-row').first().getByRole('button', { name: 'More' }).click();
+  await page.getByRole('link', { name: 'Details' }).click();
+  const input = page.getByRole('combobox', { name: 'Add tag', exact: true });
+  await input.fill('ai');
+  await input.press('Enter');
+  await expect(page.getByRole('button', { name: 'Remove tag ai', exact: true })).toBeVisible();
+}
+
 test('a URL saved on one device and logged on another merges into one read article with the highlight (SC-002)', async ({ twoDevices }) => {
   const { a, b } = twoDevices;
   // A saves first, then B logs the same URL as read with a highlight; neither has synced yet.
   await openApp(a.page);
   await a.page.goto(`/${link({ later: 1 })}`);
   await expect(a.page.getByText('Saved for later')).toBeVisible();
+  await tagSaved(a.page);
   await openApp(b.page);
   await b.page.goto(`/${link({ quote: QUOTE })}`);
   await expect(b.page.getByText('Highlight saved')).toBeVisible();

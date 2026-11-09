@@ -301,7 +301,7 @@ Log as read on a URL the extension saved marks it read.
 **Goal:** add and remove tags on articles (read and saved), with suggestions; rename,
 merge and delete; optional Add tags after capture.
 
-- [ ] T023 [P] [US3] Write `e2e/tags.spec.ts`:
+- [X] T023 [P] [US3] Write `e2e/tags.spec.ts`:
   - add a new tag, and an existing one through its suggestion, which takes 3 taps or
     fewer (SC-005);
   - "AI" and " ai " are the same tag;
@@ -313,7 +313,7 @@ merge and delete; optional Add tags after capture.
   - the capture screen's **Add tags**;
   - extend `e2e/reconcile.spec.ts` with the tag step deferred from T018: A tags the saved
     copy "ai", and after the merge the survivor carries "ai".
-- [ ] T024 [US3] Implement:
+- [X] T024 [US3] Implement:
   - `apps/pwa/src/screens/TagInput.svelte`: chips plus an input with a suggestions
     listbox;
   - `TagsSheet.svelte`: all tags with counts, Rename and Delete with Confirm;
@@ -374,6 +374,16 @@ an AND tag filter.
   - list the manual device checks as pending.
 
 ---
+
+## Follow-ups found during implementation (not in this feature's scope)
+
+- **Bug (hardening):** `apps/pwa/src/lib/dbClient.ts` `send()` doesn't guard a
+  synchronous `postMessage` throw. A `DataCloneError`, for example from passing a
+  Svelte `$state` proxy, leaves the request promise pending forever. Fix: reject the
+  pending request when `postMessage` throws. This should be its own bug-fix commit,
+  starting with a failing test (constitution VII). Found in T024; the call site was
+  fixed there.
+- **T026:** move the "All tags…" button next to the tag-filter chips.
 
 ## Dependencies & Execution Order
 

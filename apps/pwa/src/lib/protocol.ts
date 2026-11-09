@@ -1,5 +1,5 @@
 import type { Article, ArticleStats, Command, Highlight, Rejection, Result, StatsView } from '@readerlog/core';
-import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, SavedArticle, StragglerView } from '@readerlog/db';
+import type { BookCard, BookView, DuplicatePairView, HomeView, ItemTagView, LibraryView, SavedArticle, StragglerView, TagSummary } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
 /** UI ↔ DB worker messages (contracts/worker-api.md). */
@@ -16,6 +16,10 @@ export type Query =
   | { name: 'savedCount' }
   | { name: 'savedArticle'; itemId: string }
   | { name: 'findSavedByUrl'; url: string }
+  /** 008: the live tags of an article; every tag with its count; tags starting with `prefix`, most used first. */
+  | { name: 'tagsFor'; itemId: string }
+  | { name: 'allTags' }
+  | { name: 'tagSuggestions'; prefix: string; limit?: number }
   | { name: 'articleStats'; year: number; today: string }
   | { name: 'book'; itemId: string; today: string }
   | { name: 'stats'; year: number; today: string }
@@ -46,6 +50,9 @@ export interface QueryResult {
   savedCount: number;
   savedArticle: SavedArticle | null;
   findSavedByUrl: SavedArticle[];
+  tagsFor: ItemTagView[];
+  allTags: TagSummary[];
+  tagSuggestions: TagSummary[];
   articleStats: ArticleStats;
   book: BookView | null;
   stats: StatsView;
@@ -62,9 +69,20 @@ export interface QueryResult {
 export type Request =
   | { id: number; kind: 'dispatch'; cmd: Command }
   | { id: number; kind: 'query'; q: Query }
+  | { id: number; kind: 'tag'; op: TagOp }
   | { id: number; kind: 'setMeta'; key: string; value: string }
   | { id: number; kind: 'storeCover'; itemId: string; image: Blob }
   | { id: number; kind: 'sync'; op: SyncOp };
+
+/**
+ * Tag writes that need ids (008 research R3). The worker resolves the tag id, derives the assignment ids and
+ * dispatches in one step, so the UI never computes an id. Names cross only as input; they are never logged.
+ */
+export type TagOp =
+  | { action: 'tagArticle'; itemId: string; name: string }
+  /** `tagIds`: every live tag of the group (one name key). A name that already belongs to another tag merges. */
+  | { action: 'renameTag'; tagIds: string[]; newName: string }
+  | { action: 'deleteTag'; tagIds: string[] };
 
 /** Sync requests (contracts/worker-api-004.md). The code text crosses only for turnOn, join and showCode. */
 export type SyncOp =

@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 import sqlite3InitModule, { type SAHPoolUtil, type Sqlite3Static } from '@sqlite.org/sqlite-wasm';
-import { ReaderlogDb, type DispatchEnv } from '@readerlog/db';
-import { parseLocalDate, type Instant } from '@readerlog/core';
+import { ReaderlogDb, type DispatchEnv, type DispatchOutcome } from '@readerlog/db';
+import { err, ok, parseLocalDate, tagKey, type Command, type Instant, type Rejection, type Result } from '@readerlog/core';
 import { createSyncEngine, type SyncEngine } from '@readerlog/sync';
-import { reconcileAll } from '../lib/reconcile.ts';
-import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo, type SyncOp } from '../lib/protocol.ts';
+import { itemTagId, reconcileAll } from '../lib/reconcile.ts';
+import { uuidFromHash } from '../lib/ids.ts';
+import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo, type SyncOp, type TagOp } from '../lib/protocol.ts';
 
 /**
  * Owns the on-device database (research R1/R2). opfs-sahpool allows one connection at a
@@ -177,6 +178,72 @@ function env(): DispatchEnv {
 /** Local writes that can create a live saved/read pair of one URL. */
 const RECONCILES: ReadonlySet<string> = new Set(['AddArticle', 'MarkArticleRead', 'MarkArticleUnread', 'RestoreArticle']);
 
+/** Dispatch one command, then the follow-up every local write needs (cover cache, reconcile, search, other tabs). */
+async function commit(d: ReaderlogDb, cmd: Command): Promise<Result<DispatchOutcome, Rejection>> {
+  const r = d.dispatch(cmd, env());
+  if (!r.ok) return r;
+  if (cmd.kind === 'RemoveBook') d.deleteCover(cmd.itemId); // cache maintenance (R5)
+  if (RECONCILES.has(cmd.kind)) await reconcileAll(d, env); // a local write can complete a saved/read pair (R4)
+  d.invalidateSearch();
+  channel.postMessage({ type: 'changed' });
+  return r;
+}
+
+/** A TEXT column; anything else means the schema changed. */
+function col(v: unknown): string {
+  if (typeof v !== 'string') throw new TypeError('expected a TEXT column');
+  return v;
+}
+
+const NO_CHANGES: DispatchOutcome = { offerFinish: false };
+
+/**
+ * Tag writes (008 research R3): the ids are derived here, in the shell, from the name key; core only checks them.
+ * A merge-rename lists the source's live assignments as `moves`, each with the id it gets on the target tag.
+ */
+async function tagWrite(d: ReaderlogDb, op: TagOp): Promise<Result<DispatchOutcome, Rejection>> {
+  switch (op.action) {
+    case 'tagArticle': {
+      const tagId = await d.resolveTagId(op.name, uuidFromHash);
+      if (tagId === null) return err({ kind: 'InvalidInput', field: 'name', reason: 'required' });
+      return commit(d, { kind: 'TagArticle', itemId: op.itemId, tagId, itemTagId: await itemTagId(op.itemId, tagId), name: op.name });
+    }
+    case 'renameTag': {
+      const key = tagKey(op.newName);
+      const group = new Set(op.tagIds);
+      const other =
+        key === null
+          ? undefined
+          : d.raw
+              .selectArrays('SELECT id FROM tags WHERE name_key = ? AND deleted_at IS NULL ORDER BY created_at, id', [key])
+              .map((r) => col(r[0]))
+              .find((id) => !group.has(id));
+      let last: Result<DispatchOutcome, Rejection> = ok(NO_CHANGES);
+      for (const tagId of op.tagIds) {
+        if (other === undefined) {
+          last = await commit(d, { kind: 'RenameTag', tagId, newName: op.newName });
+        } else {
+          const live = d.raw.selectArrays('SELECT id, item_id FROM item_tags WHERE tag_id = ? AND deleted_at IS NULL ORDER BY id', [tagId]);
+          const moves = await Promise.all(
+            live.map(async (r) => ({ from: col(r[0]), to: await itemTagId(col(r[1]), other), itemId: col(r[1]) })),
+          );
+          last = await commit(d, { kind: 'RenameTag', tagId, newName: op.newName, merge: { targetTagId: other, moves } });
+        }
+        if (!last.ok) return last;
+      }
+      return last;
+    }
+    case 'deleteTag': {
+      let last: Result<DispatchOutcome, Rejection> = ok(NO_CHANGES);
+      for (const tagId of op.tagIds) {
+        last = await commit(d, { kind: 'DeleteTag', tagId });
+        if (!last.ok) return last;
+      }
+      return last;
+    }
+  }
+}
+
 function runQuery(d: ReaderlogDb, q: Query): unknown {
   switch (q.name) {
     case 'home':
@@ -191,6 +258,12 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.findArticleByUrl(q.url);
     case 'highlights':
       return d.highlights(q.itemId);
+    case 'tagsFor':
+      return d.tagsFor(q.itemId);
+    case 'allTags':
+      return d.allTags();
+    case 'tagSuggestions':
+      return d.tagSuggestions(q.prefix, q.limit);
     case 'savedArticles':
       return d.savedArticles(q.limit !== undefined ? { limit: q.limit } : {});
     case 'savedCount':
@@ -287,13 +360,12 @@ async function handle(req: Request): Promise<Response> {
     const d = await open();
     switch (req.kind) {
       case 'dispatch': {
-        const r = d.dispatch(req.cmd, env());
-        if (!r.ok) return { id: req.id, ok: false, error: r.error };
-        if (req.cmd.kind === 'RemoveBook') d.deleteCover(req.cmd.itemId); // cache maintenance (R5)
-        if (RECONCILES.has(req.cmd.kind)) await reconcileAll(d, env); // a local write can complete a saved/read pair (R4)
-        d.invalidateSearch();
-        channel.postMessage({ type: 'changed' });
-        return { id: req.id, ok: true, result: r.value };
+        const r = await commit(d, req.cmd);
+        return r.ok ? { id: req.id, ok: true, result: r.value } : { id: req.id, ok: false, error: r.error };
+      }
+      case 'tag': {
+        const r = await tagWrite(d, req.op);
+        return r.ok ? { id: req.id, ok: true, result: r.value } : { id: req.id, ok: false, error: r.error };
       }
       case 'query':
         return { id: req.id, ok: true, result: runQuery(d, req.q) };

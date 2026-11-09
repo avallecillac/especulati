@@ -1,6 +1,6 @@
 import type { Command, Result } from '@readerlog/core';
 import type { DispatchOutcome } from '@readerlog/db';
-import { CHANNEL, type ClientError, type Control, type Query, type QueryResult, type Request, type Response, type SyncOp, type SyncResult } from './protocol.ts';
+import { CHANNEL, type ClientError, type Control, type Query, type QueryResult, type Request, type Response, type SyncOp, type SyncResult, type TagOp } from './protocol.ts';
 
 type Pending = (res: Response) => void;
 
@@ -51,6 +51,17 @@ document.addEventListener('visibilitychange', () => {
 
 export async function dispatch(cmd: Command): Promise<Result<DispatchOutcome, ClientError>> {
   const res = await send({ kind: 'dispatch', cmd });
+  if (res.ok) {
+    notify();
+    writeHooks.forEach((h) => h());
+    return { ok: true, value: res.result as DispatchOutcome };
+  }
+  return { ok: false, error: res.error };
+}
+
+/** A tag write resolved in the DB worker (ids derived there, research R3). */
+export async function tagOp(op: TagOp): Promise<Result<DispatchOutcome, ClientError>> {
+  const res = await send({ kind: 'tag', op });
   if (res.ok) {
     notify();
     writeHooks.forEach((h) => h());
