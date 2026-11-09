@@ -270,3 +270,16 @@ test('SC-004: with 500 articles, results appear within 200 ms of the last keystr
   console.log(`search latency ms: ${times.map((t) => t.toFixed(0)).join(', ')}`);
   expect(Math.min(...times)).toBeLessThan(200);
 });
+
+test('the themed "Clear search" button shows only with text and empties the field', async ({ page }) => {
+  await seedSearch(page);
+  await openLibrary(page);
+  const x = page.getByRole('button', { name: 'Clear search', exact: true });
+  await expect(x).toHaveCount(0);
+  await box(page).fill('gardening');
+  await expect(hits(page)).toHaveCount(1);
+  await x.click();
+  await expect(box(page)).toHaveValue('');
+  await expect(x).toHaveCount(0);
+  await expect(hits(page)).toHaveCount(0);
+});

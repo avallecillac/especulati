@@ -82,7 +82,12 @@
 </script>
 
 <div class="search">
-  <input type="search" aria-label="Search articles" placeholder="Search articles" autocomplete="off" autocapitalize="none" spellcheck="false" bind:value={text} />
+  <div class="field">
+    <input type="search" aria-label="Search articles" placeholder="Search articles" autocomplete="off" autocapitalize="none" spellcheck="false" bind:value={text} />
+    {#if text !== ''}
+      <button type="button" class="x" aria-label="Clear search" onclick={() => (text = '')}><span aria-hidden="true">×</span></button>
+    {/if}
+  </div>
   <div class="chips">
     {#each chips as t (t.nameKey)}
       <button type="button" class="chip" aria-pressed={selected.includes(t.nameKey)} onclick={() => toggle(t.nameKey)}>{t.name}</button>
@@ -129,6 +134,11 @@
 
 <style>
   .search { margin-bottom: 12px; }
+  .field { position: relative; }
+  /* The browser's own clear button is blue; the component draws a themed one. */
+  .field input { padding-right: var(--tap); }
+  .field input::-webkit-search-cancel-button, .field input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+  .x { position: absolute; top: 0; right: 0; bottom: 0; width: var(--tap); min-height: 0; padding: 0; border: 0; background: none; color: var(--ink-soft); font-size: 1.4rem; line-height: 1; border-radius: 10px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
   .passage { margin-top: 4px; font-size: 0.92rem; overflow-wrap: anywhere; }
   .passage.note { font-style: italic; }
