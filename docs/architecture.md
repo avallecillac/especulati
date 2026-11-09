@@ -91,7 +91,7 @@ e2e/            Playwright scenarios
 - Types follow "parse, don't validate": `ItemId`, `LocalDate`, `Page`,
   `NonEmptyTitle`, and so on are branded and built only through smart constructors.
 
-## 6. Data model (schema v4)
+## 6. Data model (schema v5)
 
 ```sql
 CREATE TABLE items (
@@ -176,6 +176,18 @@ Only text the user explicitly selects is stored (constitution v1.2.0). The migra
 also resets `sync_cursor` and the "couldn't be read" counter, so a device re-reads
 the space once after updating (see §7).
 
+**Migration 5 (feature 008)** does three things:
+- **Saved articles:** `type = 'article'` rows with `read_on IS NULL`. The saved date is
+  `created_at`, and the partial index `idx_items_saved` serves the list.
+- **Tags:** `tags(id, name, name_key, created_at, deleted_at)` and
+  `item_tags(id, item_id, tag_id, created_at, deleted_at)` are rebuilt as synced tables.
+  Ids are derived from `name_key`, and assignment ids from `(item, tag)`, so devices
+  converge without a merge step. Tags are for articles only; books will get shelves
+  later.
+- **Re-read:** it resets the cursor once, as migration 4 did.
+
+Every read-article list, stat and lookup excludes saved articles.
+
 Sync state lives in `meta` (`sync_key`, `sync_cursor`, `pending_batch`, `sync_status`,
 `sync_old_space`), which is never synced.
 
@@ -209,6 +221,20 @@ Sync state lives in `meta` (`sync_key`, `sync_cursor`, `pending_batch`, `sync_st
   - After it updates, migration 4 makes it re-read the space; ops it already has are
     ignored by `op_id`.
   - A future table must follow the same rule: give it its own tier.
+- **More tiers (008):**
+  - `tierOf(tbl, fields)` puts `tags` and `item_tags` in the `t` tier, and any `items`
+    op setting `read_on: null` (a saved article) in the `s` tier. 0.8.0 reads `read_on`
+    strictly and would break on a saved row.
+  - `MarkArticleRead` and the reconcile survivor carry the **full article row**, so an
+    old device that never saw the saved copy receives a complete read article.
+- **Reconcile (008):**
+  - **What it fixes:** the push-only extension can't see saves made on other devices,
+    so a saved URL logged elsewhere becomes two articles.
+  - **What it does:** after sync and after local writes, the PWA merges each
+    saved/later-read (or saved/saved) pair with `ReconcileSavedArticle`. The kept copy
+    is the saved one, with the read date, the highlights and the tags carried over.
+  - **Safety:** it's deterministic, with derived ids, so every device makes identical
+    changes.
 - **As designed in 004** (`specs/004-encrypted-sync/`):
   - The relay runs as Cloudflare **Pages Functions** on the same origin
     (`/api/v1`), with D1. It stores opaque encrypted **batches** of ops, keyed by a
@@ -290,6 +316,24 @@ Details: `specs/002-isbn-scan-metadata/`.
 - **In the app:** **Add highlight** or **Add note** on any article.
 - **Jump back:** tapping a quote opens the article at the passage, through a text
   fragment derived from the quote. No anchor text is stored.
+### Save for later, tags and search (feature 008)
+- **Save:**
+  - **Mac:** **Alt+Shift+S**, or right-click → **Save for later** (on a link it saves
+    the URL only).
+  - **iPhone:** a capture link with `later: 1`, through the "Save to Readerlog"
+    Shortcut.
+  - **In the app:** **Read later** in Add article.
+- **Read:**
+  - **Mark as read**, with Undo.
+  - Logging or highlighting a saved URL marks it read on every path.
+  - **Remove** has Undo everywhere, through `RestoreArticle`.
+- **Tags:**
+  - chips with suggestions;
+  - **All tags…** to rename (merging into an existing name) or delete;
+  - **Add tags** after capture.
+- **Search:** an in-memory index in the worker, with accents folded. It covers titles,
+  authors, sites, tags, highlight quotes and notes, with an AND tag filter. With 5,000
+  articles, the first search takes about 70 ms and later ones about 1 ms.
 - A URL typed in by hand keeps only its domain, because a browser can't fetch
   arbitrary pages due to CORS. Its status is `metadata_status = 'failed'`.
 
@@ -367,5 +411,5 @@ The picker in Settings builds its rows from `THEMES`, so it needs no change.
 | 006 | illustrated-edition-ui | Native-iOS shell (large titles, translucent tab bar, push/pop), illustrated-edition look (EB Garamond/Cormorant, ornaments, cloth covers), token-based themes: Macondo, Patriarca, Automatic |
 | 007 | highlights-notes | Save passages and notes on articles: Mac extension (menu + shortcut), iPhone Shortcut (Copy → Share), by hand in the app; synced, encrypted; jump back via text links |
 | 008 | save-later-tags | Save web articles for later (Mac menu/shortcut, iPhone Shortcut, in-app), mark as read; tags with rename/merge/delete; Library search and tag filter |
-| 009 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals`, `items.merged_into` and 007's `highlights` (constitution II) |
+| 009 | export-import | JSON/CSV export, merge-by-id import, DB download, reset = new space. The export must also include 004's `duplicate_dismissals`, `items.merged_into`, 007's `highlights`, and 008's `tags`, `item_tags` and saved state (`read_on` NULL) (constitution II) |
 | later | book-shelves | User-named shelves for books (the user prefers shelves to tags for books) |

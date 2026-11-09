@@ -361,7 +361,7 @@ an AND tag filter.
 
 - [ ] T027 [P] Extend `e2e/screens.ts` and the a11y and layout specs: Saved, search with
   results, the tags sheet, and the article with tags, in both themes and at 320 px.
-- [ ] T028 [P] Update the docs:
+- [X] T028 [P] Update the docs:
   - `README.md`: Save for later (⌥⇧S, menu), tags and search;
   - `docs/architecture.md`: schema v5, the tiers `t` and `s`, reconcile, the search
     index; the 009 export row must include `tags`, `item_tags` and saved state;

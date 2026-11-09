@@ -19,6 +19,12 @@ A personal, local-first app for logging books and web articles and seeing readin
 5. To keep a passage, select it, then press **Alt+Shift+H** or right-click → **Save
    highlight to Readerlog**. On the iPhone, see "Highlight in Readerlog" in
    [the Shortcut guide](docs/ios-shortcut.md).
+6. To keep an article for later, press **Alt+Shift+S** or right-click (on a page or a
+   link) → **Save for later**. It goes to **Library → Saved**, and logging it later
+   marks it read. On the iPhone, see "Save to Readerlog" in the Shortcut guide.
+7. Tag articles on their screen (or **Add tags** right after capturing), then use
+   **Library → Search articles** to find them by title, site, tag, or a phrase from your
+   highlights and notes.
 
 ## Docs
 

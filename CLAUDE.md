@@ -62,6 +62,14 @@ pnpm --filter @readerlog/extension build:e2e  # test build with localhost access
   - Commands go through `decide()`.
   - Pushed batches are single-tier: `tierOf` keeps `highlights` ops apart, so devices
     on an older version never lose base ops. Give any future table its own tier.
+- **Saved articles and tags (008):**
+  - A saved article is `type = 'article' AND read_on IS NULL`. Read-article lists and
+    stats must exclude it.
+  - A saved insert emits `read_on: null` **explicitly** (the `s` tier).
+  - `MarkArticleRead` and reconcile carry the full row.
+  - Tags are articles only, with ids derived in the shell (`resolveTagId`), never in
+    core.
+  - Never pass Svelte `$state` proxies to the worker; copy them first.
 - Book status and the last page are **derived** from events, never stored. Removing
   anything sets `deleted_at` (a tombstone); rows are never deleted.
 - `local_date` is always explicit and computed in the shell (`apps/pwa/src/lib/clock.ts`).
