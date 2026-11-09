@@ -11,6 +11,8 @@ import type { CapturePayload, ToastState } from './toast.ts';
 const UNDO_MS = 6000;
 const MENU_ID = 'log-as-read';
 const HIGHLIGHT_ID = 'save-highlight';
+const SAVE_ID = 'save-later';
+const SAVE_COMMAND = 'save-for-later';
 const ALARM = 'readerlog-flush';
 
 export const peer = createCapturePeer(chromeStore, {
@@ -111,6 +113,45 @@ export async function captureTab(tab: Tab | undefined): Promise<void> {
   await log(tabId, { ...found, at: now.toISOString(), readOn: localDate(now) }, false);
 }
 
+/** 008: save the page in `tab` (or, with `linkUrl`, the address alone) for later. */
+export async function saveTab(tab: Tab | undefined, linkUrl?: string): Promise<void> {
+  const tabId = tab?.id;
+  const at = new Date().toISOString();
+  let input: { url: string; title: string; author: string | null; words: number | null; at: string; detailsStatus?: 'complete' | 'notFound' };
+  if (linkUrl !== undefined && linkUrl !== '') {
+    // A link: the page is not loaded, so only the address is saved, with the site as its title.
+    const url = /^https?:\/\//i.test(linkUrl) ? normalizeUrl(linkUrl) : null;
+    if (!url || !url.ok) return tabId === undefined ? undefined : showToast(tabId, { kind: 'error', message: "Can't save this link" });
+    input = { url: linkUrl, title: siteOf(url.value), author: null, words: null, at, detailsStatus: 'notFound' };
+  } else {
+    if (!tab || tabId === undefined || !/^https?:\/\//i.test(tab.url ?? '')) return refuse();
+    const found = await extract(tabId);
+    if (!found) return showToast(tabId, { kind: 'error', message: "Couldn't read this page" });
+    input = { ...found, at };
+  }
+  const r = await peer.save(input);
+  await updateBadge();
+  if (!r.ok) {
+    if (tabId === undefined) return;
+    if (r.error === 'notPaired') {
+      await showToast(tabId, { kind: 'error', message: 'Readerlog is not paired. Open the extension options.' });
+      void chrome.runtime.openOptionsPage();
+    } else {
+      await showToast(tabId, { kind: 'error', message: "Couldn't save this page" });
+    }
+    return;
+  }
+  if (!r.value.alreadySaved) void flush();
+  if (tabId === undefined) return;
+  const url = normalizeUrl(input.url);
+  await showToast(
+    tabId,
+    r.value.alreadySaved
+      ? { kind: 'alreadySaved', title: input.title }
+      : { kind: 'saved', title: input.title, site: url.ok ? siteOf(url.value) : '', itemId: r.value.itemId, undoMs: UNDO_MS },
+  );
+}
+
 /** Why a stored op was refused, as a toast. Never includes the quote or note. */
 async function showPeerError(tabId: number, error: 'notPaired' | 'invalid' | 'tooLong'): Promise<void> {
   if (error === 'notPaired') {
@@ -176,8 +217,15 @@ export async function flush(): Promise<void> {
   await updateBadge();
 }
 
+/** The short result of Add tags. Never includes a tag name. */
+function tagsMessage(added: number, dropped: number): string {
+  const n = `${added} ${added === 1 ? 'tag' : 'tags'} added`;
+  if (added === 0) return dropped > 0 ? `No tags added (${dropped} skipped)` : 'No tags added';
+  return dropped > 0 ? `${n}, ${dropped} skipped` : n;
+}
+
 async function onMessage(msg: unknown, tabId: number | undefined): Promise<void> {
-  const m = msg as { type?: string; itemId?: unknown; capture?: CapturePayload; highlightId?: unknown; createdArticle?: unknown; note?: unknown };
+  const m = msg as { type?: string; text?: unknown; itemId?: unknown; capture?: CapturePayload; highlightId?: unknown; createdArticle?: unknown; note?: unknown };
   if (m.type === 'undo' && typeof m.itemId === 'string') {
     await peer.undo(m.itemId);
     await updateBadge();
@@ -196,15 +244,32 @@ async function onMessage(msg: unknown, tabId: number | undefined): Promise<void>
     if (tabId !== undefined) {
       await showToast(tabId, r.ok ? { kind: 'noteSaved' } : { kind: 'error', message: r.error === 'tooLong' ? 'That note is too long (5,000 characters max)' : "Couldn't save the note" });
     }
+  } else if (m.type === 'addTags' && typeof m.itemId === 'string' && typeof m.text === 'string') {
+    const names = m.text.split(/[,，]/).map((x) => x.trim()).filter((x) => x !== '');
+    const r = names.length === 0 ? null : await peer.tag(m.itemId, names);
+    await updateBadge();
+    if (r?.ok) void flush();
+    if (tabId !== undefined && r) {
+      await showToast(tabId, r.ok ? { kind: 'tagsAdded', message: tagsMessage(r.value.added, r.value.dropped) } : { kind: 'error', message: "Couldn't add tags" });
+    }
   } else if (m.type === 'logAgain' && m.capture && tabId !== undefined) {
     await log(tabId, m.capture, true);
   }
 }
 
 export const onCommand = (command: string, tab?: Tab): Promise<void> | void =>
-  command === MENU_ID ? captureTab(tab) : command === HIGHLIGHT_ID ? highlightTab(tab) : undefined;
-export const onMenuClick = (info: { menuItemId: string | number; selectionText?: string | undefined }, tab?: Tab): Promise<void> | void =>
-  info.menuItemId === MENU_ID ? captureTab(tab) : info.menuItemId === HIGHLIGHT_ID ? highlightTab(tab, info.selectionText) : undefined;
+  command === MENU_ID ? captureTab(tab) : command === HIGHLIGHT_ID ? highlightTab(tab) : command === SAVE_COMMAND ? saveTab(tab) : undefined;
+export const onMenuClick = (
+  info: { menuItemId: string | number; selectionText?: string | undefined; linkUrl?: string | undefined },
+  tab?: Tab,
+): Promise<void> | void =>
+  info.menuItemId === MENU_ID
+    ? captureTab(tab)
+    : info.menuItemId === HIGHLIGHT_ID
+      ? highlightTab(tab, info.selectionText)
+      : info.menuItemId === SAVE_ID
+        ? saveTab(tab, info.linkUrl)
+        : undefined;
 
 chrome.action.onClicked.addListener((tab) => void captureTab(tab));
 chrome.commands.onCommand.addListener((command, tab) => void onCommand(command, tab));
@@ -219,6 +284,7 @@ chrome.alarms.onAlarm.addListener((a) => {
 });
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: MENU_ID, title: 'Log as read', contexts: ['page', 'action'] }, () => void chrome.runtime.lastError);
+  chrome.contextMenus.create({ id: SAVE_ID, title: 'Save for later', contexts: ['page', 'link'] }, () => void chrome.runtime.lastError);
   chrome.contextMenus.create({ id: HIGHLIGHT_ID, title: 'Save highlight to Readerlog', contexts: ['selection'] }, () => void chrome.runtime.lastError);
   void chrome.alarms.create(ALARM, { periodInMinutes: 5 });
 });

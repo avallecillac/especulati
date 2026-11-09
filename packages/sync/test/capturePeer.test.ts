@@ -315,3 +315,126 @@ describe('capture peer: highlights (007)', () => {
     expect(Object.keys((await store.get<Record<string, unknown>>('highlights')) ?? {})).toHaveLength(2000);
   }, 60000);
 });
+
+describe('capture peer: save for later and tags (008)', () => {
+  type Op = { op: string; tbl: string; row: string; fields: Record<string, unknown> };
+  const pendingOps = async (store: CaptureStore) => (await store.get<Op[]>('pending')) ?? [];
+  const saveInput = (over: Record<string, unknown> = {}) => ({
+    url: 'https://www.Example.com/post?utm_source=x&id=7#top',
+    title: 'A long read',
+    author: 'Ana' as string | null,
+    words: 2380 as number | null,
+    at: '2026-09-28T09:00:00.000Z',
+    ...over,
+  });
+  async function paired(relay: FakeRelay) {
+    const { code, pwa } = await host(relay);
+    const ctx = setup(relay);
+    await ctx.peer.pair(ORIGIN, code);
+    return { ...ctx, pwa };
+  }
+  const tagId = (name: string) => uuidFromHash(`readerlog-tag-v1|${name}`);
+
+  it('save() stamps AddArticle with read_on: null explicitly and records captured.saved', async () => {
+    const { peer, store } = await paired(fakeRelay());
+    const r = await peer.save(saveInput());
+    if (!r.ok) throw new Error('save');
+    const ops = await pendingOps(store);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]!.tbl).toBe('items');
+    expect(Object.prototype.hasOwnProperty.call(ops[0]!.fields, 'read_on')).toBe(true);
+    expect(ops[0]!.fields['read_on']).toBeNull();
+    const captured = (await store.get<Record<string, { saved?: boolean; itemId: string }>>('captured'))!;
+    expect(Object.values(captured)).toMatchObject([{ saved: true, itemId: r.value.itemId }]);
+  });
+
+  it('save() twice for the same url says alreadySaved; not paired is refused; a bad url is invalid', async () => {
+    const relay = fakeRelay();
+    const { peer } = await paired(relay);
+    const a = await peer.save(saveInput());
+    const b = await peer.save(saveInput({ at: '2026-09-28T10:00:00.000Z' }));
+    if (!a.ok || !b.ok) throw new Error('save');
+    expect(b.value).toEqual({ itemId: a.value.itemId, alreadySaved: true });
+    expect(await peer.save(saveInput({ url: 'nope' }))).toEqual({ ok: false, error: 'invalid' });
+    const lone = setup(relay);
+    expect(await lone.peer.save(saveInput())).toEqual({ ok: false, error: 'notPaired' });
+  });
+
+  it('capture() on a saved entry stamps MarkArticleRead with the full row, and the PWA shows one read article', async () => {
+    const relay = fakeRelay();
+    const { peer, store, pwa } = await paired(relay);
+    const s = await peer.save(saveInput());
+    if (!s.ok) throw new Error('save');
+    const c = await peer.capture(page({ title: 'Other title' }));
+    expect(c).toEqual({ ok: true, value: { itemId: s.value.itemId } });
+    const ops = await pendingOps(store);
+    expect(ops).toHaveLength(2);
+    expect(ops[1]!.row).toBe(s.value.itemId);
+    expect(ops[1]!.fields).toMatchObject({
+      type: 'article',
+      title: 'A long read',
+      url: 'https://www.example.com/post?id=7',
+      domain: 'example.com',
+      author: 'Ana',
+      word_count: 2380,
+      metadata_status: 'ok',
+      read_on: '2026-09-28',
+    });
+    expect(typeof ops[1]!.fields['created_at']).toBe('string');
+    expect(await peer.flush()).toMatchObject({ problem: null });
+    await pwa.engine.run('manual');
+    expect(pwa.db.articles()).toHaveLength(1);
+    // A second Log as read is a duplicate of the now-read entry.
+    expect(await peer.capture(page())).toMatchObject({ ok: true, value: { duplicateOf: { readOn: '2026-09-28' } } });
+  });
+
+  it('highlight() on a saved entry stamps MarkArticleRead (full row) before AddHighlight', async () => {
+    const { peer, store } = await paired(fakeRelay());
+    const s = await peer.save(saveInput());
+    if (!s.ok) throw new Error('save');
+    const h = await peer.highlight({ itemId: s.value.itemId, quote: 'A passage.', at: '2026-09-28T09:05:00.000Z', localDate: '2026-09-28' });
+    expect(h.ok).toBe(true);
+    const ops = await pendingOps(store);
+    expect(ops.map((o) => o.tbl)).toEqual(['items', 'items', 'highlights']);
+    expect(ops[1]!.fields).toMatchObject({ title: 'A long read', read_on: '2026-09-28', metadata_status: 'ok' });
+    // Already read now: a second highlight adds no further mark-read.
+    await peer.highlight({ itemId: s.value.itemId, quote: 'Another.', at: '2026-09-28T09:06:00.000Z', localDate: '2026-09-28' });
+    expect((await pendingOps(store)).map((o) => o.tbl)).toEqual(['items', 'items', 'highlights', 'highlights']);
+  });
+
+  it('tag() stamps TagArticle with ids derived in the shell; invalid names are dropped; the limit holds', async () => {
+    const { peer, store } = await paired(fakeRelay());
+    const s = await peer.save(saveInput());
+    if (!s.ok) throw new Error('save');
+    const r = await peer.tag(s.value.itemId, ['AI', ' design ', 'ai', '', 'x'.repeat(41)]);
+    expect(r).toEqual({ ok: true, value: { added: 2, dropped: 3 } });
+    const ops = (await pendingOps(store)).filter((o) => o.tbl === 'tags' || o.tbl === 'item_tags');
+    const aiId = await tagId('ai');
+    const designId = await tagId('design');
+    expect(ops.filter((o) => o.tbl === 'tags').map((o) => o.row)).toEqual([aiId, designId]);
+    expect(ops.filter((o) => o.tbl === 'tags').map((o) => o.fields['name'])).toEqual(['AI', 'design']);
+    expect(ops.find((o) => o.tbl === 'item_tags')!.row).toBe(await uuidFromHash(`readerlog-item-tag-v1|${s.value.itemId}|${aiId}`));
+    // Tagging again with the same name adds nothing.
+    expect(await peer.tag(s.value.itemId, ['ai'])).toEqual({ ok: true, value: { added: 0, dropped: 0 } });
+    // 18 more reach 20; one more is refused (dropped).
+    const more = Array.from({ length: 19 }, (_, i) => `t${i}`);
+    expect(await peer.tag(s.value.itemId, more)).toEqual({ ok: true, value: { added: 18, dropped: 1 } });
+    expect(await peer.tag('00000000-0000-4000-8000-000000000000', ['a'])).toEqual({ ok: false, error: 'invalid' });
+  });
+
+  it('flushes are single-tier per tierOf: s, then t, then base; the PWA sees the tags', async () => {
+    const relay = fakeRelay();
+    const { peer, store, pwa } = await paired(relay);
+    const s = await peer.save(saveInput());
+    if (!s.ok) throw new Error('save');
+    await peer.tag(s.value.itemId, ['ai', 'design']);
+    await peer.capture(page());
+    expect((await pendingOps(store)).length).toBe(1 + 4 + 1);
+    relay.log.length = 0;
+    expect((await peer.flush()).sent).toBe(6);
+    expect(posts(relay)).toHaveLength(3);
+    expect(gets(relay)).toEqual([]);
+    await pwa.engine.run('manual');
+    expect(pwa.db.articles()).toHaveLength(1);
+  });
+});

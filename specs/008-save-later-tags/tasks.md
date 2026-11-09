@@ -261,7 +261,7 @@ duplicating it. Duplicates from other devices reconcile automatically.
 **Goal:** Save for later from the menu (page or link) and ⌥⇧S, with Add tags and Undo.
 Log as read on a URL the extension saved marks it read.
 
-- [ ] T020 [P] [US1] Extend `packages/sync/test/capturePeer.test.ts`:
+- [X] T020 [P] [US1] Extend `packages/sync/test/capturePeer.test.ts`:
   - `save()` stamps `AddArticle` with `read_on: null` explicitly (F2), and records
     `captured.saved`;
   - `highlight()` on a `captured.saved` entry stamps `MarkArticleRead` (full row) before
@@ -269,7 +269,7 @@ Log as read on a URL the extension saved marks it read.
   - `capture()` on a saved entry stamps `MarkArticleRead` with the full row;
   - `tag()` stamps `TagArticle`, with ids derived in the shell;
   - flushes are single-tier per `tierOf`.
-- [ ] T021 [P] [US1] Write `e2e/extension-save.spec.ts`:
+- [X] T021 [P] [US1] Write `e2e/extension-save.spec.ts`:
   - Save for later from the page (command and menu) and from a link (URL only, the
     site as title);
   - the toast "Saved for later" in under 1 s (SC-001);
@@ -280,7 +280,7 @@ Log as read on a URL the extension saved marks it read.
   - the **Log as read** toast also offers **Add tags** (FR-011);
   - the PWA context shows the results after sync;
   - offline, it stays pending, then flushes.
-- [ ] T022 [US1] Implement:
+- [X] T022 [US1] Implement:
   - `packages/sync/src/capturePeer.ts`: `save`, `tag`, mark-read inside `capture`;
   - `apps/extension/manifest.json`: version 0.7.0, the `save-for-later` command
     Alt+Shift+S;

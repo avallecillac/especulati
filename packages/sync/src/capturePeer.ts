@@ -8,8 +8,14 @@ import {
   normalizeUrl,
   ok,
   stampOps,
+  tagKey,
+  tagName,
   tierOf,
+  detailsStatusFromDb,
   type BookSnapshot,
+  type Change,
+  type FieldValue,
+  type TagSnapshot,
   type DeviceId,
   type Hlc,
   type HighlightSnapshot,
@@ -53,10 +59,25 @@ export interface CaptureInput {
   force?: boolean;
 }
 
+export interface SaveInput {
+  url: string;
+  title: string;
+  author: string | null;
+  words: number | null;
+  /** The save instant (ISO 8601 UTC). Part of the derived item id, with `|later`. */
+  at: string;
+  /** `notFound` for a link saved by URL alone (no page was read). */
+  detailsStatus?: 'complete' | 'notFound';
+}
+
 export interface CapturePeer {
   pair(appOrigin: string, code: string): Promise<Result<void, SyncError>>;
   unpair(): Promise<void>;
   capture(p: CaptureInput): Promise<Result<{ itemId: string; duplicateOf?: { readOn: string } }, 'notPaired' | 'invalid'>>;
+  /** 008: save for later (`AddArticle` with no `readOn`; `read_on: null` is emitted explicitly). */
+  save(p: SaveInput): Promise<Result<{ itemId: string; alreadySaved?: true }, 'notPaired' | 'invalid'>>;
+  /** 008: add tags to a captured article. Names that are invalid, repeated or over the limit are counted in `dropped`. */
+  tag(itemId: string, names: readonly string[]): Promise<Result<{ added: number; dropped: number }, 'notPaired' | 'invalid'>>;
   undo(itemId: string): Promise<void>;
   /** 007: save a quote under an article already in `captured`. The id derives from the article url and `at`. */
   highlight(p: {
@@ -77,6 +98,12 @@ interface CapturedEntry {
   readOn: string;
   at: string;
   removed: boolean;
+  /** 008: saved for later and not yet marked read. */
+  saved?: boolean;
+  /** 008: the article's insert fields as stamped, so MarkArticleRead can carry the full row (S-2). */
+  row?: Record<string, FieldValue>;
+  /** 008: ids of the tags added from here (the extension cannot see the PWA's tags). */
+  tagIds?: string[];
 }
 type Captured = Record<string, CapturedEntry>;
 interface HighlightEntry {
@@ -127,6 +154,26 @@ function highlightSnapshot(itemId: string, highlightId: string, highlights: High
   } as unknown as HighlightSnapshot;
 }
 
+/** The snapshot decide() needs to mark a saved entry read: the row as captured. */
+function savedSnapshot(itemId: string, row: Record<string, FieldValue>): BookSnapshot {
+  return {
+    item: {
+      id: itemId,
+      type: 'article',
+      title: row['title'],
+      url: row['url'],
+      domain: row['domain'],
+      author: row['author'],
+      wordCount: row['word_count'],
+      detailsStatus: detailsStatusFromDb(String(row['metadata_status'])),
+      createdAt: row['created_at'],
+      deletedAt: null,
+      readOn: null,
+    },
+    events: [],
+  } as unknown as BookSnapshot;
+}
+
 export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): CapturePeer {
   /** A lowercase v4 uuid from the injected randomness. */
   function newUuid(): string {
@@ -166,6 +213,12 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
     });
     const pending = (await store.get<OpWire[]>('pending')) ?? [];
     await store.set({ pending: [...pending, ...stamped.ops], hlc: stamped.hlc, ...extra });
+  }
+
+  /** MarkArticleRead for a saved entry, or null when decide() refuses. */
+  function markRead(entry: CapturedEntry, readOn: string, now: Instant): readonly Change[] | null {
+    const d = decide(savedSnapshot(entry.itemId, entry.row!), { kind: 'MarkArticleRead', itemId: entry.itemId, readOn }, now);
+    return d.ok ? d.value.changes : null;
   }
 
   async function flushLocked(): Promise<{ sent: number; problem: SyncProblem | null }> {
@@ -260,6 +313,14 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         const known = captured[url.value];
         // Same url and at: the same capture again, nothing to do.
         if (known && known.itemId === itemId) return ok({ itemId });
+        // 008: Log as read on a saved entry marks it read instead of adding a second article.
+        if (known && !known.removed && known.saved === true && known.row) {
+          const marked = markRead(known, p.readOn, new Date(deps.now()).toISOString() as Instant);
+          if (!marked) return err('invalid' as const);
+          captured[url.value] = { ...known, saved: false, readOn: p.readOn };
+          await stampAndStore(marked, { captured });
+          return ok({ itemId: known.itemId });
+        }
         if (known && !known.removed && p.force !== true) {
           return ok({ itemId: known.itemId, duplicateOf: { readOn: known.readOn } });
         }
@@ -285,6 +346,76 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         return ok({ itemId });
       }),
 
+    save: (p) =>
+      serial(async () => {
+        if (!(await store.get<string>('syncKey'))) return err('notPaired' as const);
+        const url = normalizeUrl(p.url);
+        if (!url.ok) return err('invalid' as const);
+        const itemId = await uuidFromHash(`readerlog-capture-v1|${url.value}|${p.at}|later`);
+        const captured = (await store.get<Captured>('captured')) ?? {};
+        const known = captured[url.value];
+        if (known && known.itemId === itemId) return ok({ itemId });
+        if (known && !known.removed && known.saved === true) return ok({ itemId: known.itemId, alreadySaved: true as const });
+        const decided = decide(
+          null,
+          { kind: 'AddArticle', itemId, url: p.url, title: p.title, author: p.author, wordCount: p.words, detailsStatus: p.detailsStatus ?? 'complete' },
+          new Date(deps.now()).toISOString() as Instant,
+        );
+        if (!decided.ok) return err('invalid' as const);
+        delete captured[url.value];
+        captured[url.value] = { itemId, readOn: '', at: p.at, removed: false, saved: true, row: { ...decided.value.changes[0]!.fields } };
+        for (const k of Object.keys(captured).slice(0, Math.max(0, Object.keys(captured).length - MAX_CAPTURED))) delete captured[k];
+        await stampAndStore(decided.value.changes, { captured });
+        return ok({ itemId });
+      }),
+
+    tag: (itemId, names) =>
+      serial(async () => {
+        if (!(await store.get<string>('syncKey'))) return err('notPaired' as const);
+        const captured = (await store.get<Captured>('captured')) ?? {};
+        const url = Object.keys(captured).find((u) => captured[u]!.itemId === itemId && !captured[u]!.removed);
+        if (url === undefined) return err('invalid' as const);
+        const entry = captured[url]!;
+        const tagIds = [...(entry.tagIds ?? [])];
+        const seen = new Set<string>();
+        const changes: Change[] = [];
+        let added = 0;
+        let dropped = 0;
+        for (const raw of names) {
+          const name = tagName(raw);
+          const key = name.ok ? tagKey(name.value) : null;
+          if (!name.ok || key === null || seen.has(key)) {
+            dropped++;
+            continue;
+          }
+          seen.add(key);
+          // Research R3 step 2: the extension cannot see the tag list, so it uses the derived id.
+          const tagId = await uuidFromHash(`readerlog-tag-v1|${key}`);
+          if (tagIds.includes(tagId)) continue; // already tagged from here: nothing to add
+          const itemTagId = await uuidFromHash(`readerlog-item-tag-v1|${itemId}|${tagId}`);
+          const snapshot: TagSnapshot = {
+            item: { id: itemId, type: 'article', deletedAt: null },
+            tag: null,
+            mergeTarget: null,
+            assignments: tagIds.map((t) => ({ id: `x-${t}`, itemId, tagId: t, createdAt: '', deletedAt: null })),
+            targetAssignments: [],
+          } as unknown as TagSnapshot;
+          const decided = decide(snapshot, { kind: 'TagArticle', itemId, tagId, itemTagId, name: name.value }, new Date(deps.now()).toISOString() as Instant);
+          if (!decided.ok) {
+            dropped++;
+            continue;
+          }
+          tagIds.push(tagId);
+          changes.push(...decided.value.changes);
+          added++;
+        }
+        if (changes.length > 0) {
+          captured[url] = { ...entry, tagIds };
+          await stampAndStore(changes, { captured });
+        }
+        return ok({ added, dropped });
+      }),
+
     undo: (itemId) =>
       serial(async () => {
         const captured = (await store.get<Captured>('captured')) ?? {};
@@ -305,6 +436,16 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         if (url === undefined) return err('invalid' as const);
         const highlightId = await uuidFromHash(`readerlog-highlight-v1|${url}|${p.at}`);
         const highlights = (await store.get<Highlights>('highlights')) ?? {};
+        // 008 FR-006: a highlight on a saved article marks it read first.
+        let markChanges: readonly Change[] = [];
+        const entry = captured[url]!;
+        if (entry.saved === true && entry.row) {
+          const marked = markRead(entry, p.localDate, new Date(deps.now()).toISOString() as Instant);
+          if (marked) {
+            markChanges = marked;
+            captured[url] = { ...entry, saved: false, readOn: p.localDate };
+          }
+        }
         // An empty quote is refused here: the extension only saves selections.
         if (p.quote.trim() === '') return err('invalid' as const);
         const decided = decide(
@@ -317,7 +458,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         highlights[highlightId] = { itemId: p.itemId, quote: f['quote'] as string | null, note: f['note'] as string | null, at: p.at };
         const oldestFirst = Object.keys(highlights).sort((a, b) => highlights[a]!.at.localeCompare(highlights[b]!.at));
         for (const k of oldestFirst.slice(0, Math.max(0, oldestFirst.length - MAX_HIGHLIGHTS))) delete highlights[k];
-        await stampAndStore(decided.value.changes, { highlights });
+        await stampAndStore([...markChanges, ...decided.value.changes], { highlights, captured });
         return ok({ highlightId });
       }),
 

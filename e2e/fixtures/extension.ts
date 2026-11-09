@@ -31,6 +31,8 @@ export interface Extension {
   capture(how: 'action' | 'command' | 'menu', url?: string): Promise<void>;
   /** Save the page's selection the way the shortcut or the context menu does, for the tab showing `url`. */
   highlight(how: 'command' | 'menu', url?: string): Promise<void>;
+  /** Save for later the way the shortcut, the context menu (page) or the menu on a link does. */
+  save(how: 'command' | 'menu' | 'link', opts?: { url?: string; linkUrl?: string }): Promise<void>;
   /** Options page: address and sync code, Pair. */
   pair(code: string): Promise<Page>;
   waiting(): Promise<number>;
@@ -93,6 +95,18 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
             else await r['onMenuClick']!({ menuItemId: 'save-highlight' }, tab);
           },
           [how, url],
+        );
+      },
+      async save(how, opts = {}) {
+        await sw.evaluate(
+          async ([h, u, link]) => {
+            const [tab] = await (globalThis as unknown as ChromeInSw).chrome.tabs.query({ url: u! });
+            const r = (globalThis as unknown as { readerlog: Record<string, (...a: unknown[]) => Promise<void>> }).readerlog;
+            if (h === 'command') await r['onCommand']!('save-for-later', tab);
+            else if (h === 'menu') await r['onMenuClick']!({ menuItemId: 'save-later' }, tab);
+            else await r['onMenuClick']!({ menuItemId: 'save-later', linkUrl: link }, tab);
+          },
+          [how, opts.url ?? ARTICLE_URL, opts.linkUrl ?? ''],
         );
       },
       async pair(code) {

@@ -13,6 +13,9 @@ export interface CapturePayload {
 
 export type ToastState =
   | { kind: 'logged'; title: string; site: string; minutes: number | null; itemId: string; undoMs: number }
+  | { kind: 'saved'; title: string; site: string; itemId: string; undoMs: number }
+  | { kind: 'alreadySaved'; title: string }
+  | { kind: 'tagsAdded'; message: string }
   | { kind: 'duplicate'; title: string; readOn: string; capture: CapturePayload }
   | { kind: 'highlighted'; highlightId: string; itemId: string; createdArticle: boolean; undoMs: number }
   | { kind: 'noteSaved' }
@@ -31,6 +34,7 @@ const CSS = `
   .row { display: flex; gap: 8px; margin-top: 8px; }
   .row[hidden] { display: none; }
   button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; padding: 4px 10px; background: #3e4c59; color: #fff; }
+  input { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; font: inherit; color: #111; background: #fff; border-radius: 6px; border: 0; padding: 6px; }
   textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; font: inherit; color: #111; background: #fff; border-radius: 6px; border: 0; padding: 6px; resize: vertical; }
   button.primary { background: #2f80ed; }
 `;
@@ -78,17 +82,78 @@ export function showToast(state: ToastState): void {
   const row = el('div', 'row');
   let dismissMs: number | null = null;
 
+  // Add tags (008): a comma-separated input. It holds the toast open; Esc closes only the input.
+  const addTagsButton = (itemId: string, undoMs: number): HTMLButtonElement => {
+    const open = (): void => {
+      clearTimeout(timer);
+      row.hidden = true;
+      const input = el('input');
+      input.type = 'text';
+      input.setAttribute('aria-label', 'Tags');
+      input.placeholder = 'ai, design';
+      const save = (): void => {
+        const text = input.value;
+        hideToast();
+        if (text.trim() !== '') send({ type: 'addTags', itemId, text });
+      };
+      const cancel = (): void => {
+        form.remove();
+        row.hidden = false;
+        timer = setTimeout(hideToast, undoMs);
+      };
+      input.addEventListener('keydown', (e) => {
+        e.stopPropagation(); // the page's own shortcuts must not see the user's typing
+        if (e.key === 'Enter' && !e.isComposing) {
+          e.preventDefault();
+          save();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancel();
+        }
+      });
+      input.addEventListener('keyup', (e) => e.stopPropagation());
+      input.addEventListener('keypress', (e) => e.stopPropagation());
+      const form = el('div', 'form');
+      const actions = el('div', 'row');
+      actions.append(button('Save', save, true), button('Cancel', cancel));
+      form.append(input, actions);
+      box.append(form);
+      input.focus();
+    };
+    return button('Add tags', open);
+  };
+
   if (state.kind === 'logged') {
     box.append(el('p', 'title', state.title));
     box.append(el('p', 'line', ['Logged', state.site, state.minutes === null ? null : `~${state.minutes} min`].filter((x) => x !== null).join(' · ')));
     const itemId = state.itemId;
     row.append(
+      addTagsButton(itemId, state.undoMs),
       button('Undo', () => {
         hideToast();
         send({ type: 'undo', itemId });
       }),
     );
     dismissMs = state.undoMs;
+  } else if (state.kind === 'saved') {
+    box.append(el('p', 'title', state.title));
+    box.append(el('p', 'line', ['Saved for later', state.site].filter((x) => x !== '').join(' · ')));
+    const itemId = state.itemId;
+    row.append(
+      addTagsButton(itemId, state.undoMs),
+      button('Undo', () => {
+        hideToast();
+        send({ type: 'undo', itemId });
+      }),
+    );
+    dismissMs = state.undoMs;
+  } else if (state.kind === 'alreadySaved') {
+    box.append(el('p', 'title', state.title));
+    box.append(el('p', 'line', 'Already saved'));
+    dismissMs = 3000;
+  } else if (state.kind === 'tagsAdded') {
+    box.append(el('p', 'title', state.message));
+    dismissMs = 2500;
   } else if (state.kind === 'duplicate') {
     box.append(el('p', 'title', state.title));
     box.append(el('p', 'line', `Already logged on ${formatDate(state.readOn)}`));
