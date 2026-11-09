@@ -24,7 +24,13 @@ function send(req: WithoutId<Request>): Promise<Response> {
   const id = ++seq;
   return new Promise((resolve) => {
     pending.set(id, resolve);
-    worker.postMessage({ ...req, id });
+    try {
+      worker.postMessage({ ...req, id });
+    } catch {
+      // e.g. a DataCloneError from a reactive proxy: settle as a failure instead of leaving the entry behind.
+      pending.delete(id);
+      resolve({ id, ok: false, error: { kind: 'Storage', message: "Couldn't send the request to the database." } });
+    }
   });
 }
 
