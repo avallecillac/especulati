@@ -30,3 +30,33 @@ cd e2e && npx playwright test saved tags search extension-save capture-save --re
 1. **Mac:** right-click → Save for later, then Add tags; later, Log as read.
 2. **iPhone:** build "Save to Readerlog"; share an article; check Saved.
 3. **Search:** search a word from one of your highlights.
+
+## Validation results
+
+### 2026-11-09, dev container, Chromium 141 headless, PWA 0.9.0, extension 0.7.0 (branch only, not merged)
+
+| Check | Result |
+|---|---|
+| `pnpm typecheck` / `pnpm lint` | ✅ 0 errors; no dependency violations |
+| `pnpm test` | ✅ 895 tests, 88 files |
+| `pnpm test:convergence` | ✅ 13 tests: the 1,000-run test; 007's 0.7.0 peer; a **0.8.0 peer** (100 seeds) that never holds a saved article or tag, never fails to read its DB, keeps every base op and converges after upgrading; R-2 (40 seeds); T-2 concurrent tagging; R-1 deterministic reconcile. Removing the tier break makes the scenarios fail, as it should |
+| `pnpm e2e` | ✅ 186/186. `saved`, `capture-save`, `reconcile`, `extension-save`, `tags` and `search` pass with `--repeat-each=2` (94/94) |
+| Extension release build | ✅ `check-manifest`: no new permissions, and no test hooks |
+| SC-001: save in 1 action, under 1 s | ✅ extension toast 80–125 ms |
+| SC-002: one article after save, then log | ✅ capture-save, extension-save, reconcile (two devices, with highlight and tag carried over) |
+| SC-003: saved articles don't touch stats | ✅ db deep-equal with 100 saved, plus e2e |
+| SC-004: search under 100 ms | ✅ db: first query 70 ms (including the build), warm about 1 ms, at 5,000 articles and 2,000 highlights. UI: about 85 ms at 500 |
+| SC-005: existing tag in 3 taps or fewer | ✅ 2 taps |
+| SC-006: an old device keeps its data and converges | ✅ convergence (0.8.0 peer, R-2) |
+| a11y / 320 px | ✅ Saved, search, All tags and article tags, in both themes: no violations |
+| Scenarios 1–17 | ✅ all automated |
+| Manual device checks | ⏳ Pending: extension 0.7.0 (⌥⇧S, a link save, Add tags, Log as read on a saved page); the iPhone "Save to Readerlog" Shortcut; search for a phrase from a highlight; one sync between an updated device and a 0.8.0 one |
+
+**Decisions made during review:**
+- **Analysis fixes:** F1 (reconcile carries the survivor's full row) and F2 (a saved insert emits `read_on: null` explicitly).
+- **`RestoreArticle`:** added for Undo on Remove; it keeps the saved date.
+- **Saved's More sheet:** gains Details, which opens the saved article's screen.
+- **Tag ids:** reuse a tombstone at `|n`.
+- **Duplicate tags:** the rare duplicate-key tag group is accepted as a known limit.
+- **`dbClient` `send()`:** a synchronous throw now settles as an error, fixed in its own commit.
+- **The search field:** a themed Clear button.

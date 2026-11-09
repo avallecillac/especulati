@@ -366,7 +366,7 @@ an AND tag filter.
   - `docs/architecture.md`: schema v5, the tiers `t` and `s`, reconcile, the search
     index; the 009 export row must include `tags`, `item_tags` and saved state;
   - `CLAUDE.md`: a rule line for saved articles and tags.
-- [ ] T029 Run the full validation (main session):
+- [X] T029 Run the full validation (main session):
   - the full suite, plus `--repeat-each=2` on the new specs;
   - quickstart scenarios 1–17;
   - fill in the validation results;
