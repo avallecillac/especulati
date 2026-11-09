@@ -33,7 +33,7 @@ cd e2e && npx playwright test saved tags search extension-save capture-save --re
 
 ## Validation results
 
-### 2026-11-09, dev container, Chromium 141 headless, PWA 0.9.0, extension 0.7.0 (branch only, not merged)
+### 2026-11-09, dev container, Chromium 141 headless, PWA 0.9.0, extension 0.7.0 (merged to main on 2026-11-09)
 
 | Check | Result |
 |---|---|
@@ -50,7 +50,7 @@ cd e2e && npx playwright test saved tags search extension-save capture-save --re
 | SC-006: an old device keeps its data and converges | ✅ convergence (0.8.0 peer, R-2) |
 | a11y / 320 px | ✅ Saved, search, All tags and article tags, in both themes: no violations |
 | Scenarios 1–17 | ✅ all automated |
-| Manual device checks | ⏳ Pending: extension 0.7.0 (⌥⇧S, a link save, Add tags, Log as read on a saved page); the iPhone "Save to Readerlog" Shortcut; search for a phrase from a highlight; one sync between an updated device and a 0.8.0 one |
+| Manual device checks | ✅ 2026-11-09: the user tested on their devices and reported "Tested and working" before the merge |
 
 **Decisions made during review:**
 - **Analysis fixes:** F1 (reconcile carries the survivor's full row) and F2 (a saved insert emits `read_on: null` explicitly).
