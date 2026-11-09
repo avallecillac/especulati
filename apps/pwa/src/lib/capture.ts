@@ -16,6 +16,10 @@ export interface Capture {
   quote: string | null;
   /** Only ever set together with `quote`. */
   note: string | null;
+  /** Save for later (008). Always false when `quote` is set: a highlight wins. */
+  later: boolean;
+  /** Raw tag names from the link (008): at most 20 strings; the worker normalises them. */
+  tags: string[];
 }
 
 /** Which part of the payload is wrong: shown on the damaged-link screen. */
@@ -29,6 +33,7 @@ const fail = (reason: CaptureProblem) => ({ ok: false as const, error: { reason 
 
 const TITLE_MAX = 500;
 const AUTHOR_MAX = 200;
+const TAGS_MAX = 20;
 
 /** Standard Base64 (any line breaks) or base64url, to text. Throws on bad input. */
 function decodeBase64(d: string): string {
@@ -79,6 +84,9 @@ export function decodeCapture(d: string) {
   // A note that is too long is dropped: the passage is the point, and it is added by hand later.
   const n = q.value !== null && typeof p['note'] === 'string' ? normalizeNote(p['note']) : null;
 
+  const later = q.value === null && (p['later'] === 1 || p['later'] === true || p['later'] === '1');
+  const tags = Array.isArray(p['tags']) ? p['tags'].filter((t): t is string => typeof t === 'string').slice(0, TAGS_MAX) : [];
+
   const value: Capture = {
     url: url.value,
     site,
@@ -88,6 +96,8 @@ export function decodeCapture(d: string) {
     at: new Date(at).toISOString(),
     quote: q.value,
     note: n !== null && n.ok ? n.value : null,
+    later,
+    tags,
   };
   return { ok: true as const, value };
 }
@@ -99,3 +109,7 @@ export const captureId = (c: Pick<Capture, 'url' | 'at'>): Promise<string> =>
 /** The derived highlight id: the same link opened twice gives "Already saved" (research 007 R6). */
 export const highlightCaptureId = (url: string, at: string): Promise<string> =>
   uuidFromHash(`readerlog-highlight-v1|${url}|${at}`);
+
+/** The derived id of a saved article: the 005 label plus `|later` (contracts/capture-008.md). */
+export const saveCaptureId = (c: Pick<Capture, 'url' | 'at'>): Promise<string> =>
+  uuidFromHash(`readerlog-capture-v1|${c.url}|${c.at}|later`);

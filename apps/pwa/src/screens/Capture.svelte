@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { readingMinutes, type Article } from '@readerlog/core';
   import { dispatch, query } from '../lib/dbClient.ts';
-  import { captureId, decodeCapture, highlightCaptureId, type Capture, type CaptureProblem } from '../lib/capture.ts';
+  import { captureId, decodeCapture, highlightCaptureId, saveCaptureId, type Capture, type CaptureProblem } from '../lib/capture.ts';
   import { todayLocal } from '../lib/clock.ts';
   import { longDate } from '../lib/dates.ts';
   import { errorMessage } from '../lib/errors.ts';
@@ -19,6 +19,8 @@
     | { kind: 'error'; message: string }
     | { kind: 'duplicate'; capture: Capture; id: string; loggedOn: string }
     | { kind: 'saved'; capture: Capture; id: string; fresh: boolean }
+    /** Save mode (008). `readOn`: the date this URL was already read, when it was. */
+    | { kind: 'later'; capture: Capture; id: string; fresh: boolean; readOn: string | null }
     /** Highlight mode (007). `articleNew`: this link logged the article, so Undo removes it too. */
     | { kind: 'highlighted'; capture: Capture; hid: string; itemId: string; articleNew: boolean; fresh: boolean; note: string | null };
 
@@ -69,6 +71,37 @@
   async function push() {
     await refreshStatus();
     if (syncState.on) await runSync('manual');
+  }
+
+  /** Save mode, contracts/capture-008.md: a live saved match is "Already saved"; a read match still saves anew. */
+  async function runSave(c: Capture) {
+    const saved = await query({ name: 'findSavedByUrl', url: c.url });
+    if (!saved.ok) return void (phase = { kind: 'error', message: errorMessage(saved.error) });
+    const id = await saveCaptureId(c);
+    if (saved.value[0]) {
+      phase = { kind: 'later', capture: c, id: saved.value[0].id, fresh: false, readOn: null };
+      return void (await refreshStatus());
+    }
+    const read = await query({ name: 'findArticleByUrl', url: c.url });
+    if (!read.ok) return void (phase = { kind: 'error', message: errorMessage(read.error) });
+    const readOn = read.value[0]?.readOn ?? null;
+    const r = await dispatch({
+      kind: 'AddArticle',
+      itemId: id,
+      url: c.url,
+      title: c.title,
+      author: c.author,
+      wordCount: c.wordCount,
+      detailsStatus: 'complete',
+    });
+    // AlreadyExists: this very link was saved and then undone; it stays removed, as in an article capture.
+    if (!r.ok && r.error.kind !== 'AlreadyExists') return void (phase = { kind: 'error', message: errorMessage(r.error) });
+    phase = { kind: 'later', capture: c, id, fresh: r.ok, readOn };
+    if (r.ok) {
+      canUndo = true;
+      undoTimer = setTimeout(() => (canUndo = false), UNDO_MS);
+    }
+    await push();
   }
 
   /** Highlight mode, steps 2-5 of contracts/capture-highlight.md. */
@@ -144,6 +177,7 @@
     if (!parsed.ok) return void (phase = { kind: 'damaged', problem: parsed.error.reason });
     const c = parsed.value;
     if (c.quote !== null) return runHighlight(c, c.quote);
+    if (c.later) return runSave(c);
     const id = await captureId(c);
     const found = await query({ name: 'findArticleByUrl', url: c.url });
     if (!found.ok) return void (phase = { kind: 'error', message: errorMessage(found.error) });
@@ -234,6 +268,27 @@
         <button class="primary" type="button" onclick={() => navigate('/library')}>Done</button>
       </div>
     {/if}
+  </section>
+{:else if phase.kind === 'later'}
+  {@const p = phase}
+  <section class="card">
+    {#if removed}
+      <p role="status"><strong>Removed</strong></p>
+    {:else}
+      <p role="status"><strong>{p.fresh ? 'Saved for later' : 'Already saved'}</strong></p>
+      <p class="muted">{p.capture.title} · {p.capture.site}{minutes(p.capture)}</p>
+      {#if p.readOn}<p class="muted">You read this on {longDate(p.readOn)}</p>{/if}
+    {/if}
+    {#if !removed && !syncState.on}
+      <p class="muted">
+        <strong>Finish setup:</strong>
+        <a href="#/settings/sync">join your sync space</a> to send this to your other devices.
+      </p>
+    {/if}
+    <div class="actions">
+      {#if canUndo && !removed}<button type="button" onclick={() => void undo(p.id)}>Undo</button>{/if}
+      <button class="primary" type="button" onclick={() => navigate('/library')}>Done</button>
+    </div>
   </section>
 {:else if phase.kind === 'saved'}
   {@const p = phase}

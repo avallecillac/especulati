@@ -7,6 +7,7 @@ assignment ids are derived in the shell (research R3).
 |---|---|---|---|
 | `AddArticle` (changed) | `readOn` becomes **optional**. When it's absent, the article is saved | insert with **`read_on: null` emitted explicitly in the change's fields**, never left out. `tierOf` depends on it (R2): a saved insert without the field would be `base`, and would break 0.8.0 devices | as 005 |
 | `MarkArticleRead` | `itemId, readOn` | one op with **every** insert field plus `read_on` (S-2) | `NotFound` (missing, removed, not an article); `AlreadyRead`; `InvalidInput` (readOn) |
+| `RestoreArticle` (decided in review, 2026-11-08) | `itemId` | `deleted_at = null`; already live gives no changes. Undo for Remove, on saved and read articles alike. It keeps the original id and saved date. It's a `base` op: a 0.8.0 device holding no row for a saved article parks it harmlessly | `NotFound` (missing, or not an article) |
 | `MarkArticleUnread` | `itemId` | `read_on = null` (the `s` tier) | `NotFound`; `NotRead` |
 | `TagArticle` | `itemId, tagId, itemTagId, name` | insert or restore the tag if it's new or tombstoned; insert or restore the assignment | `NotFound` (item missing, removed or not an article); `InvalidInput { field: 'name' }` (empty after normalising, or over 40 characters); `TooManyTags { max: 20 }`. Already tagged gives no changes |
 | `UntagArticle` | `itemTagId` | the assignment gets `deleted_at = now` | `NotFound`. Already removed gives no changes |

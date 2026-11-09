@@ -171,7 +171,7 @@ re-runs all checks, and commits after each phase.
 **Independent Test:** save by URL with **Read later**, and with a `later` capture link.
 Both are listed in Saved, newest first, with the count, and stats don't change.
 
-- [ ] T011 [P] [US1] Write `e2e/saved.spec.ts`:
+- [X] T011 [P] [US1] Write `e2e/saved.spec.ts`:
   - Add article with **Read later** lands in Saved (not Articles);
   - the Library "Saved (1)" count;
   - newest first;
@@ -180,20 +180,20 @@ Both are listed in Saved, newest first, with the count, and stats don't change.
   - **Remove** with Undo;
   - the empty state;
   - Stats unchanged (SC-003, UI level).
-- [ ] T012 [P] [US1] Write `e2e/capture-save.spec.ts` (contracts/capture-008, save
+- [X] T012 [P] [US1] Write `e2e/capture-save.spec.ts` (contracts/capture-008, save
   mode):
   - a `later` link saves and shows "Saved for later" with **Undo**;
   - reopening it shows "Already saved";
   - a URL that was already read gets a new saved entry, and the screen says "You read
     this on <date>";
   - offline, it saves locally, then syncs.
-- [ ] T013 [US1] Worker and protocol:
+- [X] T013 [US1] Worker and protocol:
   - the queries `savedArticles` and `findSavedByUrl`;
   - the commands;
   - change notifications invalidate the search index.
 
   Files: `apps/pwa/src/lib/protocol.ts`, `src/worker/db.worker.ts`.
-- [ ] T014 [US1] UI:
+- [X] T014 [US1] UI:
   - `apps/pwa/src/screens/Saved.svelte`: the list per ui-008, with Remove and Undo;
   - `Library.svelte`: the "Saved (N)" segment;
   - `Articles.svelte`: Add article gains a **Read later** option;
@@ -201,7 +201,7 @@ Both are listed in Saved, newest first, with the count, and stats don't change.
   - `Capture.svelte`: save mode, with the derived id `…|later`.
 
   T011 and T012 must pass.
-- [ ] T015 [US1] `docs/ios-shortcut.md`: a new section, "Save to Readerlog": duplicate
+- [X] T015 [US1] `docs/ios-shortcut.md`: a new section, "Save to Readerlog": duplicate
   "Log in Readerlog" and add the Dictionary key `later` (Number) = 1.
 
 **Checkpoint:** review, run all checks, commit.
@@ -237,6 +237,10 @@ duplicating it. Duplicates from other devices reconcile automatically.
   - each has exactly one live article, read with B's date, holding the highlight and
     the "ai" tag (SC-002).
 - [ ] T019 [US2] Implement:
+  - `RestoreArticle` (contracts/commands-008, decided in review): core command and
+    test, db snapshot, and the **Undo** on Remove in `Saved.svelte` (also on the read
+    Article screen's Remove, if it has a toast); extend `e2e/saved.spec.ts` Remove with
+    an Undo assertion;
   - Mark as read, and Mark as unread for Undo (`Saved.svelte`, `Article.svelte`);
   - `HighlightSheet.svelte`: on a saved article, dispatch `MarkArticleRead` before
     `AddHighlight`;

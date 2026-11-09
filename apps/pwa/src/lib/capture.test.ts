@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureId, decodeCapture, highlightCaptureId } from './capture.ts';
+import { captureId, decodeCapture, highlightCaptureId, saveCaptureId } from './capture.ts';
 
 const std = (o: unknown): string => Buffer.from(JSON.stringify(o), 'utf8').toString('base64');
 const AT = '2026-03-04T12:00:00Z';
@@ -144,5 +144,35 @@ describe('highlightCaptureId', () => {
     expect(await highlightCaptureId(a.url, a.at)).toBe(await highlightCaptureId(a.url, a.at));
     expect(await highlightCaptureId(a.url, a.at)).not.toBe(await captureId(a));
     expect(await highlightCaptureId(a.url, '2026-03-04T12:00:01.000Z')).not.toBe(await highlightCaptureId(a.url, a.at));
+  });
+});
+
+describe('save for later keys (008)', () => {
+  it('later is true for 1 and true, otherwise false', () => {
+    expect(value(shortcut({ ...base, later: 1 })).later).toBe(true);
+    expect(value(shortcut({ ...base, later: true })).later).toBe(true);
+    expect(value(shortcut({ ...base, later: '1' })).later).toBe(true);
+    expect(value(shortcut({ ...base, later: 0 })).later).toBe(false);
+    expect(value(shortcut({ ...base })).later).toBe(false);
+  });
+
+  it('later is ignored when a quote is present', () => {
+    const c = value(shortcut({ ...base, later: 1, quote: 'A passage.' }));
+    expect(c.later).toBe(false);
+    expect(c.quote).toBe('A passage.');
+  });
+
+  it('tags keeps up to 20 strings and drops the rest', () => {
+    const many = Array.from({ length: 25 }, (_, i) => `t${i}`);
+    expect(value(shortcut({ ...base, tags: ['a', 3, null, 'b', {}] })).tags).toEqual(['a', 'b']);
+    expect(value(shortcut({ ...base, tags: many })).tags).toEqual(many.slice(0, 20));
+    expect(value(shortcut({ ...base, tags: 'a' })).tags).toEqual([]);
+    expect(value(shortcut({ ...base })).tags).toEqual([]);
+  });
+
+  it('the save id differs from the log id and is stable', async () => {
+    const c = { url: 'https://example.com/a', at: '2026-03-04T12:00:00.000Z' };
+    expect(await saveCaptureId(c)).toBe(await saveCaptureId(c));
+    expect(await saveCaptureId(c)).not.toBe(await captureId(c));
   });
 });

@@ -105,19 +105,28 @@ async function runSync(d: ReaderlogDb, op: SyncOp): Promise<unknown> {
   switch (op.action) {
     case 'run': {
       const r = await e.run(op.reason);
-      if (r.changed) channel.postMessage({ type: 'changed' });
+      if (r.changed) {
+        d.invalidateSearch();
+        channel.postMessage({ type: 'changed' });
+      }
       return r;
     }
     case 'status':
       return e.status();
     case 'turnOn': {
       const r = await e.turnOn();
-      if (r.ok) channel.postMessage({ type: 'changed' });
+      if (r.ok) {
+        d.invalidateSearch();
+        channel.postMessage({ type: 'changed' });
+      }
       return r;
     }
     case 'join': {
       const r = await e.join(op.code);
-      if (r.ok) channel.postMessage({ type: 'changed' });
+      if (r.ok) {
+        d.invalidateSearch();
+        channel.postMessage({ type: 'changed' });
+      }
       return r;
     }
     case 'showCode':
@@ -127,7 +136,10 @@ async function runSync(d: ReaderlogDb, op: SyncOp): Promise<unknown> {
       return null;
     case 'reset': {
       const r = await e.reset();
-      if (r.ok) channel.postMessage({ type: 'changed' });
+      if (r.ok) {
+        d.invalidateSearch();
+        channel.postMessage({ type: 'changed' });
+      }
       return r;
     }
   }
@@ -165,6 +177,12 @@ function runQuery(d: ReaderlogDb, q: Query): unknown {
       return d.findArticleByUrl(q.url);
     case 'highlights':
       return d.highlights(q.itemId);
+    case 'savedArticles':
+      return d.savedArticles(q.limit !== undefined ? { limit: q.limit } : {});
+    case 'savedCount':
+      return d.savedCount();
+    case 'findSavedByUrl':
+      return d.findSavedByUrl(q.url);
     case 'articleStats': {
       const today = parseLocalDate(q.today);
       if (!today.ok) throw new Error(`bad today: ${today.error.reason}`);
@@ -256,6 +274,7 @@ async function handle(req: Request): Promise<Response> {
         const r = d.dispatch(req.cmd, env());
         if (!r.ok) return { id: req.id, ok: false, error: r.error };
         if (req.cmd.kind === 'RemoveBook') d.deleteCover(req.cmd.itemId); // cache maintenance (R5)
+        d.invalidateSearch();
         channel.postMessage({ type: 'changed' });
         return { id: req.id, ok: true, result: r.value };
       }

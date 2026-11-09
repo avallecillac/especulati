@@ -7,6 +7,8 @@
   import Butterfly from '../ornaments/Butterfly.svelte';
   import { navigate } from '../lib/router.svelte.ts';
 
+  let { onsaved }: { onsaved?: () => void } = $props();
+
   const PAGE = 100;
 
   let articles = $state<Article[] | null>(null);
@@ -46,6 +48,7 @@
   let title = $state('');
   let titleTouched = $state(false);
   let readOn = $state(todayLocal());
+  let later = $state(false);
   let error = $state<string | null>(null);
   let loggedOn = $state<string | null>(null);
 
@@ -74,6 +77,7 @@
     title = '';
     titleTouched = false;
     readOn = todayLocal();
+    later = false;
     error = null;
     adding = true;
   }
@@ -90,12 +94,14 @@
       title: title.trim() === '' ? site : title,
       author: null,
       wordCount: null,
-      readOn,
+      ...(later ? {} : { readOn }),
       detailsStatus: 'notFound',
     });
     if (!r.ok) return void (error = errorMessage(r.error));
     adding = false;
-    navigate(`/article/${itemId}`);
+    // A saved article has no page of its own: show it in the Saved list.
+    if (later) onsaved?.();
+    else navigate(`/article/${itemId}`);
   }
 </script>
 
@@ -106,8 +112,11 @@
     {#if loggedOn}<p class="muted" role="status">Already logged on {longDate(loggedOn)}.</p>{/if}
     <label for="article-title">Title</label>
     <input id="article-title" type="text" bind:value={title} oninput={() => (titleTouched = true)} />
-    <label for="article-read-on">Date read</label>
-    <input id="article-read-on" type="date" bind:value={readOn} />
+    <label class="check"><input type="checkbox" bind:checked={later} /> Read later</label>
+    {#if !later}
+      <label for="article-read-on">Date read</label>
+      <input id="article-read-on" type="date" bind:value={readOn} />
+    {/if}
     <div class="actions">
       <button class="primary" type="submit">Save article</button>
       <button type="button" onclick={() => (adding = false)}>Cancel</button>

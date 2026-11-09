@@ -148,3 +148,32 @@ twice never saves twice.
 - **"The passage is too long".** Select less text. Nothing was saved.
 - **Anything else.** The *Troubleshooting* list above applies too: the rest of the Shortcut
   is the same.
+
+## Save to Readerlog
+
+A third Shortcut keeps an article for later, without counting it as read.
+
+### Build it
+
+1. In the Shortcuts app, touch and hold **Log in Readerlog**, then tap **Duplicate**.
+2. Open the copy and rename it **Save to Readerlog**. It still appears in the Share Sheet
+   for **URLs** only.
+3. In the **Dictionary**, add one more key: `later`, type **Number**, value `1`. Leave the
+   other keys as they are.
+
+### Using it
+
+In Chrome (or Safari), tap Share, then **Save to Readerlog**. Readerlog opens and shows
+**Saved for later** with the title and site. Tap **Undo** within 6 seconds to remove it.
+The article appears in **Library**, under **Saved**, and doesn't change your stats.
+
+If you already read the address, it is saved again and the screen says **You read this on**
+the date. If it is already saved, the screen says **Already saved**. Opening the same link
+twice never saves twice.
+
+### Troubleshooting
+
+- **It was logged as read, not saved.** The `later` key is missing, or its type isn't
+  **Number**. Check the Dictionary.
+- **Anything else.** The *Troubleshooting* list above applies too: the rest of the Shortcut
+  is the same.

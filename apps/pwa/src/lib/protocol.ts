@@ -1,5 +1,5 @@
 import type { Article, ArticleStats, Command, Highlight, Rejection, Result, StatsView } from '@readerlog/core';
-import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, StragglerView } from '@readerlog/db';
+import type { BookCard, BookView, DuplicatePairView, HomeView, LibraryView, SavedArticle, StragglerView } from '@readerlog/db';
 import type { SyncError, SyncReason, SyncRunResult, SyncStatusView } from '@readerlog/sync';
 
 /** UI ↔ DB worker messages (contracts/worker-api.md). */
@@ -11,6 +11,10 @@ export type Query =
   | { name: 'article'; itemId: string }
   | { name: 'findArticleByUrl'; url: string }
   | { name: 'highlights'; itemId: string }
+  /** 008: saved articles, newest saved first. */
+  | { name: 'savedArticles'; limit?: number }
+  | { name: 'savedCount' }
+  | { name: 'findSavedByUrl'; url: string }
   | { name: 'articleStats'; year: number; today: string }
   | { name: 'book'; itemId: string; today: string }
   | { name: 'stats'; year: number; today: string }
@@ -37,6 +41,9 @@ export interface QueryResult {
   article: Article | null;
   findArticleByUrl: Article[];
   highlights: Highlight[];
+  savedArticles: SavedArticle[];
+  savedCount: number;
+  findSavedByUrl: SavedArticle[];
   articleStats: ArticleStats;
   book: BookView | null;
   stats: StatsView;

@@ -7,11 +7,12 @@
   import DetailsBadge from './DetailsBadge.svelte';
   import Fish from '../ornaments/Fish.svelte';
   import Articles from './Articles.svelte';
+  import Saved from './Saved.svelte';
 
-  let { initialTab = 'books' }: { initialTab?: 'books' | 'articles' } = $props();
+  let { initialTab = 'books' }: { initialTab?: 'books' | 'articles' | 'saved' } = $props();
   let view = $state<LibraryView | null>(null);
   // svelte-ignore state_referenced_locally
-  let tab = $state<'books' | 'articles'>(initialTab);
+  let tab = $state<'books' | 'articles' | 'saved'>(initialTab);
 
   async function load() {
     const r = await query({ name: 'library' });
@@ -19,9 +20,20 @@
     else reportError(r.error);
   }
 
+  let savedCount = $state(0);
+  async function loadSaved() {
+    const r = await query({ name: 'savedCount' });
+    if (r.ok) savedCount = r.value;
+    else reportError(r.error);
+  }
+
   $effect(() => {
     void load();
-    return onChanged(() => void load());
+    void loadSaved();
+    return onChanged(() => {
+      void load();
+      void loadSaved();
+    });
   });
 
   const groups = [
@@ -37,11 +49,14 @@
 <div class="segmented" role="tablist" aria-label="Library">
   <button role="tab" id="tab-books" aria-selected={tab === 'books'} aria-controls="panel-library" onclick={() => (tab = 'books')}>Books</button>
   <button role="tab" id="tab-articles" aria-selected={tab === 'articles'} aria-controls="panel-library" onclick={() => (tab = 'articles')}>Articles</button>
+  <button role="tab" id="tab-saved" aria-selected={tab === 'saved'} aria-controls="panel-library" aria-label="Saved" onclick={() => (tab = 'saved')}>Saved{savedCount > 0 ? ` (${savedCount})` : ''}</button>
 </div>
 
-<div id="panel-library" role="tabpanel" aria-labelledby={tab === 'books' ? 'tab-books' : 'tab-articles'}>
+<div id="panel-library" role="tabpanel" aria-labelledby={`tab-${tab}`}>
 {#if tab === 'articles'}
-  <Articles />
+  <Articles onsaved={() => (tab = 'saved')} />
+{:else if tab === 'saved'}
+  <Saved />
 {:else if view}
   {@const v = view}
   {#if groups.every(([key]) => v[key].length === 0)}
