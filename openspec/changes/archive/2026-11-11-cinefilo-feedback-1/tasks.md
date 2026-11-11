@@ -17,4 +17,4 @@ Checks = `pnpm typecheck`, eslint, depcruise, `pnpm test`, `pnpm test:convergenc
 ## 3. The corrected history (main session)
 
 - [x] 3.1 keep-import build emits `watchOrder` (D6) with tests; build `import/titles.json` with *Triangle of Sadness* as #1.
-- [ ] 3.2 Preview build; the user imports the file on one phone after the release.
+- [x] 3.2 Preview build; the user imports the file on one phone after the release.

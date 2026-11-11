@@ -26,4 +26,4 @@ Checks = `pnpm typecheck`, eslint, depcruise, `pnpm test`, `pnpm test:convergenc
 ## 4. Preview (no production)
 
 - [x] 4.1 Push the branch; the Cloudflare preview deploy builds. Check it with a fresh test space only (never the real sync code).
-- [ ] 4.2 (User) Review on the preview; merge to `main` only on the user's go-ahead.
+- [x] 4.2 (User) Review on the preview; merge to `main` only on the user's go-ahead.

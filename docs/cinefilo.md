@@ -73,3 +73,10 @@ themoviedb.org → Settings → API, then paste the API key (v3) or the read acc
 (v4) in **Settings → TMDB** on each phone. The key stays on that phone: it is never
 synced, exported or sent anywhere but `api.themoviedb.org`. Without a key, titles are
 added by hand. This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+## Personal lists and history
+
+- **Lists:** Together (the shared list, the default) plus each member's own list. A switch above the tabs shows whose list is on screen; the partner's list is view-only. A title exists once; each list is a status on it. Recommend a title to the partner from its screen; they accept or dismiss it.
+- **Watch history:** titles watched on Together carry a shared order; the Watched list shows `#N` (newest first, or "From #1"). Marking a title watched on Together takes the next number. A `cinefilo-titles/v1` import may set `watchOrder` on titles that have none.
+- **Layout:** a per-device list/grid toggle next to Add; the grid shows posters only.
+- Frozen device-local keys: `cinefilo.appearance`, `cinefilo.covers`, `cinefilo.watchedOrder`, `cinefilo.layout`. Frozen labels: `cinefilo-mstatus-v1`, `cinefilo-rec-v1`.
