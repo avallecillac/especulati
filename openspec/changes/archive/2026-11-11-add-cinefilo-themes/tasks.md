@@ -23,4 +23,4 @@ Each group is one commit. "Checks" = `pnpm typecheck`, eslint, depcruise, `pnpm 
 ## 4. Visual check and deploy
 
 - [x] 4.1 Playwright captures each main screen in both themes at 390×844 to `e2e/cinefilo/__screens__/` (not committed). The main session compares them with the design canvas and fixes differences.
-- [ ] 4.2 Full gate (checks + `pnpm test:convergence` + `pnpm e2e`), merge to `main`, confirm the production deploy serves both themes.
+- [x] 4.2 Full gate (checks + `pnpm test:convergence` + `pnpm e2e`), merge to `main`, confirm the production deploy serves both themes.
