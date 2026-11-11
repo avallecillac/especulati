@@ -14,3 +14,7 @@ playwright-report/
 .idea/
 dist-e2e/
 e2e/cinefilo/__screens__/
+
+# Personal import sources (Google Keep lists); never commit
+apps/cinefilo/import.md
+import/
