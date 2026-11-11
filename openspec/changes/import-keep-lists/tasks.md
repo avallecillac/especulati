@@ -22,5 +22,5 @@ Checks = `pnpm typecheck`, eslint, depcruise, `pnpm test`, `pnpm --filter cinefi
 
 ## 4. Run it
 
-- [ ] 4.1 (Main session) Run parse + match on the real list with the user's `TMDB_API_KEY`, go through `review.md` with the user, record `decisions.json`, build `titles.json`.
+- [x] 4.1 (Main session) Run parse + match on the real list with the user's `TMDB_API_KEY`, go through `review.md` with the user, record `decisions.json`, build `titles.json`.
 - [ ] 4.2 (User) Import `titles.json` on one phone from Settings → Import list; check the partner's phone receives it.
