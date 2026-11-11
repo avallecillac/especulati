@@ -30,7 +30,7 @@ Each numbered group is one commit. "Checks" means that `pnpm typecheck && pnpm l
 
 ## 5. User actions before merging
 
-- [ ] 5.1 (User) In the Cloudflare dashboard, set the Pages project build to the new path: the build command `pnpm --filter lector build`, and the output `apps/lector/dist`. The D1 binding `RELAY_DB` stays the same. Verify: a preview deployment of the branch builds successfully.
+- [x] 5.1 (User) In the Cloudflare dashboard, set the Pages project build to the new path: the build command `pnpm --filter lector build`, and the output `apps/lector/dist`. The D1 binding `RELAY_DB` stays the same. Verify: a preview deployment of the branch builds successfully.
 - [ ] 5.2 (User) After the merge, in `chrome://extensions` (or Brave), remove the old unpacked Readerlog, then load `apps/lector-extension/dist` and pair it again from its Options. Verify: "Log as read" on an article shows the Lector toast.
 
 ## 6. Check production after deploy
