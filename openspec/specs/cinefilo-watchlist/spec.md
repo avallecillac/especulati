@@ -39,7 +39,7 @@ Every list SHALL be available offline.
 - **THEN** it leaves Watch later and appears in Watched on both members' devices after sync
 
 ### Requirement: Mark as watched with a date
-Marking a title as watched SHALL record a watched date, which is the calendar day on the marking device. The date defaults to today, and "Yesterday" or any earlier day is available. A title SHALL keep a single watched date; marking it watched again replaces the date.
+Marking a title as watched in the app SHALL record a watched date, which is the calendar day on the marking device. The date defaults to today, and "Yesterday" or any earlier day is available. A title SHALL keep at most one watched date; marking it watched again replaces the date. A title MAY be watched with no date when the date is unknown (for example, imported history), and a member SHALL be able to add a date later.
 
 #### Scenario: Mark watched today
 - **WHEN** a member marks a movie watched with the default date
@@ -52,6 +52,10 @@ Marking a title as watched SHALL record a watched date, which is the calendar da
 #### Scenario: Back to later clears nothing it shouldn't
 - **WHEN** a watched title is moved back to Watch later
 - **THEN** its watched date is cleared, and both members' verdicts and reviews remain
+
+#### Scenario: Watched with no date
+- **WHEN** an imported title is watched with no date
+- **THEN** its screen shows "Watched · date unknown" with "Add date", and adding a date keeps it watched
 
 ### Requirement: Series progress
 A series SHALL optionally hold a current season number, from 1 up to its season count when the count is known. The current season SHALL be shown in the Watching list.
