@@ -6,6 +6,8 @@ export default defineConfig({
       { test: { name: 'sync-core', root: 'packages/sync-core', environment: 'node' } },
       { test: { name: 'db-kit', root: 'packages/db-kit', environment: 'node' } },
       { test: { name: 'lector-core', root: 'packages/lector-core', environment: 'node' } },
+      { test: { name: 'cinefilo-core', root: 'packages/cinefilo-core', environment: 'node' } },
+      { test: { name: 'cinefilo-db', root: 'packages/cinefilo-db', environment: 'node' } },
       { test: { name: 'lector-db', root: 'packages/lector-db', environment: 'node' } },
       { test: { name: 'sync', root: 'packages/sync', environment: 'node' } },
       { test: { name: 'lector-sync', root: 'packages/lector-sync', environment: 'node' } },
@@ -17,6 +19,9 @@ export default defineConfig({
           include: ['test/**/*.test.ts'],
           passWithNoTests: true,
         },
+      },
+      {
+        test: { name: 'cinefilo', root: 'apps/cinefilo', environment: 'node', include: ['src/**/*.test.ts'] },
       },
       {
         test: { name: 'lector', root: 'apps/lector', environment: 'node', include: ['src/**/*.test.ts'] },

@@ -4,10 +4,10 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 1. Scaffold
 
-- [ ] 1.1 Create `packages/cinefilo-core`, `packages/cinefilo-db` and `apps/cinefilo` as Svelte 5 + Vite + `vite-plugin-pwa`. Give the DB worker its own OPFS file `/cinefilo.db`, the VFS name `cinefilo-sahpool` and the Web Lock `cinefilo-db`, and add the workspace packages. Verify that `pnpm install && pnpm typecheck` passes and that `pnpm --filter cinefilo dev` serves an empty shell.
-- [ ] 1.2 Add dependency-cruiser rules: no imports between `cinefilo-*` and lector packages, and `cinefilo-core` is pure, with no DOM lib, no other packages and no `Date.now`, `Math.random` or `fetch`. Verify that `pnpm lint` passes, and fails on a deliberate bad import that is then reverted.
-- [ ] 1.3 Add the cinefilo Pages Functions adapter, which mounts the shared relay handler on `CINEFILO_RELAY_DB`, plus build config for its own Pages project. Verify the relay handler tests pass against the adapter (`pnpm test --project relay`).
-- [ ] 1.4 User action: create the Cloudflare Pages project and the D1 database, bind `CINEFILO_RELAY_DB`, and apply the relay `schema.sql`. Verify a preview deploy answers `GET /api/v1/…` with the relay's 401 for a missing token.
+- [x] 1.1 Create `packages/cinefilo-core`, `packages/cinefilo-db` and `apps/cinefilo` as Svelte 5 + Vite + `vite-plugin-pwa`. Give the DB worker its own OPFS file `/cinefilo.db`, the VFS name `cinefilo-sahpool` and the Web Lock `cinefilo-db`, and add the workspace packages. Verify that `pnpm install && pnpm typecheck` passes and that `pnpm --filter cinefilo dev` serves an empty shell.
+- [x] 1.2 Add dependency-cruiser rules: no imports between `cinefilo-*` and lector packages, and `cinefilo-core` is pure, with no DOM lib, no other packages and no `Date.now`, `Math.random` or `fetch`. Verify that `pnpm lint` passes, and fails on a deliberate bad import that is then reverted.
+- [x] 1.3 Add the cinefilo Pages Functions adapter, which mounts the shared relay handler on `CINEFILO_RELAY_DB`, plus build config for its own Pages project. Verify the relay handler tests pass against the adapter (`pnpm test --project relay`).
+- [ ] 1.4 Create the Cloudflare Pages project `cinefilo` (Git-connected, root `apps/cinefilo`, build-watch paths limited to cinefilo and shared packages) and bind `CINEFILO_RELAY_DB` (production and preview) to the D1 database `cinefilo-relay`. Done: the project is `cinefilo`, served at `cinefilo-6oo.pages.dev` (`cinefilo.pages.dev` was taken) (already created, id `48d221be-1783-4866-b737-2e40265697f7`, relay `schema.sql` applied). Verify a preview deploy answers `GET /api/v1/…` with the relay's 401 for a missing token.
 
 ## 2. Core domain (`cinefilo-core`, tests first, no mocks)
 
@@ -61,7 +61,7 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 8. Integration and deploy
 
-- [ ] 8.1 Add cinefilo to CI (typecheck, lint, test, convergence, e2e), and confirm lector's suites are untouched. Verify that the CI run is green.
+- [ ] 8.1 Make sure CI (typecheck, lint, unit tests) covers the cinefilo packages, and run cinefilo's e2e and convergence locally before merging (e2e is not run in GitHub Actions; see CLAUDE.md). Confirm lector's suites are untouched. Verify that the CI run is green and the local e2e passes.
 - [ ] 8.2 Document cinefilo in `docs/` (architecture, deploy steps, pairing a partner, the TMDB key) and in the repository README. Verify that the documented deploy steps work against the preview project.
 - [ ] 8.3 Production deploy and real pairing on both partners' phones. Verify by hand: a title added offline on one phone appears on the other, and both ratings show.
 

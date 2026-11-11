@@ -17,6 +17,27 @@ module.exports = {
       to: { pathNot: '^(packages/(lector-core|sync-core)/src|@especulati/sync-core$)' },
     },
     {
+      name: 'cinefilo-core-is-pure',
+      comment: 'packages/cinefilo-core may only import itself and the pure packages/sync-core — no npm modules, no node builtins.',
+      severity: 'error',
+      from: { path: '^packages/cinefilo-core/src' },
+      to: { pathNot: '^(packages/(cinefilo-core|sync-core)/src|@especulati/sync-core$)' },
+    },
+    {
+      name: 'cinefilo-lector-isolated',
+      comment: 'Cinéfilo and Lector never share code: no import between cinefilo-* (and apps/cinefilo) and lector-* (and apps/lector*), in either direction.',
+      severity: 'error',
+      from: { path: '^(packages/cinefilo-|apps/cinefilo/)' },
+      to: { path: '^packages/lector-|^apps/lector|^@especulati/lector-' },
+    },
+    {
+      name: 'lector-cinefilo-isolated',
+      comment: 'The reverse direction of cinefilo-lector-isolated.',
+      severity: 'error',
+      from: { path: '^(packages/lector-|apps/lector)' },
+      to: { path: '^packages/cinefilo-|^apps/cinefilo/|^@especulati/cinefilo-' },
+    },
+    {
       name: 'shared-no-apps-domain',
       comment: 'The shared packages (sync-core, db-kit, sync) know no app: no lector-*/cinefilo-* package and nothing under apps/.',
       severity: 'error',
