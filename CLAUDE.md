@@ -15,7 +15,7 @@ through a zero-knowledge relay (Cloudflare Pages Functions + D1).
 pnpm install
 pnpm typecheck        # all packages; packages/lector-core has no DOM lib (purity check)
 pnpm lint             # ESLint + dependency-cruiser boundary rules
-pnpm test             # Vitest: lector-core, lector-db, sync, relay, lector (Node, in-memory SQLite-WASM)
+pnpm test             # Vitest: sync-core, db-kit, sync, lector-*, relay (Node, in-memory SQLite-WASM)
 pnpm test:convergence # the full 1,000-run sync convergence test (SC-003; about 2 min)
 pnpm e2e              # Playwright on Chromium against the production build
 pnpm --filter lector dev # local dev server
@@ -29,7 +29,7 @@ Lector's storage and wire identifiers still say `readerlog`, and they MUST NOT c
 the OPFS file and SAH-pool names, the Web Lock, the BroadcastChannel, the HKDF salt, the
 envelope AAD, the QR prefix, every derived-id hash label, `readerlog.appearance` and the
 `readerlog/v1` export format. Changing one orphans local data or splits the sync space.
-They live in `frozen.ts` files and are pinned by `packages/sync/test/frozen-ids.test.ts`
+They live in `frozen.ts` files and are pinned by `packages/lector-sync/test/frozen-ids.test.ts` (plus `golden.test.ts`)
 and `apps/lector/src/frozen-ids.test.ts`. Never do a repo-wide replace of `readerlog`.
 See `openspec/changes/rename-to-lector/design.md` (D1).
 
@@ -42,16 +42,22 @@ See `openspec/changes/rename-to-lector/design.md` (D1).
 - `packages/lector-db`: SQLite schema and migrations, `applyChanges` (rows + `field_clock` +
   `change_log` in one transaction), and the read models. It runs in the browser worker and
   in Node tests.
-- `packages/sync`: the sync code, HKDF keys, AES-GCM envelopes, relay client and engine.
-  The engine runs **inside the DB worker**. It must not import `apps/*`; inject `fetch`,
-  `now`, `random` and `online`.
+- **Shared sync packages** (must not import any app's packages; rule `shared-no-apps-domain`):
+  - `packages/sync-core`: pure HLC, op parsing over an app `SyncSchema`, `mergeOp`,
+    `stampOps`, the `SyncStore` contract.
+  - `packages/db-kit`: SQLite sync plumbing (`applyChanges`, `applyRemoteOps`, push
+    bookkeeping, `SqliteSyncStore`, bookkeeping DDL, `runMigrations`).
+  - `packages/sync`: the engine (keys, envelopes, relay client, push/pull), configured by a
+    `SyncApp`. It runs **inside the DB worker**; inject `fetch`, `now`, `random` and `online`.
+- `packages/lector-sync`: `lectorSyncApp` (frozen values), the capture peer, and lector's
+  convergence suite.
 - `apps/relay` + `functions/`: the zero-knowledge relay. It stores opaque
   `{ batchId, iv, ct }` only, and must not import `packages/*` (dependency-cruiser
-  enforces this). `functions/api/[[path]].ts` is the Pages Functions adapter (D1 binding
-  `RELAY_DB`).
+  enforces this). `functions/api/[[path]].ts` is lector's Pages Functions adapter (D1 binding
+  `RELAY_DB`); adapters may import only `apps/relay/src` (rule `relay-adapters`).
 - `apps/lector-extension`: the Chrome/Brave MV3 extension. It must not import
   `packages/lector-db` or `apps/lector`. It writes through core `decide()` + `stampOps`, and
-  pushes through `packages/sync/src/capturePeer.ts`, which never pulls. The extractor
+  pushes through `packages/lector-sync/src/capturePeer.ts`, which never pulls. The extractor
   returns only `{ url, title, author, words }`; article text is never stored or sent,
   except text the user explicitly saves as a highlight (constitution v1.2.0). Test hooks
   exist only in the `EXT_E2E` build.
@@ -155,7 +161,7 @@ directly or re-delegate it with the decision included.
 - In the Claude Code sandbox, pnpm fails with `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK`;
   run pnpm commands outside the sandbox.
 - The `rtk` hook rewrites `pnpm lint` so dependency-cruiser doesn't run; run
-  `npx eslint .` and `npx depcruise packages apps/lector/src apps/relay/src apps/lector-extension/src --config .dependency-cruiser.cjs`
+  `node node_modules/eslint/bin/eslint.js .` and `npx depcruise packages apps/lector/src apps/relay/src apps/lector-extension/src functions --config .dependency-cruiser.cjs`
   directly.
 - **e2e runs locally, not in GitHub Actions.** CI runs typecheck, lint and unit tests only
   (e2e took about 12 minutes there, and the extension tests can't load the extension on

@@ -71,14 +71,20 @@ Accepted losses compared with the native spec:
 ## 5. Code architecture: functional core, imperative shell
 
 ```
-packages/lector-core   pure TS: branded types, decide(), HLC, merge rules, interchange v1, stat math
-packages/lector-db     SQLite schema + migrations, repositories, stats SQL (browser worker + Node tests)
-packages/sync   HKDF keys, AES-GCM envelopes, relay client, push/pull loop
-apps/lector        Svelte UI, DB worker, service worker, barcode scanner, /capture route
+Shared (no app's domain; dependency-cruiser rule shared-no-apps-domain)
+packages/sync-core     pure TS: HLC, Result, ids, op types, parseRemoteOpWith(schema), mergeOp, stampOps, SyncStore contract
+packages/db-kit        SQLite sync plumbing: applyChanges, applyRemoteOps (LWW, parking, inbox), push bookkeeping, SqliteSyncStore, bookkeeping DDL, migration runner
+packages/sync          app-agnostic engine: HKDF keys, AES-GCM envelopes, relay client, push/pull loop; configured by a SyncApp
+apps/relay             zero-knowledge relay handler; each app's Pages Functions adapter (functions/, apps/<app>/functions/) wires it to its own D1
+
+Lector
+packages/lector-core   pure TS: branded types, decide(), lectorSchema (allow-list, tiers), interchange v1, stat math
+packages/lector-db     schema + migrations, repositories, stats SQL; delegates sync plumbing to db-kit (db.syncStore)
+packages/lector-sync   lectorSyncApp (the frozen readerlog salt/AAD/QR prefix), push-only capture peer, lector convergence suite
+apps/lector            Svelte UI, DB worker, service worker, barcode scanner, /capture route
 apps/lector-extension  Chrome/Brave MV3 extension: Readability extractor, toast, push-only capture peer (no SQLite)
-apps/relay      zero-knowledge relay handler (+ functions/ = Cloudflare Pages Functions adapter, D1)
-shortcuts/      iOS Shortcut + JS snippet + install guide
-e2e/            Playwright scenarios
+shortcuts/             iOS Shortcut + JS snippet + install guide
+e2e/                   Playwright scenarios
 ```
 
 - `packages/lector-core` never touches the DOM, SQLite, `fetch`, the clock, or
@@ -192,6 +198,12 @@ Sync state lives in `meta` (`sync_key`, `sync_cursor`, `pending_batch`, `sync_st
 `sync_old_space`), which is never synced.
 
 ## 7. Sync (v1)
+
+- **Shared engine (extract-shared-sync):** the merge rules below live in `sync-core`/`db-kit`
+  and the engine in `sync`. An app plugs in a `SyncSchema` (writable fields, insert-required
+  fields, `tierOf`), a `canInsert` parent check, and a `SyncApp` (salt, AAD prefix, QR
+  prefix, op parser). Different salts give each app its own space: a lector code can never
+  open another app's space.
 
 - **Merge semantics**
   - **Fields** use last-writer-wins per `(table, row, field)`, comparing HLCs

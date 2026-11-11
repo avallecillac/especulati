@@ -37,6 +37,13 @@ module.exports = {
       to: { path: '^packages/' },
     },
     {
+      name: 'relay-adapters',
+      comment: "A Pages Functions adapter (functions/ or apps/<app>/functions/) only wires the relay: from apps/ it may import apps/relay/src alone.",
+      severity: 'error',
+      from: { path: ['^functions/', '^apps/[a-z-]+/functions/'] },
+      to: { path: '^apps/', pathNot: '^apps/relay/src/' },
+    },
+    {
       name: 'sync-no-apps',
       severity: 'error',
       from: { path: '^packages/sync' },

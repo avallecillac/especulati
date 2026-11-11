@@ -94,14 +94,14 @@ each group is one bisectable commit.
 
 ## 6. Rules, docs and integration
 
-- [ ] 6.1 Add the `relay-adapters` dependency-cruiser rule (`apps/*/functions/**` may import
+- [x] 6.1 Add the `relay-adapters` dependency-cruiser rule (`apps/*/functions/**` may import
   only `apps/relay/src/**` from `apps/`). Extend the lint paths in `package.json` to the new
   packages. Verify that `pnpm lint` passes and that a scratch import of `lector-core` from
   `packages/sync` fails lint (then revert the scratch import).
-- [ ] 6.2 Update `docs/architecture.md` §5 (package map) and §7 (sync: engine plus app
+- [x] 6.2 Update `docs/architecture.md` §5 (package map) and §7 (sync: engine plus app
   config, schema and hooks), plus the layout section of `CLAUDE.md`. Verify that the doc
   links resolve and that the package list matches `ls packages`.
-- [ ] 6.3 Run the full gate: `pnpm typecheck`, `pnpm lint`, `pnpm test`,
+- [x] 6.3 Run the full gate: `pnpm typecheck`, `pnpm lint`, `pnpm test`,
   `pnpm test:convergence` and `pnpm e2e`. All must be green.
 
 ## Workflow follow-up
