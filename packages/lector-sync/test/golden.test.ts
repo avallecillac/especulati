@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { deriveKeys, formatSyncCode, qrPayload, seal, type Plain } from '@especulati/sync';
+import { deriveKeys, formatSyncCode, open, qrPayload, seal, type Plain } from '@especulati/sync';
 import { lectorSyncApp } from '../src/index.ts';
 
 // Golden vectors recorded from the code before extract-shared-sync. They pin the frozen wire
-// values (salt, AAD prefix, QR prefix): the refactor must reproduce them byte for byte.
+// values (salt, AAD prefix, QR prefix): keys, codes and old ciphertexts must keep matching.
 const k = Uint8Array.from({ length: 32 }, (_, i) => i);
 const FIXED_IV = Uint8Array.from({ length: 12 }, (_, i) => 0xa0 + i);
 const BATCH_ID = '00000000-0000-4000-8000-0000000000b1';
@@ -37,14 +37,25 @@ describe('golden vectors', () => {
     expect(keys.authToken).toBe(AUTH_TOKEN);
   });
 
-  it('seal: exact ciphertext for a fixed key, IV, batch id and plaintext', async () => {
+  // The envelope gzips before encrypting, and gzip bytes differ between zlib builds (macOS vs
+  // Linux), so the exact ciphertext is not portable. What must hold forever: a batch sealed by
+  // the pre-extraction code still opens to the same plaintext, and seal → open round-trips.
+  it('open: a ciphertext recorded before extract-shared-sync still opens to the same plaintext', async () => {
+    const { spaceId, encKey } = await deriveKeys(k, lectorSyncApp.salt);
+    const opened = await open({ batchId: BATCH_ID, iv: IV, ct: CT }, encKey, spaceId, lectorSyncApp.aadPrefix);
+    expect(opened).toEqual({ ok: true, value: PLAIN });
+  });
+
+  it('seal: the fixed IV is used, and the result opens to the same plaintext', async () => {
     const { spaceId, encKey } = await deriveKeys(k, lectorSyncApp.salt);
     vi.spyOn(crypto, 'getRandomValues').mockImplementation(((a: Uint8Array) => {
       a.set(FIXED_IV);
       return a;
     }) as typeof crypto.getRandomValues);
     const env = await seal(PLAIN, encKey, spaceId, BATCH_ID, lectorSyncApp.aadPrefix);
-    expect(env).toEqual({ batchId: BATCH_ID, iv: IV, ct: CT });
+    expect(env.iv).toBe(IV);
+    vi.restoreAllMocks();
+    expect(await open(env, encKey, spaceId, lectorSyncApp.aadPrefix)).toEqual({ ok: true, value: PLAIN });
   });
 
   it('formatSyncCode and qrPayload: exact strings', () => {
