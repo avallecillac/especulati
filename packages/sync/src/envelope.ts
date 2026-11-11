@@ -1,5 +1,4 @@
-import { err, ok, type OpWire, type Result } from '@especulati/lector-core';
-import { ENVELOPE_AAD_PREFIX } from './frozen.ts';
+import { err, ok, type OpWire, type Result } from '@especulati/sync-core';
 
 export type { OpWire };
 export interface Plain {
@@ -32,14 +31,15 @@ function fromB64url(s: string): Uint8Array<ArrayBuffer> | null {
   }
 }
 
-const aadFor = (spaceId: string, batchId: string) => new TextEncoder().encode(`${ENVELOPE_AAD_PREFIX}/${spaceId}/${batchId}`);
+const aadFor = (aadPrefix: string, spaceId: string, batchId: string) => new TextEncoder().encode(`${aadPrefix}/${spaceId}/${batchId}`);
 
 async function pipe(data: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
   const out = new Response(new Blob([data as BlobPart]).stream().pipeThrough(stream));
   return new Uint8Array(await out.arrayBuffer());
 }
 
-export async function seal(p: Plain, key: CryptoKey, spaceId: string, batchId: string): Promise<Envelope> {
+/** `aadPrefix` is the app's (`SyncApp.aadPrefix`). */
+export async function seal(p: Plain, key: CryptoKey, spaceId: string, batchId: string, aadPrefix: string): Promise<Envelope> {
   const json = new TextEncoder().encode(JSON.stringify(p));
   let flag = FLAG_RAW;
   let body: Uint8Array = json;
@@ -56,7 +56,7 @@ export async function seal(p: Plain, key: CryptoKey, spaceId: string, batchId: s
   pt.set(body, 1);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aadFor(spaceId, batchId) }, key, pt),
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aadFor(aadPrefix, spaceId, batchId) }, key, pt),
   );
   return { batchId, iv: toB64url(iv), ct: toB64url(ct) };
 }
@@ -65,6 +65,7 @@ export async function open(
   e: Envelope,
   key: CryptoKey,
   spaceId: string,
+  aadPrefix: string,
 ): Promise<Result<Plain, 'decrypt' | 'version' | 'shape'>> {
   const iv = fromB64url(e.iv);
   const ct = fromB64url(e.ct);
@@ -72,7 +73,7 @@ export async function open(
   let pt: Uint8Array;
   try {
     pt = new Uint8Array(
-      await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: aadFor(spaceId, e.batchId) }, key, ct.slice()),
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv, additionalData: aadFor(aadPrefix, spaceId, e.batchId) }, key, ct.slice()),
     );
   } catch {
     return err('decrypt');

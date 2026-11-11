@@ -2,7 +2,7 @@
 // Runs inside the DB worker only (it reads the DB directly); the UI never imports it.
 //
 // Every id is derived from content, so two devices reconciling the same pair produce the same
-// rows. The ids use the same labels as the convergence test (packages/sync/test/convergence.test.ts).
+// rows. The ids use the same labels as the convergence test (packages/lector-sync/test/convergence.test.ts).
 
 import type { DispatchEnv, LectorDb } from '@especulati/lector-db';
 import { HL_COPY_LABEL, ITEM_TAG_ID_LABEL } from './frozen.ts';

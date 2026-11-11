@@ -20,9 +20,7 @@ module.exports = {
       name: 'shared-no-apps-domain',
       comment: 'The shared packages (sync-core, db-kit, sync) know no app: no lector-*/cinefilo-* package and nothing under apps/.',
       severity: 'error',
-      // TEMPORARY: packages/sync still imports lector-core/lector-db until group 4 (4.2/5.1) rewires it.
-      // Delete the pathNot then, so the rule covers sync too (extract-shared-sync tasks 3.1/4.2).
-      from: { path: '^packages/(sync-core|db-kit|sync)/', pathNot: '^packages/sync/' },
+      from: { path: '^packages/(sync-core|db-kit|sync)/' },
       to: { path: '^packages/(lector|cinefilo)-|^apps/|^@especulati/(lector|cinefilo)-' },
     },
     {
@@ -52,11 +50,11 @@ module.exports = {
       to: { path: '^packages/lector-db|^apps/lector/' },
     },
     {
-      name: 'capture-peer-no-db',
-      comment: 'The capture peer and shared push stay free of packages/lector-db (feature 005).',
+      name: 'lector-sync-no-db',
+      comment: 'The capture peer and lector sync config stay free of SQLite, so the extension bundle has no WASM (feature 005).',
       severity: 'error',
-      from: { path: '^packages/sync/src/(capturePeer|push)\\.ts' },
-      to: { path: '^packages/lector-db' },
+      from: { path: '^packages/lector-sync/' },
+      to: { path: '^packages/(lector-db|db-kit)|^@especulati/(lector-db|db-kit)$' },
     },
     { name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
   ],

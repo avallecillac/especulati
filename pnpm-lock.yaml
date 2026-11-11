@@ -35,6 +35,9 @@ importers:
       '@especulati/lector-db':
         specifier: workspace:*
         version: link:../../packages/lector-db
+      '@especulati/lector-sync':
+        specifier: workspace:*
+        version: link:../../packages/lector-sync
       '@especulati/sync':
         specifier: workspace:*
         version: link:../../packages/sync
@@ -75,9 +78,9 @@ importers:
       '@especulati/lector-core':
         specifier: workspace:*
         version: link:../../packages/lector-core
-      '@especulati/sync':
+      '@especulati/lector-sync':
         specifier: workspace:*
-        version: link:../../packages/sync
+        version: link:../../packages/lector-sync
       '@mozilla/readability':
         specifier: 0.6.0
         version: 0.6.0
@@ -137,14 +140,30 @@ importers:
         specifier: 3.53.4-build1
         version: 3.53.4-build1
 
-  packages/sync:
+  packages/lector-sync:
     dependencies:
       '@especulati/lector-core':
         specifier: workspace:*
         version: link:../lector-core
-      '@especulati/lector-db':
+      '@especulati/sync':
         specifier: workspace:*
-        version: link:../lector-db
+        version: link:../sync
+      '@especulati/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
+
+  packages/sync:
+    dependencies:
+      '@especulati/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
+    devDependencies:
+      '@especulati/db-kit':
+        specifier: workspace:*
+        version: link:../db-kit
+      '@sqlite.org/sqlite-wasm':
+        specifier: 3.53.4-build1
+        version: 3.53.4-build1
 
   packages/sync-core: {}
 

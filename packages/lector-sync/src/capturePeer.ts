@@ -1,6 +1,6 @@
 // The extension's push-only sync peer (005 research R7, contracts/extension.md). It holds no
 // SQLite: state lives in a CaptureStore (chrome.storage.local in the extension, a Map in tests).
-// It must not import packages/lector-db or engine.ts (dependency-cruiser `capture-peer-no-db`), so the
+// It must not import packages/lector-db or db-kit (dependency-cruiser `lector-sync-no-db`), so the
 // extension bundle stays free of WASM. It never calls GET /batches (FR-012).
 import {
   decide,
@@ -24,13 +24,11 @@ import {
   type Table,
   type Result,
 } from '@especulati/lector-core';
-import { parseSyncCode } from './code.ts';
-import { seal } from './envelope.ts';
-import { CAPTURE_ID_LABEL, HIGHLIGHT_ID_LABEL, ITEM_TAG_ID_LABEL, TAG_ID_LABEL } from './frozen.ts';
-import { uuidFromHash } from './ids.ts';
-import { deriveKeys, type SyncKeys } from './keys.ts';
-import { pushAll, type PushSource } from './push.ts';
-import { createRelayClient, type RelayClient, type RelayFailure } from './relayClient.ts';
+import {
+  createRelayClient, deriveKeys, parseSyncCode, pushAll, seal, uuidFromHash,
+  type PushSource, type RelayClient, type RelayFailure, type SyncKeys,
+} from '@especulati/sync';
+import { CAPTURE_ID_LABEL, ENVELOPE_AAD_PREFIX, HIGHLIGHT_ID_LABEL, ITEM_TAG_ID_LABEL, SYNC_SALT, TAG_ID_LABEL } from './frozen.ts';
 
 export interface CaptureStore {
   get<T>(k: string): Promise<T | undefined>;
@@ -230,7 +228,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
     if (waiting === 0 && !(await store.get<PendingBatch | null>('pendingBatch'))) return { sent: 0, problem: null };
 
     const status = (await store.get<StatusRecord>('status')) ?? { lastSentAt: null, problem: null };
-    const keys = await deriveKeys(fromB64url(key));
+    const keys = await deriveKeys(fromB64url(key), SYNC_SALT);
     const device = await deviceId();
     // The token is a count of ops from the head of `pending`: only this peer appends (at the tail)
     // and only complete() removes (from the head), so a re-sent batch has the same content.
@@ -259,7 +257,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
     };
     const out = await pushAll(source, {
       client: clientFor(origin, keys),
-      seal: (ops, batchId) => seal({ v: 1, device, ops }, keys.encKey, keys.spaceId, batchId),
+      seal: (ops, batchId) => seal({ v: 1, device, ops }, keys.encKey, keys.spaceId, batchId, ENVELOPE_AAD_PREFIX),
       newBatchId: newUuid,
     });
     const problem = out.failure ? problemOf(out.failure) : null;
@@ -278,7 +276,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
       if (!/^https?:\/\/[^/?#\s]+$/i.test(origin)) return err<SyncError>({ kind: 'format' });
       const k = parseSyncCode(code);
       if (!k.ok) return err<SyncError>({ kind: k.error });
-      const keys = await deriveKeys(k.value);
+      const keys = await deriveKeys(k.value, SYNC_SALT);
       const found = await clientFor(origin, keys).spaceExists();
       if (!found.ok) {
         if (found.kind === 'offline') return err<SyncError>({ kind: 'offline' });

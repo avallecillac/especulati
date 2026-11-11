@@ -1,5 +1,5 @@
 // Options page: pair with a Lector site, see the status, unpair.
-import { createCapturePeer } from '@especulati/sync/capturePeer';
+import { createCapturePeer } from '@especulati/lector-sync/capturePeer';
 import { chromeStore } from './store.ts';
 
 const peer = createCapturePeer(chromeStore, {

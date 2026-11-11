@@ -3,10 +3,8 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { parseRemoteOp, tagKey, tierOf, type EventType, type OpWire } from '@especulati/lector-core';
-import { parseSyncCode } from '../src/code.ts';
-import { deriveKeys } from '../src/keys.ts';
-import { open } from '../src/envelope.ts';
-import { createRelayClient } from '../src/relayClient.ts';
+import { createRelayClient, deriveKeys, open, parseSyncCode } from '@especulati/sync';
+import { lectorSyncApp } from '../src/index.ts';
 import { fakeRelay, makePeer, prng, uuid, type FakeRelay, type Peer } from './harness.ts';
 
 // SC-003 requires 1,000 runs: `pnpm test:convergence`. The everyday `pnpm test` runs 200.
@@ -449,7 +447,7 @@ describe('forward compatibility: a v3 peer (007 T007)', () => {
   async function v3Pull(p: Peer, code: string, relay: ReturnType<typeof fakeRelay>): Promise<number> {
     const k = parseSyncCode(code);
     if (!k.ok) throw new Error('code');
-    const keys = await deriveKeys(k.value);
+    const keys = await deriveKeys(k.value, lectorSyncApp.salt);
     const client = createRelayClient(relay.fetch, keys.spaceId, keys.authToken, () => true);
     let applied = 0;
     for (let more = true; more; ) {
@@ -461,7 +459,7 @@ describe('forward compatibility: a v3 peer (007 T007)', () => {
       let last = cursor;
       for (const b of page.value.batches) {
         last = b.seq;
-        const opened = await open(b, keys.encKey, keys.spaceId);
+        const opened = await open(b, keys.encKey, keys.spaceId, lectorSyncApp.aadPrefix);
         if (!opened.ok) { skipped++; continue; }
         if (opened.value.ops.some((w) => w.tbl === 'highlights')) { skipped++; continue; }
         for (const w of opened.value.ops) {
@@ -622,7 +620,7 @@ describe('forward compatibility: a 0.8.0 peer (008 T009)', () => {
   async function v8Pull(p: Peer, code: string, relay: FakeRelay, afterBatch?: () => void): Promise<number> {
     const k = parseSyncCode(code);
     if (!k.ok) throw new Error('code');
-    const keys = await deriveKeys(k.value);
+    const keys = await deriveKeys(k.value, lectorSyncApp.salt);
     const client = createRelayClient(relay.fetch, keys.spaceId, keys.authToken, () => true);
     let applied = 0;
     for (let more = true; more; ) {
@@ -630,7 +628,7 @@ describe('forward compatibility: a 0.8.0 peer (008 T009)', () => {
       const page = await client.getBatches(cursor, 100);
       if (!page.ok) throw new Error(`pull ${page.kind}`);
       for (const b of page.value.batches) {
-        const opened = await open(b, keys.encKey, keys.spaceId);
+        const opened = await open(b, keys.encKey, keys.spaceId, lectorSyncApp.aadPrefix);
         let skipped = 0;
         const ops: Parameters<Peer['db']['applyRemoteOps']>[0][number][] = [];
         if (!opened.ok) skipped++;

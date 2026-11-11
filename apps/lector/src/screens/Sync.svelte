@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { lectorSyncApp } from '@especulati/lector-sync';
   import { formatSyncCode, parseQrPayload, type SyncError } from '@especulati/sync';
   import { sync } from '../lib/dbClient.ts';
   import { qrSvg } from '../lib/qr.ts';
@@ -101,7 +102,7 @@
 
   function onScanned(payload: string) {
     scanning = false;
-    const k = parseQrPayload(payload);
+    const k = parseQrPayload(payload, lectorSyncApp.qrPrefix);
     if (!k.ok) return void (error = errorText(k.error));
     void join(formatSyncCode(k.value));
   }

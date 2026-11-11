@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { QR_PREFIX } from '../packages/lector-sync/src/frozen.ts';
 import { formatSyncCode, parseSyncCode, qrPayload } from '../packages/sync/src/code.ts';
 import { test, expect } from './fixtures/relay.ts';
 import { addBook, openApp } from './helpers.ts';
@@ -90,7 +91,7 @@ test('join by scanning the QR code with the fake camera', async ({ twoDevices })
   const parsed = parseSyncCode(code);
   if (!parsed.ok) throw new Error('code');
 
-  await b.camera.showQr(qrPayload(parsed.value));
+  await b.camera.showQr(qrPayload(parsed.value, QR_PREFIX));
   await openApp(b.page, '#/settings/sync');
   await b.page.getByRole('button', { name: 'Join', exact: true }).click();
   await b.page.getByRole('button', { name: 'Scan code' }).click();

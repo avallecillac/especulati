@@ -1,0 +1,13 @@
+{
+  "name": "@especulati/lector-sync",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./capturePeer": "./src/capturePeer.ts" },
+  "scripts": { "typecheck": "tsc --noEmit -p ." },
+  "dependencies": {
+    "@especulati/lector-core": "workspace:*",
+    "@especulati/sync": "workspace:*",
+    "@especulati/sync-core": "workspace:*"
+  }
+}

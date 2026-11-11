@@ -7,7 +7,8 @@ export default defineConfig({
       { test: { name: 'db-kit', root: 'packages/db-kit', environment: 'node' } },
       { test: { name: 'lector-core', root: 'packages/lector-core', environment: 'node' } },
       { test: { name: 'lector-db', root: 'packages/lector-db', environment: 'node' } },
-      { test: { name: 'sync', root: 'packages/sync', environment: 'node', passWithNoTests: true } },
+      { test: { name: 'sync', root: 'packages/sync', environment: 'node' } },
+      { test: { name: 'lector-sync', root: 'packages/lector-sync', environment: 'node' } },
       {
         test: {
           name: 'relay',

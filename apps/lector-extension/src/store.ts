@@ -1,5 +1,5 @@
 // CaptureStore over chrome.storage.local (data-model "Extension storage").
-import type { CaptureStore } from '@especulati/sync/capturePeer';
+import type { CaptureStore } from '@especulati/lector-sync/capturePeer';
 
 export type { CaptureStore };
 

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { formatSyncCode, newSyncSecret, parseQrPayload, parseSyncCode, qrPayload } from '../src/code.ts';
 
+const QR = 'toy:sync:1:';
 const k = Uint8Array.from({ length: 32 }, (_, i) => i);
 const fixedRandom = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 7 + 3) & 0xff);
 
@@ -72,12 +73,13 @@ describe('sync code', () => {
   });
 
   it('qrPayload round-trips and rejects other prefixes', () => {
-    const q = qrPayload(k);
-    expect(q.startsWith('readerlog:sync:1:')).toBe(true);
-    expect(q.slice('readerlog:sync:1:'.length)).toHaveLength(56);
-    expect(parseQrPayload(q)).toEqual({ ok: true, value: k });
-    expect(parseQrPayload('readerlog:sync:2:' + formatSyncCode(k))).toEqual({ ok: false, error: 'format' });
-    expect(parseQrPayload('https://x.test/' + formatSyncCode(k))).toEqual({ ok: false, error: 'format' });
-    expect(parseQrPayload(formatSyncCode(k))).toEqual({ ok: false, error: 'format' });
+    const q = qrPayload(k, QR);
+    expect(q.startsWith(QR)).toBe(true);
+    expect(q.slice(QR.length)).toHaveLength(56);
+    expect(parseQrPayload(q, QR)).toEqual({ ok: true, value: k });
+    expect(parseQrPayload('toy:sync:2:' + formatSyncCode(k), QR)).toEqual({ ok: false, error: 'format' });
+    expect(parseQrPayload('https://x.test/' + formatSyncCode(k), QR)).toEqual({ ok: false, error: 'format' });
+    expect(parseQrPayload(formatSyncCode(k), QR)).toEqual({ ok: false, error: 'format' });
+    expect(parseQrPayload(q, 'other:sync:1:')).toEqual({ ok: false, error: 'format' });
   });
 });

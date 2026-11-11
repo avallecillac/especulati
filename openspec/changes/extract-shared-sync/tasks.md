@@ -63,32 +63,32 @@ each group is one bisectable commit.
 
 ## 4. App-agnostic `packages/sync`
 
-- [ ] 4.1 Take `salt` in `deriveKeys`, `aadPrefix` in `seal`/`open` and `qrPrefix` in the code
+- [x] 4.1 Take `salt` in `deriveKeys`, `aadPrefix` in `seal`/`open` and `qrPrefix` in the code
   helpers. Define `SyncApp` and add `packages/lector-sync` (scaffold, a vitest project,
   and the `lector-sync-no-db` rule) exporting `lectorSyncApp` with the current strings.
   Point the golden tests at `lectorSyncApp`. Verify that the golden vectors from 1.1 still
   pass byte for byte.
-- [ ] 4.2 Change `createSyncEngine` to `{ store: SyncStore, app: SyncApp, fetch, now, random, online }`.
+- [x] 4.2 Change `createSyncEngine` to `{ store: SyncStore, app: SyncApp, fetch, now, random, online }`.
   Drop the `@especulati/lector-db` and `lector-core` imports, and make `join` return
   `ok({})`. Update `engine.test.ts`, `push.test.ts` and `privacy.test.ts` to use a toy app
   over db-kit. Verify that the sync tests pass and that `packages/sync/package.json` has no
   `lector-*` dependency.
-- [ ] 4.3 Update `apps/lector/src/worker/db.worker.ts`: build the engine with
+- [x] 4.3 Update `apps/lector/src/worker/db.worker.ts`: build the engine with
   `store: db.syncStore, app: lectorSyncApp`, and after a successful join reply
   `{ duplicates: db.duplicates().length }`. Verify that the pwa tests pass and that
   `e2e/` sync and join scenarios (`pnpm e2e`) pass.
-- [ ] 4.4 Add `packages/sync/test/generic.convergence.test.ts` on db-kit with a toy
+- [x] 4.4 Add `packages/sync/test/generic.convergence.test.ts` on db-kit with a toy
   `notes` + `marks` (FK) schema: 3 peers, shuffled delivery with duplicates, a child op
   before its parent, an LWW tie. All peers must reach identical table dumps. Verify that
   it passes with `CONVERGENCE_RUNS=200`.
 
 ## 5. Move the lector-only sync code
 
-- [ ] 5.1 `git mv` `capturePeer.ts` and its test to `packages/lector-sync`. Point
+- [x] 5.1 `git mv` `capturePeer.ts` and its test to `packages/lector-sync`. Point
   `apps/lector-extension` imports at `@especulati/lector-sync/capturePeer`, and drop the
   `./capturePeer` export from `packages/sync`. Verify that the extension `build` (release
   check) and `build:e2e` succeed and the capture e2e passes.
-- [ ] 5.2 `git mv` `convergence.test.ts` and `harness.ts` to `packages/lector-sync/test`, with
+- [x] 5.2 `git mv` `convergence.test.ts` and `harness.ts` to `packages/lector-sync/test`, with
   import paths changed only. Point the `test:convergence` script at the `lector-sync`
   project. Verify with `pnpm test:convergence` (1,000 runs) green.
 

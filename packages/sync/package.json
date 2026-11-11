@@ -3,10 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./capturePeer": "./src/capturePeer.ts" },
-  "scripts": { "typecheck": "tsc --noEmit -p ." },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
   "dependencies": {
-    "@especulati/lector-core": "workspace:*",
-    "@especulati/lector-db": "workspace:*"
+    "@especulati/sync-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@especulati/db-kit": "workspace:*",
+    "@sqlite.org/sqlite-wasm": "3.53.4-build1"
   }
 }

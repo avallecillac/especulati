@@ -11,7 +11,7 @@
   "dependencies": {
     "@mozilla/readability": "0.6.0",
     "@especulati/lector-core": "workspace:*",
-    "@especulati/sync": "workspace:*"
+    "@especulati/lector-sync": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.0",

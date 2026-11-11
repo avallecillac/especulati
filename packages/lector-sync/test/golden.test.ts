@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatSyncCode, qrPayload } from '../src/code.ts';
-import { seal, type Plain } from '../src/envelope.ts';
-import { deriveKeys } from '../src/keys.ts';
+import { deriveKeys, formatSyncCode, qrPayload, seal, type Plain } from '@especulati/sync';
+import { lectorSyncApp } from '../src/index.ts';
 
 // Golden vectors recorded from the code before extract-shared-sync. They pin the frozen wire
 // values (salt, AAD prefix, QR prefix): the refactor must reproduce them byte for byte.
@@ -33,23 +32,23 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('golden vectors', () => {
   it('deriveKeys: spaceId and authToken', async () => {
-    const keys = await deriveKeys(k);
+    const keys = await deriveKeys(k, lectorSyncApp.salt);
     expect(keys.spaceId).toBe(SPACE_ID);
     expect(keys.authToken).toBe(AUTH_TOKEN);
   });
 
   it('seal: exact ciphertext for a fixed key, IV, batch id and plaintext', async () => {
-    const { spaceId, encKey } = await deriveKeys(k);
+    const { spaceId, encKey } = await deriveKeys(k, lectorSyncApp.salt);
     vi.spyOn(crypto, 'getRandomValues').mockImplementation(((a: Uint8Array) => {
       a.set(FIXED_IV);
       return a;
     }) as typeof crypto.getRandomValues);
-    const env = await seal(PLAIN, encKey, spaceId, BATCH_ID);
+    const env = await seal(PLAIN, encKey, spaceId, BATCH_ID, lectorSyncApp.aadPrefix);
     expect(env).toEqual({ batchId: BATCH_ID, iv: IV, ct: CT });
   });
 
   it('formatSyncCode and qrPayload: exact strings', () => {
     expect(formatSyncCode(k)).toBe(CODE);
-    expect(qrPayload(k)).toBe(QR);
+    expect(qrPayload(k, lectorSyncApp.qrPrefix)).toBe(QR);
   });
 });

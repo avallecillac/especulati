@@ -3,8 +3,7 @@
 // revert the change, do not update the expectation.
 import { hkdfSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { parseQrPayload, qrPayload } from '../src/code.ts';
-import { open, seal, type Envelope, type Plain } from '../src/envelope.ts';
+import { deriveKeys, open, parseQrPayload, qrPayload, seal, uuidFromHash, type Envelope, type Plain } from '@especulati/sync';
 import {
   CAPTURE_ID_LABEL,
   ENVELOPE_AAD_PREFIX,
@@ -14,8 +13,7 @@ import {
   SYNC_SALT,
   TAG_ID_LABEL,
 } from '../src/frozen.ts';
-import { deriveKeys } from '../src/keys.ts';
-import { uuidFromHash } from '../src/ids.ts';
+import { lectorSyncApp } from '../src/index.ts';
 
 const secret = Uint8Array.from({ length: 32 }, (_, i) => i);
 const SPACE_ID = '91488ff10bdb42384315ee164e88b9e9';
@@ -32,6 +30,12 @@ const FIXTURE: Envelope = {
 };
 
 describe('frozen sync identifiers', () => {
+  it('lectorSyncApp carries the frozen literals', () => {
+    expect(lectorSyncApp.salt).toBe('readerlog-sync-v1');
+    expect(lectorSyncApp.aadPrefix).toBe('readerlog/v1');
+    expect(lectorSyncApp.qrPrefix).toBe('readerlog:sync:1:');
+  });
+
   it('the literals are unchanged', () => {
     expect(SYNC_SALT).toBe('readerlog-sync-v1');
     expect(ENVELOPE_AAD_PREFIX).toBe('readerlog/v1');
@@ -43,7 +47,7 @@ describe('frozen sync identifiers', () => {
   });
 
   it('the HKDF salt derives the recorded spaceId and authToken', async () => {
-    const keys = await deriveKeys(secret);
+    const keys = await deriveKeys(secret, SYNC_SALT);
     expect(keys.spaceId).toBe(SPACE_ID);
     expect(keys.authToken).toBe(AUTH_TOKEN);
     const hk = (info: string, len: number) => Buffer.from(hkdfSync('sha256', secret, 'readerlog-sync-v1', info, len));
@@ -52,14 +56,14 @@ describe('frozen sync identifiers', () => {
   });
 
   it('a fixture ciphertext from the pre-rename build still opens', async () => {
-    const { encKey, spaceId } = await deriveKeys(secret);
-    const r = await open(FIXTURE, encKey, spaceId);
+    const { encKey, spaceId } = await deriveKeys(secret, SYNC_SALT);
+    const r = await open(FIXTURE, encKey, spaceId, ENVELOPE_AAD_PREFIX);
     expect(r).toEqual({ ok: true, value: PLAIN });
   });
 
   it('the AAD is `readerlog/v1/<spaceId>/<batchId>`', async () => {
-    const { encKey, spaceId } = await deriveKeys(secret);
-    const e = await seal(PLAIN, encKey, spaceId, BATCH_ID);
+    const { encKey, spaceId } = await deriveKeys(secret, SYNC_SALT);
+    const e = await seal(PLAIN, encKey, spaceId, BATCH_ID, ENVELOPE_AAD_PREFIX);
     // Decrypt independently with the literal AAD; a different AAD would fail authentication.
     const b64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64url'));
     const pt = await crypto.subtle.decrypt(
@@ -68,12 +72,12 @@ describe('frozen sync identifiers', () => {
       b64(e.ct),
     );
     expect(pt.byteLength).toBeGreaterThan(1);
-    expect(await open(e, encKey, spaceId)).toEqual({ ok: true, value: PLAIN });
+    expect(await open(e, encKey, spaceId, ENVELOPE_AAD_PREFIX)).toEqual({ ok: true, value: PLAIN });
   });
 
   it('the QR text starts with `readerlog:sync:1:` and the code parses back', () => {
-    expect(qrPayload(secret).startsWith('readerlog:sync:1:')).toBe(true);
-    expect(parseQrPayload(qrPayload(secret))).toEqual({ ok: true, value: secret });
+    expect(qrPayload(secret, QR_PREFIX).startsWith('readerlog:sync:1:')).toBe(true);
+    expect(parseQrPayload(qrPayload(secret, QR_PREFIX), QR_PREFIX)).toEqual({ ok: true, value: secret });
   });
 
   it('the capture-peer hash labels derive the recorded ids', async () => {

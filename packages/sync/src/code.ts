@@ -1,5 +1,4 @@
-import { err, ok, type Result } from '@especulati/lector-core';
-import { QR_PREFIX } from './frozen.ts';
+import { err, ok, type Result } from '@especulati/sync-core';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const CHECK_BYTES = 3;
@@ -126,12 +125,13 @@ export function parseSyncCode(s: string): Result<Uint8Array, 'format' | 'checksu
   return ok(k);
 }
 
-export function qrPayload(k: Uint8Array): string {
-  return QR_PREFIX + flat(k);
+/** `qrPrefix` is the app's (`SyncApp.qrPrefix`). */
+export function qrPayload(k: Uint8Array, qrPrefix: string): string {
+  return qrPrefix + flat(k);
 }
 
-export function parseQrPayload(s: string): Result<Uint8Array, 'format' | 'checksum'> {
+export function parseQrPayload(s: string, qrPrefix: string): Result<Uint8Array, 'format' | 'checksum'> {
   const t = s.trim();
-  if (!t.startsWith(QR_PREFIX)) return err('format');
-  return parseSyncCode(t.slice(QR_PREFIX.length));
+  if (!t.startsWith(qrPrefix)) return err('format');
+  return parseSyncCode(t.slice(qrPrefix.length));
 }

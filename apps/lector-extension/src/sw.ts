@@ -2,7 +2,7 @@
 // captureTab(). It keeps no state in memory across events: every choice a toast offers comes back
 // as a message that carries what it needs, so the worker may be stopped in between.
 import { normalizeQuote, normalizeUrl, readingMinutes, siteOf } from '@especulati/lector-core';
-import { createCapturePeer } from '@especulati/sync/capturePeer';
+import { createCapturePeer } from '@especulati/lector-sync/capturePeer';
 import type { Extracted } from './extract.ts';
 import { readSelection } from './selection.ts';
 import { chromeStore } from './store.ts';

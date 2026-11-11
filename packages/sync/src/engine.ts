@@ -1,5 +1,5 @@
-import { err, ok, parseRemoteOp, type RemoteOp, type Result } from '@especulati/lector-core';
-import type { LectorDb, SyncProblem, SyncStatus } from '@especulati/lector-db';
+import { err, ok, type RemoteOp, type Result, type SyncProblem, type SyncStatus, type SyncStore } from '@especulati/sync-core';
+import type { SyncApp } from './app.ts';
 import { formatSyncCode, newSyncSecret, parseSyncCode, qrPayload } from './code.ts';
 import { open, seal } from './envelope.ts';
 import { deriveKeys, type SyncKeys } from './keys.ts';
@@ -7,7 +7,8 @@ import { pushAll, type PushSource } from './push.ts';
 import { createRelayClient, type RelayClient, type RelayFailure } from './relayClient.ts';
 
 export interface SyncDeps {
-  db: LectorDb;
+  store: SyncStore;
+  app: SyncApp;
   fetch: typeof fetch;
   now: () => number;
   random: (n: number) => Uint8Array;
@@ -43,7 +44,8 @@ export type SyncReason = 'start' | 'visible' | 'online' | 'write' | 'manual';
 export interface SyncEngine {
   status(): SyncStatusView;
   turnOn(): Promise<Result<{ code: string; qr: string }, SyncError>>;
-  join(code: string): Promise<Result<{ duplicates: number }, SyncError>>;
+  /** An app that wants more from a join (lector: its duplicate count) reads it from its own store afterwards. */
+  join(code: string): Promise<Result<Record<string, never>, SyncError>>;
   leave(): void;
   /** A new space and code, every change pushed to it, then the old space deleted (research R7). */
   reset(): Promise<Result<{ code: string; qr: string }, SyncError>>;
@@ -69,7 +71,7 @@ interface Session {
 }
 
 export function createSyncEngine(deps: SyncDeps): SyncEngine {
-  const { db } = deps;
+  const { store, app } = deps;
   const sessions = new Map<string, Session>();
   let current: Promise<SyncRunResult> | null = null;
   let again: { pushOnly: boolean } | null = null;
@@ -88,15 +90,15 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
   async function sessionFor(key: string): Promise<Session> {
     let s = sessions.get(key);
     if (!s) {
-      const keys = await deriveKeys(fromB64url(key));
+      const keys = await deriveKeys(fromB64url(key), app.salt);
       s = { keys, client: createRelayClient(deps.fetch, keys.spaceId, keys.authToken, deps.online) };
       sessions.set(key, s);
     }
     return s;
   }
 
-  const currentStatus = (): SyncStatus => db.syncMeta().status ?? { lastOkAt: null, problem: null, undecryptable: 0 };
-  const setStatus = (patch: Partial<SyncStatus>): void => db.setSyncMeta({ status: { ...currentStatus(), ...patch } });
+  const currentStatus = (): SyncStatus => store.syncMeta().status ?? { lastOkAt: null, problem: null, undecryptable: 0 };
+  const setStatus = (patch: Partial<SyncStatus>): void => store.setSyncMeta({ status: { ...currentStatus(), ...patch } });
   const wallMs = (): number => deps.now();
 
   function problemOf(f: RelayFailure): SyncProblem {
@@ -121,8 +123,8 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
 
   /** Pull every page. Returns a failure, or null when caught up (or stopped at a newer version). */
   async function pull(s: Session, res: SyncRunResult): Promise<RelayFailure | null> {
-    const before = new Set(db.inboxOpIds());
-    let cursor = db.syncMeta().cursor;
+    const before = new Set(store.inboxOpIds());
+    let cursor = store.syncMeta().cursor;
     for (;;) {
       const page = await s.client.getBatches(cursor, PULL_LIMIT);
       if (!page.ok) return page;
@@ -131,7 +133,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
       let skipped = 0;
       let newer = false;
       for (const b of page.value.batches) {
-        const opened = await open(b, s.keys.encKey, s.keys.spaceId);
+        const opened = await open(b, s.keys.encKey, s.keys.spaceId, app.aadPrefix);
         if (!opened.ok) {
           if (opened.error === 'version') {
             newer = true;
@@ -144,7 +146,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
         const parsed: RemoteOp[] = [];
         let good = true;
         for (const w of opened.value.ops) {
-          const p = parseRemoteOp(w, opened.value.device);
+          const p = app.parseOp(w, opened.value.device);
           if (!p.ok) {
             good = false;
             break;
@@ -157,7 +159,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
         last = b.seq;
       }
       if (last !== cursor) {
-        const applied = db.applyPulledPage(ops, last, wallMs);
+        const applied = store.applyPulledPage(ops, last, wallMs);
         res.pulled += applied.applied;
         cursor = last;
       }
@@ -168,7 +170,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
       }
       if (!page.value.more) break;
     }
-    const now = new Set(db.inboxOpIds());
+    const now = new Set(store.inboxOpIds());
     stuck = new Set([...before].filter((id) => now.has(id)));
     return null;
   }
@@ -176,21 +178,21 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
   /** The push source over the local DB: the token is the change_log seq the batch reaches up to. */
   const source: PushSource<number> = {
     next: (limit, upTo) => {
-      const { maxSeq, ops } = db.unpushedOps(limit, upTo);
+      const { maxSeq, ops } = store.unpushedOps(limit, upTo);
       return { ops, token: maxSeq };
     },
-    complete: (token) => db.completePush(token),
+    complete: (token) => store.completePush(token),
     pending: () => {
-      const p = db.syncMeta().pendingBatch;
+      const p = store.syncMeta().pendingBatch;
       return p ? { batchId: p.batchId, token: p.maxSeq } : null;
     },
-    setPending: (p) => db.setSyncMeta({ pendingBatch: p ? { batchId: p.batchId, maxSeq: p.token } : null }),
+    setPending: (p) => store.setSyncMeta({ pendingBatch: p ? { batchId: p.batchId, maxSeq: p.token } : null }),
   };
 
   async function push(s: Session, res: SyncRunResult): Promise<RelayFailure | null> {
     const out = await pushAll(source, {
       client: s.client,
-      seal: (ops, batchId) => seal({ v: 1, device: db.getMeta('device_id') ?? '', ops }, s.keys.encKey, s.keys.spaceId, batchId),
+      seal: (ops, batchId) => seal({ v: 1, device: store.getMeta('device_id') ?? '', ops }, s.keys.encKey, s.keys.spaceId, batchId, app.aadPrefix),
       newBatchId: newUuid,
     });
     res.pushed += out.pushed;
@@ -199,19 +201,19 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
 
   /** After a reset: the old space is deleted only once the new one holds everything. A failure is retried on later runs. */
   async function deleteOldSpace(): Promise<void> {
-    const old = db.syncMeta().oldSpace;
+    const old = store.syncMeta().oldSpace;
     if (old === null) return;
     const r = await (await sessionFor(old)).client.deleteSpace();
     // Already gone counts as done.
     if (r.ok || r.kind === 'notFound' || r.kind === 'unauthorized') {
-      db.setSyncMeta({ oldSpace: null });
+      store.setSyncMeta({ oldSpace: null });
       sessions.delete(old);
     }
   }
 
   async function runOnce(pushOnly: boolean): Promise<SyncRunResult> {
     const res: SyncRunResult = { pulled: 0, pushed: 0, changed: false, problem: null, backoffMs: null };
-    const meta = db.syncMeta();
+    const meta = store.syncMeta();
     if (meta.key === null) return res;
     const stopped = meta.status?.problem;
     if (stopped && STOPPED.includes(stopped)) {
@@ -253,13 +255,13 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
   }
 
   function begin(secret: Uint8Array, oldSpace: string | null = null): void {
-    db.setSyncMeta({ key: b64url(secret), pendingBatch: null, status: null, oldSpace });
-    db.resetPushState();
+    store.setSyncMeta({ key: b64url(secret), pendingBatch: null, status: null, oldSpace });
+    store.resetPushState();
     failures = 0;
     stuck = new Set();
   }
 
-  const codeFor = (k: Uint8Array) => ({ code: formatSyncCode(k), qr: qrPayload(k) });
+  const codeFor = (k: Uint8Array) => ({ code: formatSyncCode(k), qr: qrPayload(k, app.qrPrefix) });
 
   function run(_reason: SyncReason, opts?: { pushOnly?: boolean }): Promise<SyncRunResult> {
     const pushOnly = opts?.pushOnly === true;
@@ -278,12 +280,12 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
   return {
     run,
     status() {
-      const meta = db.syncMeta();
-      const inbox = new Set(db.inboxOpIds());
+      const meta = store.syncMeta();
+      const inbox = new Set(store.inboxOpIds());
       return {
         on: meta.key !== null,
         lastOkAt: meta.status?.lastOkAt ?? null,
-        pending: db.pendingCount(),
+        pending: store.pendingCount(),
         problem: meta.status?.problem ?? null,
         undecryptable: meta.status?.undecryptable ?? 0,
         inboxStuck: [...stuck].filter((id) => inbox.has(id)).length,
@@ -292,7 +294,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
 
     async turnOn() {
       const secret = newSyncSecret(deps.random);
-      const keys = await deriveKeys(secret);
+      const keys = await deriveKeys(secret, app.salt);
       const client = createRelayClient(deps.fetch, keys.spaceId, keys.authToken, deps.online);
       const created = await client.createSpace();
       if (!created.ok) {
@@ -306,7 +308,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     async join(code) {
       const k = parseSyncCode(code);
       if (!k.ok) return err<SyncError>({ kind: k.error });
-      const keys = await deriveKeys(k.value);
+      const keys = await deriveKeys(k.value, app.salt);
       const client = createRelayClient(deps.fetch, keys.spaceId, keys.authToken, deps.online);
       const found = await client.spaceExists();
       if (!found.ok) {
@@ -316,21 +318,21 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
       }
       begin(k.value);
       await run('manual');
-      return ok({ duplicates: db.duplicates().length });
+      return ok({});
     },
 
     leave() {
       // Local rows stay. An owed DELETE of an old space is dropped with the rest: the code is forgotten.
-      db.setSyncMeta({ key: null, cursor: null, pendingBatch: null, status: null, oldSpace: null });
+      store.setSyncMeta({ key: null, cursor: null, pendingBatch: null, status: null, oldSpace: null });
       failures = 0;
       stuck = new Set();
     },
 
     async reset() {
-      const oldKey = db.syncMeta().key;
+      const oldKey = store.syncMeta().key;
       if (oldKey === null) return err<SyncError>({ kind: 'notFound' });
       const secret = newSyncSecret(deps.random);
-      const keys = await deriveKeys(secret);
+      const keys = await deriveKeys(secret, app.salt);
       const client = createRelayClient(deps.fetch, keys.spaceId, keys.authToken, deps.online);
       const created = await client.createSpace();
       if (!created.ok) {
@@ -345,7 +347,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     },
 
     showCode() {
-      const key = db.syncMeta().key;
+      const key = store.syncMeta().key;
       return key === null ? null : codeFor(fromB64url(key));
     },
   };

@@ -2,6 +2,7 @@
 import sqlite3InitModule, { type SAHPoolUtil, type Sqlite3Static } from '@sqlite.org/sqlite-wasm';
 import { LectorDb, type DispatchEnv, type DispatchOutcome } from '@especulati/lector-db';
 import { err, ok, parseLocalDate, tagKey, type Command, type Instant, type Rejection, type Result } from '@especulati/lector-core';
+import { lectorSyncApp } from '@especulati/lector-sync';
 import { createSyncEngine, type SyncEngine } from '@especulati/sync';
 import { itemTagId, reconcileAll } from '../lib/reconcile.ts';
 import { uuidFromHash } from '../lib/ids.ts';
@@ -90,7 +91,8 @@ function syncEngine(d: LectorDb): SyncEngine {
     engine = {
       db: d,
       engine: createSyncEngine({
-        db: d,
+        store: d.syncStore,
+        app: lectorSyncApp,
         fetch: (input, init) => fetch(input, init),
         now: () => Date.now(),
         random: (n) => crypto.getRandomValues(new Uint8Array(n)),
@@ -141,7 +143,8 @@ async function runSync(d: LectorDb, op: SyncOp): Promise<unknown> {
     case 'join': {
       const r = await e.join(op.code);
       await changed(r.ok);
-      return r;
+      // The duplicate count is lector's, not the engine's: the reply shape to the UI is unchanged.
+      return r.ok ? ok({ duplicates: d.duplicates().length }) : r;
     }
     case 'showCode':
       return e.showCode();

@@ -1,7 +1,3 @@
-import { SYNC_SALT } from './frozen.ts';
-
-const SALT = new TextEncoder().encode(SYNC_SALT);
-
 export interface SyncKeys {
   spaceId: string;
   authToken: string;
@@ -14,8 +10,9 @@ function b64url(bytes: Uint8Array): string {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** HKDF-SHA-256 of the sync secret into the three values of research R2. */
-export async function deriveKeys(k: Uint8Array): Promise<SyncKeys> {
+/** HKDF-SHA-256 of the sync secret into the three values of research R2. `salt` is the app's (`SyncApp.salt`). */
+export async function deriveKeys(k: Uint8Array, salt: string): Promise<SyncKeys> {
+  const SALT = new TextEncoder().encode(salt);
   const base = await crypto.subtle.importKey('raw', k.slice(), 'HKDF', false, ['deriveBits', 'deriveKey']);
   const bits = async (info: string, bytes: number) =>
     new Uint8Array(

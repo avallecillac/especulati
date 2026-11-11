@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatSyncCode } from '../src/code.ts';
+import { formatSyncCode, uuidFromHash } from '@especulati/sync';
 import { createCapturePeer, type CaptureStore } from '../src/capturePeer.ts';
-import { uuidFromHash } from '../src/ids.ts';
 import { fakeRelay, makePeer, prng, randomBytes, type FakeRelay, type Peer } from './harness.ts';
 
 const ORIGIN = 'https://readerlog.test';

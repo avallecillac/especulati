@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { deriveKeys } from '../src/keys.ts';
 import { seal, type Plain } from '../src/envelope.ts';
-import { fakeRelay, makePeer, uuid, type FakeRelay, type Peer } from './harness.ts';
+import { fakeRelay, makeToyPeer as makePeer, toyApp, uuid, type FakeRelay, type ToyPeer as Peer } from './toyHarness.ts';
 
 let itemN = 0;
-function addBook(p: Peer, title = 'Book'): string {
-  p.tick();
-  const id = uuid(0x500000 + ++itemN);
-  const r = p.db.dispatch({ kind: 'AddBook', itemId: id, title, startNow: false, localDate: '2026-09-01' }, p.env);
-  expect(r.ok).toBe(true);
-  return id;
+function addNote(p: Peer, body = 'Note'): string {
+  return p.addNote(body);
 }
-const titles = (p: Peer) => p.db.raw.selectValues('SELECT title FROM items ORDER BY id').map(String);
+const bodies = (p: Peer) => p.raw.selectValues('SELECT body FROM notes ORDER BY id').map(String);
 const gets = (r: FakeRelay) => r.log.filter((x) => x.method === 'GET' && x.path.includes('/batches')).length;
 const posts = (r: FakeRelay) => r.log.filter((x) => x.method === 'POST').length;
 
@@ -36,9 +32,9 @@ async function postRaw(relay: FakeRelay, host: Peer, plain: unknown, opts: { sea
   const { parseSyncCode } = await import('../src/code.ts');
   const k = parseSyncCode(code);
   if (!k.ok) throw new Error('code');
-  const keys = await deriveKeys(k.value);
+  const keys = await deriveKeys(k.value, toyApp.salt);
   const batchId = opts.postAs ?? uuid(0x900000 + ++itemN);
-  const env = await seal(plain as Plain, keys.encKey, keys.spaceId, opts.sealAs ?? batchId);
+  const env = await seal(plain as Plain, keys.encKey, keys.spaceId, opts.sealAs ?? batchId, toyApp.aadPrefix);
   const res = await relay.fetch(`/api/v1/spaces/${keys.spaceId}/batches`, {
     method: 'POST',
     headers: { authorization: `Bearer ${keys.authToken}`, 'content-type': 'application/json' },
@@ -49,16 +45,16 @@ async function postRaw(relay: FakeRelay, host: Peer, plain: unknown, opts: { sea
 const goodOp = (n: number, title: string) => ({
   op: uuid(0xa00000 + n),
   hlc: `${String(Date.UTC(2026, 8, 27, 13, 0, 0) + n).padStart(13, '0')}-0000-${uuid(0xfeed)}`,
-  tbl: 'items',
+  tbl: 'notes',
   row: uuid(0xb00000 + n),
-  fields: { type: 'book', title, created_at: '2026-09-01T10:00:00.000Z' },
+  fields: { body: title },
 });
 
 describe('engine: basics', () => {
   it('run() with sync off is a no-op', async () => {
     const relay = fakeRelay();
     const p = makePeer(1, relay);
-    addBook(p);
+    addNote(p);
     expect(await p.engine.run('manual')).toMatchObject({ pulled: 0, pushed: 0, changed: false });
     expect(relay.log).toEqual([]);
     expect(p.engine.status().on).toBe(false);
@@ -67,16 +63,16 @@ describe('engine: basics', () => {
   it('two devices converge through the relay; own batches pulled back are harmless', async () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
-    addBook(a, 'Dune');
+    addNote(a, 'Dune');
     const own = await a.engine.run('manual');
     expect(own.changed).toBe(false); // it pulled its own batch back: nothing new
     const b = await joinSpace(relay, a, 2);
-    expect(titles(b)).toEqual(['Dune']);
-    addBook(b, 'Emma');
+    expect(bodies(b)).toEqual(['Dune']);
+    addNote(b, 'Emma');
     expect((await b.engine.run('write')).pushed).toBeGreaterThan(0);
     const r = await a.engine.run('visible');
     expect(r.changed).toBe(true);
-    expect(titles(a).sort()).toEqual(['Dune', 'Emma']);
+    expect(bodies(a).sort()).toEqual(['Dune', 'Emma']);
     expect((await a.engine.run('visible')).changed).toBe(false);
     expect(a.engine.status()).toMatchObject({ on: true, pending: 0, problem: null });
   });
@@ -85,7 +81,7 @@ describe('engine: basics', () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
     for (let i = 0; i < 120; i++) {
-      addBook(a, `B${i}`);
+      addNote(a, `B${i}`);
       await a.engine.run('write');
     }
     const b = makePeer(2, relay);
@@ -96,27 +92,27 @@ describe('engine: basics', () => {
       'after=50&limit=50',
       'after=100&limit=50',
     ]);
-    expect(b.db.syncMeta().cursor).toBe(120 + 0);
-    expect(titles(b)).toHaveLength(120);
+    expect(b.store.syncMeta().cursor).toBe(120 + 0);
+    expect(bodies(b)).toHaveLength(120);
   });
 
   it('pushes at most 500 ops per batch, persisting pending_batch before the POST and clearing it after', async () => {
     const relay = fakeRelay();
     const a = makePeer(1, relay);
-    for (let i = 0; i < 1100; i++) addBook(a, `B${i}`);
+    for (let i = 0; i < 1100; i++) addNote(a, `B${i}`);
     const seen: { pending: unknown; matches: boolean }[] = [];
     relay.before = ({ method, body }) => {
       if (method !== 'POST') return;
-      const pending = a.db.syncMeta().pendingBatch;
+      const pending = a.store.syncMeta().pendingBatch;
       seen.push({ pending, matches: pending?.batchId === (JSON.parse(body!) as { batchId: string }).batchId });
     };
     expect((await a.engine.turnOn()).ok).toBe(true);
     expect(posts(relay)).toBe(3);
     expect(seen.every((s) => s.pending !== null && s.matches)).toBe(true);
-    expect(a.db.syncMeta().pendingBatch).toBeNull();
-    expect(a.db.pendingCount()).toBe(0);
+    expect(a.store.syncMeta().pendingBatch).toBeNull();
+    expect(a.store.pendingCount()).toBe(0);
     const b = await joinSpace(relay, a, 2);
-    expect(titles(b)).toHaveLength(1100);
+    expect(bodies(b)).toHaveLength(1100);
   });
 });
 
@@ -125,7 +121,7 @@ describe('engine: crash and concurrency', () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
     const b = await joinSpace(relay, a, 2);
-    addBook(a, 'Dune');
+    addNote(a, 'Dune');
     let crashed = false;
     relay.after = ({ method }) => {
       if (method === 'POST' && !crashed) {
@@ -135,7 +131,7 @@ describe('engine: crash and concurrency', () => {
     };
     const r1 = await a.engine.run('write');
     expect(r1.problem).toBe('offline');
-    const pending = a.db.syncMeta().pendingBatch;
+    const pending = a.store.syncMeta().pendingBatch;
     expect(pending).not.toBeNull();
     const sent: string[] = [];
     relay.before = ({ method, body }) => {
@@ -144,14 +140,14 @@ describe('engine: crash and concurrency', () => {
     const r2 = await a.engine.run('write');
     expect(sent).toEqual([pending!.batchId]);
     expect(r2.problem ?? null).toBeNull();
-    expect(a.db.syncMeta().pendingBatch).toBeNull();
-    expect(a.db.pendingCount()).toBe(0);
+    expect(a.store.syncMeta().pendingBatch).toBeNull();
+    expect(a.store.pendingCount()).toBe(0);
     // The relay holds the batch exactly once.
     const stored = relay.store.dumpAll().split('\n').filter((l) => l.includes('"batch_id"'));
     expect(stored.filter((l) => l.includes(pending!.batchId))).toHaveLength(1);
     await b.engine.run('visible');
-    expect(titles(b)).toEqual(['Dune']);
-    expect(b.db.raw.selectValue('SELECT COUNT(*) FROM items')).toBe(1);
+    expect(bodies(b)).toEqual(['Dune']);
+    expect(b.raw.selectValue('SELECT COUNT(*) FROM notes')).toBe(1);
   });
 
   it('one run at a time; a run() during a run sets run-again and runs once more', async () => {
@@ -182,25 +178,25 @@ describe('engine: errors', () => {
   it('offline: problem offline, nothing changed, and no request when online() is false', async () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
-    addBook(a, 'Dune');
+    addNote(a, 'Dune');
     a.online = false;
     relay.log.length = 0;
-    const before = a.db.pendingCount();
+    const before = a.store.pendingCount();
     const r = await a.engine.run('online');
     expect(r).toMatchObject({ pulled: 0, pushed: 0, changed: false, problem: 'offline' });
     expect(relay.log).toEqual([]);
-    expect(a.db.pendingCount()).toBe(before);
+    expect(a.store.pendingCount()).toBe(before);
     expect(a.engine.status().problem).toBe('offline');
     a.online = true;
     relay.before = () => {
       throw new TypeError('Failed to fetch');
     };
     expect((await a.engine.run('online')).problem).toBe('offline');
-    expect(a.db.pendingCount()).toBe(before);
+    expect(a.store.pendingCount()).toBe(before);
     relay.before = undefined;
     expect((await a.engine.run('online')).problem ?? null).toBeNull();
     expect(a.engine.status().problem).toBeNull();
-    expect(a.db.pendingCount()).toBe(0);
+    expect(a.store.pendingCount()).toBe(0);
   });
 
   it.each([
@@ -215,7 +211,7 @@ describe('engine: errors', () => {
     expect(r.backoffMs ?? null).toBeNull();
     relay.before = undefined;
     relay.log.length = 0;
-    addBook(a);
+    addNote(a);
     expect((await a.engine.run('write')).problem).toBe(problem);
     expect(relay.log).toEqual([]); // stopped
     expect(a.engine.status().problem).toBe(problem);
@@ -235,9 +231,9 @@ describe('engine: errors', () => {
     await postRaw(relay, a, { v: 1, device: uuid(0xfeed), ops: [goodOp(5, 'Five')] });
     const r = await b.engine.run('visible');
     expect(r.problem ?? null).toBeNull();
-    expect(titles(b).sort()).toEqual(['Five', 'One']);
+    expect(bodies(b).sort()).toEqual(['Five', 'One']);
     expect(b.engine.status().undecryptable).toBe(2);
-    expect(b.db.syncMeta().cursor).toBe(4);
+    expect(b.store.syncMeta().cursor).toBe(4);
     // Nothing is retried.
     relay.log.length = 0;
     await b.engine.run('visible');
@@ -253,16 +249,16 @@ describe('engine: errors', () => {
     await postRaw(relay, a, { v: 1, device: uuid(0xfeed), ops: [goodOp(2, 'Two')] });
     const r = await b.engine.run('visible');
     expect(r.problem).toBe('newerVersion');
-    expect(titles(b)).toEqual(['One']);
-    expect(b.db.syncMeta().cursor).toBe(1);
+    expect(bodies(b)).toEqual(['One']);
+    expect(b.store.syncMeta().cursor).toBe(1);
     expect(b.engine.status().problem).toBe('newerVersion');
   });
 
   it("relay 5xx and timeouts give 'relay' with 30 s, 2 min, 10 min backoff, changing nothing", async () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
-    addBook(a);
-    const pending = a.db.pendingCount();
+    addNote(a);
+    const pending = a.store.pendingCount();
     relay.before = () => new Response('{"error":"x"}', { status: 503 });
     const delays: (number | null | undefined)[] = [];
     for (let i = 0; i < 5; i++) {
@@ -271,7 +267,7 @@ describe('engine: errors', () => {
       delays.push(r.backoffMs);
     }
     expect(delays).toEqual([30_000, 120_000, 600_000, 600_000, 600_000]);
-    expect(a.db.pendingCount()).toBe(pending);
+    expect(a.store.pendingCount()).toBe(pending);
     relay.before = () => {
       throw Object.assign(new Error('timed out'), { name: 'TimeoutError' });
     };
@@ -290,7 +286,7 @@ describe('engine: push only, stuck inbox', () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
     const b = await joinSpace(relay, a, 2);
-    addBook(b, 'Captured');
+    addNote(b, 'Captured');
     relay.log.length = 0;
     const r = await b.engine.run('write', { pushOnly: true });
     expect(r.pushed).toBeGreaterThan(0);
@@ -298,7 +294,7 @@ describe('engine: push only, stuck inbox', () => {
     expect(gets(relay)).toBe(0);
     expect(posts(relay)).toBe(1);
     await a.engine.run('manual');
-    expect(titles(a)).toEqual(['Captured']);
+    expect(bodies(a)).toEqual(['Captured']);
   });
 
   it('inboxStuck counts inbox rows that survived one full pull', async () => {
@@ -308,13 +304,13 @@ describe('engine: push only, stuck inbox', () => {
     const orphan = {
       op: uuid(0xc00001),
       hlc: `${String(Date.UTC(2026, 8, 27, 13, 0, 0)).padStart(13, '0')}-0000-${uuid(0xfeed)}`,
-      tbl: 'reading_events',
+      tbl: 'marks',
       row: uuid(0xc00002),
-      fields: { item_id: uuid(0xdead), event_type: 'started', occurred_at: '2026-09-01T10:00:00.000Z', local_date: '2026-09-01' },
+      fields: { note_id: uuid(0xdead), label: 'orphan' },
     };
     await postRaw(relay, a, { v: 1, device: uuid(0xfeed), ops: [orphan] });
     await b.engine.run('visible');
-    expect(b.db.raw.selectValue('SELECT COUNT(*) FROM sync_inbox')).toBe(1);
+    expect(b.raw.selectValue('SELECT COUNT(*) FROM sync_inbox')).toBe(1);
     expect(b.engine.status().inboxStuck).toBe(0); // it arrived in this very pull
     await b.engine.run('visible');
     expect(b.engine.status().inboxStuck).toBe(1); // a whole pull later, its item still never came
@@ -359,13 +355,13 @@ describe('engine: turnOn / join errors (US1)', () => {
   it('notFound: a valid code for an unknown space (404) changes nothing locally', async () => {
     const relay = fakeRelay();
     const b = makePeer(2, relay);
-    addBook(b, 'Mine');
-    const before = b.db.pendingCount();
+    addNote(b, 'Mine');
+    const before = b.store.pendingCount();
     expect(await b.engine.join(await unknownCode())).toMatchObject({ ok: false, error: { kind: 'notFound' } });
     expect(b.engine.status().on).toBe(false);
     expect(b.engine.showCode()).toBeNull();
-    expect(b.db.pendingCount()).toBe(before);
-    expect(titles(b)).toEqual(['Mine']);
+    expect(b.store.pendingCount()).toBe(before);
+    expect(bodies(b)).toEqual(['Mine']);
   });
 
   it('offline: join and turnOn report offline and change nothing', async () => {
@@ -404,48 +400,35 @@ describe('engine: turnOn / join errors (US1)', () => {
     expect(JSON.stringify(r)).not.toContain(code.replace(/-/g, '').slice(0, 8));
   });
 
-  it('join returns duplicates: 0 and pulls the host books; showCode matches turnOn', async () => {
+  it('join returns an empty ok and pulls the host notes; showCode matches turnOn', async () => {
     const relay = fakeRelay();
     const a = makePeer(1, relay);
-    addBook(a, 'Dune');
+    addNote(a, 'Dune');
     const on = await a.engine.turnOn();
     expect(on.ok && on.value.code).toBe(a.engine.showCode()!.code);
     const b = makePeer(2, relay);
     const r = await b.engine.join(a.engine.showCode()!.code);
-    expect(r).toMatchObject({ ok: true, value: { duplicates: 0 } });
-    expect(titles(b)).toEqual(['Dune']);
-  });
-
-  it('join returns the number of duplicate pairs after the merge of both logs (US5)', async () => {
-    const relay = fakeRelay();
-    const a = makePeer(1, relay);
-    const b = makePeer(2, relay);
-    for (const [p, n] of [[a, 0x610001], [b, 0x610002]] as const) {
-      p.tick();
-      expect(p.db.dispatch({ kind: 'AddBook', itemId: uuid(n), title: 'Dune', isbn: '9780306406157', startNow: false, localDate: '2026-09-01' }, p.env).ok).toBe(true);
-    }
-    await a.engine.turnOn();
-    const r = await b.engine.join(a.engine.showCode()!.code);
-    expect(r).toMatchObject({ ok: true, value: { duplicates: 1 } });
+    expect(r).toEqual({ ok: true, value: {} });
+    expect(bodies(b)).toEqual(['Dune']);
   });
 });
 
 describe('engine: leave and reset (US4)', () => {
   const metaKeys = (p: Peer) =>
-    p.db.raw.selectValues(`SELECT key FROM meta WHERE key IN ('sync_key','sync_cursor','pending_batch','sync_status')`).map(String).sort();
+    p.raw.selectValues(`SELECT key FROM meta WHERE key IN ('sync_key','sync_cursor','pending_batch','sync_status')`).map(String).sort();
 
   it('leave() removes the sync meta and keeps every row; the device stops calling the relay', async () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
-    addBook(a, 'Dune');
+    addNote(a, 'Dune');
     await a.engine.run('write');
     expect(metaKeys(a)).toContain('sync_key');
-    const changes = a.db.raw.selectValue('SELECT COUNT(*) FROM change_log');
+    const changes = a.raw.selectValue('SELECT COUNT(*) FROM change_log');
     a.engine.leave();
     expect(metaKeys(a)).toEqual([]);
     expect(a.engine.status()).toMatchObject({ on: false, lastOkAt: null, problem: null });
-    expect(titles(a)).toEqual(['Dune']);
-    expect(a.db.raw.selectValue('SELECT COUNT(*) FROM change_log')).toBe(changes);
+    expect(bodies(a)).toEqual(['Dune']);
+    expect(a.raw.selectValue('SELECT COUNT(*) FROM change_log')).toBe(changes);
     relay.log.length = 0;
     await a.engine.run('manual');
     expect(relay.log).toEqual([]);
@@ -455,8 +438,8 @@ describe('engine: leave and reset (US4)', () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
     const b = await joinSpace(relay, a, 2);
-    addBook(a, 'Dune');
-    addBook(b, 'Emma');
+    addNote(a, 'Dune');
+    addNote(b, 'Emma');
     await b.engine.run('write');
     await a.engine.run('visible'); // a now holds a received row too
     const oldCode = a.engine.showCode()!.code;
@@ -470,11 +453,11 @@ describe('engine: leave and reset (US4)', () => {
     const kinds = relay.log.map((x) => x.method);
     expect(kinds[0]).toBe('PUT');
     expect(kinds.lastIndexOf('POST')).toBeLessThan(kinds.indexOf('DELETE'));
-    expect(a.db.syncMeta().oldSpace).toBeNull();
-    expect(a.db.pendingCount()).toBe(0);
+    expect(a.store.syncMeta().oldSpace).toBeNull();
+    expect(a.store.pendingCount()).toBe(0);
     // A third device joining with the new code gets the union.
     const c = await joinSpace(relay, a, 3);
-    expect(titles(c).sort()).toEqual(['Dune', 'Emma']);
+    expect(bodies(c).sort()).toEqual(['Dune', 'Emma']);
   });
 
   it('a failed DELETE keeps sync_old_space and the next run() retries it', async () => {
@@ -483,12 +466,12 @@ describe('engine: leave and reset (US4)', () => {
     relay.before = (req) => (req.method === 'DELETE' ? new Response('{"error":"x"}', { status: 503 }) : undefined);
     const r = await a.engine.reset();
     expect(r.ok).toBe(true);
-    expect(a.db.syncMeta().oldSpace).not.toBeNull();
+    expect(a.store.syncMeta().oldSpace).not.toBeNull();
     relay.before = undefined;
     relay.log.length = 0;
     await a.engine.run('manual');
     expect(relay.log.some((x) => x.method === 'DELETE')).toBe(true);
-    expect(a.db.syncMeta().oldSpace).toBeNull();
+    expect(a.store.syncMeta().oldSpace).toBeNull();
     relay.log.length = 0;
     await a.engine.run('manual');
     expect(relay.log.some((x) => x.method === 'DELETE')).toBe(false);
@@ -498,14 +481,14 @@ describe('engine: leave and reset (US4)', () => {
     const relay = fakeRelay();
     const a = await startSpace(relay);
     const b = await joinSpace(relay, a, 2);
-    addBook(a, 'Dune');
+    addNote(a, 'Dune');
     await a.engine.run('write');
     await b.engine.run('visible');
-    addBook(b, 'Emma'); // local only: b never pushes it to the old space
+    addNote(b, 'Emma'); // local only: b never pushes it to the old space
     await a.engine.reset();
     const gone = await b.engine.run('manual');
     expect(gone.problem).toBe('spaceGone');
-    expect(titles(b).sort()).toEqual(['Dune', 'Emma']);
+    expect(bodies(b).sort()).toEqual(['Dune', 'Emma']);
     // The old space really is gone: the old code no longer joins.
     const stale = makePeer(9, relay);
     expect(await stale.engine.join(b.engine.showCode()!.code)).toMatchObject({ ok: false, error: { kind: 'notFound' } });
@@ -513,7 +496,7 @@ describe('engine: leave and reset (US4)', () => {
     expect((await b.engine.join(a.engine.showCode()!.code)).ok).toBe(true);
     expect(b.engine.status().problem).toBeNull();
     await a.engine.run('visible');
-    expect(titles(a).sort()).toEqual(['Dune', 'Emma']);
-    expect(titles(b).sort()).toEqual(['Dune', 'Emma']);
+    expect(bodies(a).sort()).toEqual(['Dune', 'Emma']);
+    expect(bodies(b).sort()).toEqual(['Dune', 'Emma']);
   });
 });
