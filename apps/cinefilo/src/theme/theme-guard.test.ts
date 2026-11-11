@@ -31,10 +31,18 @@ describe('no literal colours outside src/theme', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the theme defines the tokens screens rely on', () => {
-    const css = readFileSync(join(SRC, 'theme', 'screening-room.css'), 'utf8');
-    for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'accent', 'on-accent', 'danger', 'like', 'meh', 'dislike', 'backdrop']) {
-      expect(css).toContain(`--${t}:`);
+  it('the theme files define the tokens screens rely on', () => {
+    for (const id of ['beton', 'willis']) {
+      const css = readFileSync(join(SRC, 'theme', `${id}.css`), 'utf8');
+      for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'accent', 'on-accent', 'danger', 'like', 'meh', 'dislike', 'backdrop', 'font-title', 'font-label']) {
+        expect(css).toContain(`--${t}:`);
+      }
     }
+  });
+
+  it('screening-room.css is gone and --font-display is not used', () => {
+    expect(readdirSync(join(SRC, 'theme'))).not.toContain('screening-room.css');
+    const offenders = walk(SRC).filter((f) => /\.(svelte|css|ts)$/.test(f) && !f.endsWith('.test.ts') && readFileSync(f, 'utf8').includes('var(--font-display)'));
+    expect(offenders).toEqual([]);
   });
 });

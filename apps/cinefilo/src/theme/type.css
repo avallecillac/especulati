@@ -1,0 +1,20 @@
+/* Per-theme typography that tokens alone don't carry (sizes, tracking, caps). Tokens only, no colours.
+   Béton: Archivo 800 capitals, Plex Mono labels. Willis: Italiana capitals, Caslon reviews, Inter labels. */
+:root[data-theme='beton'] h1 { font-size: 2.35rem; font-weight: 800; letter-spacing: -0.04em; line-height: 0.9; text-transform: uppercase; }
+:root[data-theme='beton'] h2 { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; text-transform: uppercase; }
+:root[data-theme='beton'] .name { font-weight: 800; letter-spacing: -0.02em; font-size: 1.1rem; }
+:root[data-theme='beton'] body { font-weight: 500; }
+:root[data-theme='beton'] .small,
+:root[data-theme='beton'] .tabbar a { font-size: 0.7rem; letter-spacing: 0.03em; text-transform: uppercase; }
+:root[data-theme='beton'] .tabbar a[aria-current='page'] { color: var(--ink); font-weight: 500; border-bottom: 3px solid var(--accent); }
+:root[data-theme='beton'] .row { border-bottom: 1px solid var(--hairline); background: none; padding-left: 0; padding-right: 0; }
+
+:root[data-theme='willis'] { font-family: var(--font-label); }
+:root[data-theme='willis'] h1 { font-size: 2rem; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
+:root[data-theme='willis'] h2 { font-size: 1.3rem; font-weight: 400; letter-spacing: 0.09em; text-transform: uppercase; }
+:root[data-theme='willis'] h3 { font-family: var(--font-label); }
+:root[data-theme='willis'] .name { font-family: var(--font-title); font-weight: 400; font-size: 1.4rem; letter-spacing: 0.09em; text-transform: uppercase; line-height: 1.1; }
+:root[data-theme='willis'] .small { font-size: 0.75rem; letter-spacing: 0.02em; }
+:root[data-theme='willis'] .tabbar a { font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; }
+:root[data-theme='willis'] .tabbar a[aria-current='page'] { font-weight: 400; }
+:root[data-theme='willis'] button.primary { font-weight: 500; }

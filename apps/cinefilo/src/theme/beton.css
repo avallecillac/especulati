@@ -1,0 +1,29 @@
+/* Béton: raw concrete, ink, one rust accent, square corners and heavy rules (design D1). */
+:root[data-theme='beton'] {
+  color-scheme: light;
+  --bg: #d5d1c8;
+  --surface: #bdb8ae;
+  --surface-2: #c9c5bc;
+  --ink: #161615;
+  /* The token sheet's #5E5B55 is 4.44:1 on --bg; this is the nearest value that passes AA (4.66:1). */
+  --ink-soft: #5b5851;
+  --rule: #161615;
+  --hairline: #a8a399;
+  --accent: #9c3d24;
+  --on-accent: #f2efe8;
+  --both-loved: #9c3d24;
+  --danger: #8a2c1c;
+  --like: #1f5f2e;
+  --meh: #6f5400;
+  --dislike: #8a2c1c;
+  --bar: rgb(213 209 200 / 0.94);
+  --backdrop: rgb(22 22 21 / 0.5);
+  --font-title: 'Archivo', ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-text: 'Archivo', ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-label: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --radius: 0;
+  --radius-sheet: 0;
+  --radius-pill: 0;
+  --rule-width: 2px;
+  --poster-filter: grayscale(1) contrast(1.1);
+}

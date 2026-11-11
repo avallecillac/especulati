@@ -1,0 +1,28 @@
+/* Willis: near-black, warm tungsten text, brass accent, an orange dot for "both loved" (design D1). */
+:root[data-theme='willis'] {
+  color-scheme: dark;
+  --bg: #0d0b09;
+  --surface: #17130f;
+  --surface-2: #211b16;
+  --ink: #eadfc8;
+  --ink-soft: #a39478;
+  --rule: #3a3127;
+  --hairline: #2a231c;
+  --accent: #d4a253;
+  --on-accent: #0d0b09;
+  --both-loved: #d9762b;
+  --danger: #e8806a;
+  --like: #7ed08a;
+  --meh: #e3b85c;
+  --dislike: #e8806a;
+  --bar: rgb(13 11 9 / 0.92);
+  --backdrop: rgb(0 0 0 / 0.6);
+  --font-title: 'Italiana', 'Iowan Old Style', Georgia, serif;
+  --font-text: 'Libre Caslon Display', 'Iowan Old Style', Georgia, serif;
+  --font-label: 'Inter', ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --radius: 4px;
+  --radius-sheet: 16px;
+  --radius-pill: 26px;
+  --rule-width: 1px;
+  --poster-filter: sepia(0.6) brightness(0.55);
+}

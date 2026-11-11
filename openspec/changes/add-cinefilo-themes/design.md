@@ -19,9 +19,10 @@ One file per theme, `apps/cinefilo/src/theme/<id>.css`, holding exactly one `:ro
 | `--surface` | `#BDB8AE` | `#17130F` |
 | `--surface-2` | `#C9C5BC` | `#211B16` |
 | `--ink` | `#161615` | `#EADFC8` |
-| `--ink-soft` | `#5E5B55` | `#A39478` |
+| `--ink-soft` | `#5B5851` (4.66:1) | `#A39478` |
 | `--rule` | `#161615` | `#3A3127` |
 | `--hairline` | `#A8A399` | `#2A231C` |
+| `--control-border` | `#161615` | `#7A6A55` (≥ 3:1, borders of buttons and inputs) |
 | `--accent` | `#9C3D24` | `#D4A253` |
 | `--on-accent` | `#F2EFE8` | `#0D0B09` |
 | `--both-loved` | `#9C3D24` | `#D9762B` |
@@ -33,7 +34,7 @@ One file per theme, `apps/cinefilo/src/theme/<id>.css`, holding exactly one `:ro
 | `--rule-width` | 2px | 1px |
 | `--poster-filter` | `grayscale(1) contrast(1.1)` | `sepia(0.6) brightness(0.55)` |
 
-`--font-display` is replaced by `--font-title`. Reviews use `--font-text`; buttons and labels use `--font-label`. Contrast pairs tested: ink/bg, ink-soft/bg, ink/surface, on-accent/accent, accent/bg (as large text), rule/bg (3:1).
+`--font-display` is replaced by `--font-title`. Reviews use `--font-text`; buttons and labels use `--font-label`. Contrast pairs tested: ink/bg, ink-soft/bg, ink/surface, on-accent/accent, accent/bg (as large text), control-border/bg (3:1). `--rule` and `--hairline` are decorative separators and exempt. `--bar` and `--backdrop` join the contract (app.css uses them).
 
 ### D2. Registry, Automatic and pre-paint
 `theme/themes.ts` lists `{ id, name, scheme, themeColor }` for `beton` (light) and `willis` (dark); `resolveTheme(pref, systemDark)` maps `automatic` → beton/willis. The preference lives in `localStorage['cinefilo.appearance']` (`automatic` | theme id; a new frozen identifier, pinned in `src/frozen-ids.test.ts`). A small inline pre-paint script in `index.html` sets `data-theme` and `<meta name="theme-color">` before any module loads; a test runs it against the registry (lector's `prepaint.test.ts` pattern). Automatic listens to `matchMedia('(prefers-color-scheme: dark)')`. The manifest's colours use Willis. `screening-room.css` is deleted.

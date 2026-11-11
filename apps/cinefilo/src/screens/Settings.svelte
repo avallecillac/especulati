@@ -7,6 +7,9 @@
   import { localDate } from '../lib/clock.ts';
   import { saveTmdbKey, tmdb } from '../lib/tmdb.svelte.ts';
   import TmdbLogo from './TmdbLogo.svelte';
+  import { appearance, setAppearance } from '../lib/appearance.svelte.ts';
+  import { covers, setCovers, type CoversMode } from '../lib/covers.svelte.ts';
+  import { THEMES, type Appearance } from '../theme/themes.ts';
 
   let shown = $state<{ code: string; svg: string } | null>(null);
   let error = $state<string | null>(null);
@@ -16,6 +19,19 @@
   let keyDraft = $state('');
 
   const status = $derived(app.sync);
+
+  const appearanceChoices: { id: Appearance; name: string }[] = [{ id: 'automatic', name: 'Automatic' }, ...THEMES.map((t) => ({ id: t.id, name: t.name }))];
+  const coverChoices: { id: CoversMode; name: string }[] = [{ id: 'generated', name: 'Generated' }, { id: 'posters', name: 'TMDB posters' }];
+
+  // Radio groups: arrow keys move the choice and the focus together.
+  function onRadioKey(e: KeyboardEvent, ids: string[], i: number, pick: (id: string) => void) {
+    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+    if (step === 0) return;
+    e.preventDefault();
+    const next = ids[(i + step + ids.length) % ids.length]!;
+    pick(next);
+    (e.currentTarget as HTMLElement).parentElement?.querySelector<HTMLElement>(`[data-choice="${next}"]`)?.focus();
+  }
 
   async function reveal(c: CodeView) {
     shown = { code: c.code, svg: await qrSvg(c.qr) };
@@ -110,6 +126,26 @@
 </script>
 
 <header class="bar"><h1>Settings</h1></header>
+
+<section class="card" aria-labelledby="appearance-h">
+  <h2 id="appearance-h">Appearance</h2>
+  <p class="muted small">Saved on this device only. Automatic follows the device: Béton in light mode, Willis in dark.</p>
+  <div class="seg choice" role="radiogroup" aria-label="Appearance">
+    {#each appearanceChoices as c, i (c.id)}
+      {@const on = appearance.value === c.id}
+      <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => setAppearance(c.id)}
+        onkeydown={(e) => onRadioKey(e, appearanceChoices.map((x) => x.id), i, setAppearance)}>{c.name}</button>
+    {/each}
+  </div>
+  <h3 class="covers-h" id="covers-h">Covers</h3>
+  <div class="seg choice" role="radiogroup" aria-labelledby="covers-h">
+    {#each coverChoices as c, i (c.id)}
+      {@const on = covers.mode === c.id}
+      <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => setCovers(c.id)}
+        onkeydown={(e) => onRadioKey(e, coverChoices.map((x) => x.id), i, (id) => setCovers(id as CoversMode))}>{c.name}</button>
+    {/each}
+  </div>
+</section>
 
 <section class="card" aria-labelledby="who-h">
   <h2 id="who-h">Members</h2>

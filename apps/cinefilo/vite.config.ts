@@ -14,7 +14,7 @@ export default defineConfig({
       strategies: 'generateSW',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,wasm,svg,png,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,wasm,svg,png,webmanifest}', 'fonts/*-latin-wght-*.woff2', 'fonts/*-latin-[0-9]*-normal.woff2'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api\//],
@@ -26,8 +26,8 @@ export default defineConfig({
         start_url: './#/',
         scope: './',
         display: 'standalone',
-        background_color: '#14121a',
-        theme_color: '#14121a',
+        background_color: '#0d0b09',
+        theme_color: '#0d0b09',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
