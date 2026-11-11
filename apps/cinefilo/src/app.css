@@ -137,3 +137,7 @@ code { word-break: break-all; }
 .tile .badge.reviewed { right: 4px; top: 4px; padding: 2px 4px; }
 .bar { flex-wrap: wrap; gap: 8px; }
 .bar-actions { margin-left: auto; }
+
+/* New-version bar (lib/pwa.svelte.ts): pinned on top, tokens only. */
+.update-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--surface-2); color: var(--ink); border-bottom: var(--rule-width) solid var(--rule); }
+.update-bar button { min-height: 44px; }

@@ -8,6 +8,7 @@
   import TitleScreen from './screens/TitleScreen.svelte';
   import Settings from './screens/Settings.svelte';
   import AddSheet from './screens/AddSheet.svelte';
+  import { applyUpdate, pwa } from './lib/pwa.svelte.ts';
 
   const TABS = [
     { label: 'Watch later', href: '#/later', tab: 'later' },
@@ -32,6 +33,13 @@
 
 {#if app.ready}
   <span data-testid="ready" hidden></span>
+{/if}
+
+{#if pwa.needRefresh}
+  <div class="update-bar" role="status">
+    <span>A new version of Cinéfilo is ready.</span>
+    <button type="button" class="primary" onclick={applyUpdate}>Update</button>
+  </div>
 {/if}
 
 {#if !app.ready}
