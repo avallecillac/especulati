@@ -2,11 +2,19 @@
 module.exports = {
   forbidden: [
     {
+      name: 'sync-core-is-pure',
+      comment: 'packages/sync-core may only import itself — no npm modules, no other workspace packages, no node builtins.',
+      severity: 'error',
+      from: { path: '^packages/sync-core/src' },
+      to: { pathNot: '^packages/sync-core/src' },
+    },
+    {
       name: 'core-is-pure',
-      comment: 'packages/lector-core may only import itself — no npm modules, no other workspace packages, no node builtins.',
+      comment: 'packages/lector-core may only import itself and the pure packages/sync-core — no npm modules, no node builtins.',
       severity: 'error',
       from: { path: '^packages/lector-core/src' },
-      to: { pathNot: '^packages/lector-core/src' },
+      // Workspace packages are bare specifiers that depcruise leaves unresolved, so match the name too.
+      to: { pathNot: '^(packages/(lector-core|sync-core)/src|@especulati/sync-core$)' },
     },
     {
       name: 'db-no-ui',

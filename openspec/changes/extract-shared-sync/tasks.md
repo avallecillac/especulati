@@ -6,31 +6,31 @@ each group is one bisectable commit.
 
 ## 1. Pin today's behaviour (tests only, no moves yet)
 
-- [ ] 1.1 Add golden-vector tests in `packages/sync/test/golden.test.ts`. For a fixed
+- [x] 1.1 Add golden-vector tests in `packages/sync/test/golden.test.ts`. For a fixed
   32-byte secret they pin `deriveKeys` → `spaceId`, `authToken`; `seal` with a fixed IV and
   batch id → the exact `ct`; `formatSyncCode` / `qrPayload` → the exact strings. Values are
   recorded from the current code. Verify that `pnpm test --project sync golden` passes on
   the unmodified code.
-- [ ] 1.2 Add a schema snapshot test in `packages/lector-db/test/bookkeeping.snapshot.test.ts`.
+- [x] 1.2 Add a schema snapshot test in `packages/lector-db/test/bookkeeping.snapshot.test.ts`.
   It records `pragma_table_info` and `pragma_index_list` for `field_clock`, `change_log`,
   `meta` and `sync_inbox` after `migrate()`. Verify that it passes.
 
 ## 2. `packages/sync-core` (pure)
 
-- [ ] 2.1 Scaffold the `@especulati/sync-core` package (package.json, tsconfig without the
+- [x] 2.1 Scaffold the `@especulati/sync-core` package (package.json, tsconfig without the
   DOM lib), a `sync-core` vitest project, and the `sync-core-is-pure` dependency-cruiser
   rule. Verify with `pnpm lint` and `pnpm typecheck`.
-- [ ] 2.2 `git mv` `hlc.ts`, `result.ts` and the generic id/parse helpers (`DeviceId`,
+- [x] 2.2 `git mv` `hlc.ts`, `result.ts` and the generic id/parse helpers (`DeviceId`,
   `parseDeviceId`, `UUID_PATTERN`, `ParseError`) with their tests from `lector-core` to
   `sync-core`. In `lector-core/src/index.ts`, add an explicit re-export block. Allow
   `lector-core` → `sync-core` in the purity rule. Verify that the moved tests and every
   `lector-core` test pass.
-- [ ] 2.3 Test first: write `parseRemoteOpWith` tests on a toy schema (unknown table,
+- [x] 2.3 Test first: write `parseRemoteOpWith` tests on a toy schema (unknown table,
   non-writable field, bad uuid, HLC over the cap, non-scalar value, device taken from the
   HLC). Then add `SyncSchema`, `parseRemoteOpWith`, `mergeOp`, `stampOps`, the
   `OpWire`/`RemoteOp` types and the `SyncStore` interface to `sync-core`. Verify that the
   new tests pass.
-- [ ] 2.4 Define `lectorSchema` in `lector-core/src/merge.ts` from the existing constants.
+- [x] 2.4 Define `lectorSchema` in `lector-core/src/merge.ts` from the existing constants.
   Re-implement `parseRemoteOp = parseRemoteOpWith(lectorSchema)` and keep the
   `WRITABLE_FIELDS` / `INSERT_FIELDS` / `tierOf` exports. Verify that
   `merge.test.ts`, `merge.property.test.ts` and `ops.test.ts` pass unchanged.

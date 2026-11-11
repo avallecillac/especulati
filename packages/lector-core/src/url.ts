@@ -1,5 +1,4 @@
-import { err, ok, type Result } from './result.ts';
-import type { Brand, ParseError } from './types.ts';
+import { err, ok, type Brand, type ParseError, type Result } from '@especulati/sync-core';
 
 /** An http(s) address in the canonical form `normalizeUrl` produces (005 R6). */
 export type NormalizedUrl = Brand<string, 'NormalizedUrl'>;

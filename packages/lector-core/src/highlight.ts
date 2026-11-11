@@ -1,6 +1,5 @@
-import { err, ok, type Result } from './result.ts';
-import type { Brand, Instant, ItemId, LocalDate } from './types.ts';
-import { UUID_PATTERN } from './types.ts';
+import { err, ok, UUID_PATTERN, type Brand, type Result } from '@especulati/sync-core';
+import type { Instant, ItemId, LocalDate } from './types.ts';
 
 export type HighlightId = Brand<string, 'HighlightId'>;
 

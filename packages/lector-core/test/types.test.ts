@@ -3,7 +3,7 @@ import {
   parseAuthor, parseDeviceId, parseGenre, parseInstant, parseItemId, parseLocalDate,
   parsePage, parsePageCount, parseTitle, previousLocalDate, type Result,
 } from '../src/index.ts';
-import { parseHlc } from '../src/hlc.ts';
+import { parseHlc } from '../src/index.ts';
 
 const ok = <T>(r: Result<T, unknown>): T | undefined => { expect(r.ok).toBe(true); return r.ok ? r.value : undefined; };
 const bad = (r: { ok: boolean }) => expect(r.ok).toBe(false);

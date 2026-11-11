@@ -1,5 +1,5 @@
 import { err, ok, type Result } from './result.ts';
-import { UUID_PATTERN, type Brand, type DeviceId, type ParseError } from './types.ts';
+import { UUID_PATTERN, type Brand, type DeviceId, type ParseError } from './ids.ts';
 
 /**
  * Hybrid logical clock stamp: `<13-digit unix ms>-<4-digit counter>-<device uuid>`.

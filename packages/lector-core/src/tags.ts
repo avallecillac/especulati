@@ -1,5 +1,4 @@
-import { err, ok, type Result } from './result.ts';
-import type { ParseError } from './types.ts';
+import { err, ok, type ParseError, type Result } from '@especulati/sync-core';
 
 /** Tag names: 1 to 40 characters (code points). */
 export const TAG_NAME_MAX = 40;

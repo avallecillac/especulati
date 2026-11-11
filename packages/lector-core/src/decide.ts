@@ -1,4 +1,4 @@
-import { err, ok, type Result } from './result.ts';
+import { err, ok, UUID_PATTERN, type ParseError, type Result } from '@especulati/sync-core';
 import type {
   BooksSnapshot, BookSnapshot, Change, Command, Decision, FieldValue, HighlightSnapshot, ItemTagRow, ReconcileSnapshot, Rejection, TagMove, TagSnapshot,
 } from './commands.ts';
@@ -9,7 +9,7 @@ import { parseWordCount } from './article.ts';
 import { normalizeUrl, siteOf } from './url.ts';
 import {
   parseAuthor, parseCoverUrl, parseEventId, parseGenre, parseIsbn, parseItemId, parseLocalDate, parsePage, parsePageCount, parseTitle,
-  UUID_PATTERN, type CoverUrl, type Instant, type Isbn13, type ParseError,
+  type CoverUrl, type Instant, type Isbn13,
 } from './types.ts';
 
 type Decided = Result<Decision, Rejection>;

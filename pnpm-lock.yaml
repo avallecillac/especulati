@@ -107,7 +107,11 @@ importers:
         specifier: 3.1.4
         version: 3.1.4(@types/emscripten@1.41.6)
 
-  packages/lector-core: {}
+  packages/lector-core:
+    dependencies:
+      '@especulati/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
 
   packages/lector-db:
     dependencies:
@@ -126,6 +130,8 @@ importers:
       '@especulati/lector-db':
         specifier: workspace:*
         version: link:../lector-db
+
+  packages/sync-core: {}
 
 packages:
 

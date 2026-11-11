@@ -1,7 +1,6 @@
 import { hlcNext, type Hlc } from './hlc.ts';
-import type { Change } from './commands.ts';
-import type { OpWire } from './merge.ts';
-import type { DeviceId } from './types.ts';
+import type { DeviceId } from './ids.ts';
+import type { Change, OpWire } from './merge.ts';
 
 /**
  * Turn decided changes into wire ops with the same stamping rule as the DB's `applyChanges`: one

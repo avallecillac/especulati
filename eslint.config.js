@@ -18,7 +18,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/lector-core/src/**/*.ts'],
+    files: ['packages/lector-core/src/**/*.ts', 'packages/sync-core/src/**/*.ts'],
     rules: {
       'no-restricted-properties': ['error', ...impureInCore],
       'no-restricted-globals': ['error', ...shellGlobals],

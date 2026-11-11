@@ -1,12 +1,7 @@
-import { err, ok, type Result } from './result.ts';
-
-declare const brand: unique symbol;
-/** Nominal typing: a value of Brand<T, B> can only be produced by B's parser. */
-export type Brand<T, B extends string> = T & { readonly [brand]: B };
+import { err, ok, UUID_PATTERN, type Brand, type ParseError, type Result } from '@especulati/sync-core';
 
 export type ItemId = Brand<string, 'ItemId'>;
 export type EventId = Brand<string, 'EventId'>;
-export type DeviceId = Brand<string, 'DeviceId'>;
 export type NonEmptyTitle = Brand<string, 'NonEmptyTitle'>;
 export type Author = Brand<string, 'Author'>;
 export type Isbn13 = Brand<string, 'Isbn13'>;
@@ -19,12 +14,6 @@ export type LocalDate = Brand<string, 'LocalDate'>;
 /** UTC ISO-8601 with Z. */
 export type Instant = Brand<string, 'Instant'>;
 
-export interface ParseError {
-  readonly field: string;
-  readonly reason: string;
-}
-
-export const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const UUID_RE = new RegExp(`^${UUID_PATTERN}$`);
 const LOCAL_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
@@ -39,7 +28,6 @@ function parseUuid<T>(field: string, input: string): Result<T, ParseError> {
 
 export const parseItemId = (s: string) => parseUuid<ItemId>('itemId', s);
 export const parseEventId = (s: string) => parseUuid<EventId>('eventId', s);
-export const parseDeviceId = (s: string) => parseUuid<DeviceId>('deviceId', s);
 
 /** "Trimmed, 1–500 characters" */
 export function parseTitle(input: string): Result<NonEmptyTitle, ParseError> {

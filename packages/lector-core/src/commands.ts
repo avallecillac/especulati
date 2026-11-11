@@ -1,3 +1,4 @@
+import type { FieldValue } from '@especulati/sync-core';
 import type { BookStatus, DetailsStatus, EventType, Item, ReadingEvent } from './book.ts';
 import type { Highlight } from './highlight.ts';
 import type { Instant, ItemId } from './types.ts';
@@ -156,7 +157,7 @@ export type Rejection =
   | { readonly kind: 'InvalidInput'; readonly field: string; readonly reason: string };
 
 export type Table = 'items' | 'reading_events' | 'duplicate_dismissals' | 'highlights' | 'tags' | 'item_tags';
-export type FieldValue = string | number | null;
+export type { FieldValue };
 
 /** One row upsert: only the fields being set. Column names are DB columns. */
 export interface Change {

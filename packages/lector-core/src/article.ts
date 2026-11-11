@@ -1,7 +1,7 @@
-import { err, ok, type Result } from './result.ts';
+import { err, ok, type Brand, type ParseError, type Result } from '@especulati/sync-core';
 import type { DetailsStatus } from './book.ts';
 import type { NormalizedUrl } from './url.ts';
-import type { Author, Brand, Instant, ItemId, LocalDate, NonEmptyTitle, ParseError } from './types.ts';
+import type { Author, Instant, ItemId, LocalDate, NonEmptyTitle } from './types.ts';
 
 /** An integer in 0..100000 (data-model). */
 export type WordCount = Brand<number, 'WordCount'>;
