@@ -3,6 +3,7 @@ import type { SyncStatusView } from '@especulati/sync';
 import { CHANNEL } from '../worker/frozen.ts';
 import { dispatch, me, members, syncRun, syncStatus, type Call } from './dbClient.ts';
 import type { UiCommand } from './commands.ts';
+import { loadTmdbKey } from './tmdb.svelte.ts';
 
 /**
  * Shared UI state. `rev` bumps after every write (ours, another tab's, or a sync that pulled), and the
@@ -29,7 +30,7 @@ export function showToast(text: string, undo?: () => void): void {
 }
 
 export async function refresh(): Promise<void> {
-  const [m, who, st] = await Promise.all([members(), me(), syncStatus()]);
+  const [m, who, st] = await Promise.all([members(), me(), syncStatus(), loadTmdbKey()]);
   if (m.ok) app.members = m.value;
   if (who.ok) app.memberId = who.value.memberId;
   if (st.ok) app.sync = st.value;

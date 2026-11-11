@@ -48,14 +48,14 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 6. TMDB
 
-- [ ] 6.1 A TMDB client for search/multi and movie and tv details, with the 8 s deadline and failure outcomes, tested against recorded fixtures, and no key in error text. Verify with Vitest using fixture responses.
-- [ ] 6.2 Settings for the TMDB key, kept device-local, plus the attribution notice and logo in About. In the add sheet, search shows results with a 1-tap Add, and falls back to manual when there is no key, the device is offline or TMDB fails. Verify with Playwright using a mocked TMDB route, checking that adding takes at most 2 taps after the results appear.
-- [ ] 6.3 The poster cache in the worker (downscale, local table, placeholder art) and Link to TMDB from the title screen. Verify with a Playwright test that a poster shows offline after the first fetch, and that linking keeps the ratings.
+- [x] 6.1 A TMDB client for search/multi and movie and tv details, with the 8 s deadline and failure outcomes, tested against recorded fixtures, and no key in error text. Verify with Vitest using fixture responses.
+- [x] 6.2 Settings for the TMDB key, kept device-local, plus the attribution notice and logo in About. In the add sheet, search shows results with a 1-tap Add, and falls back to manual when there is no key, the device is offline or TMDB fails. Verify with Playwright using a mocked TMDB route, checking that adding takes at most 2 taps after the results appear.
+- [x] 6.3 The poster cache in the worker (downscale, local table, placeholder art) and Link to TMDB from the title screen. Verify with a Playwright test that a poster shows offline after the first fetch, and that linking keeps the ratings.
 
 ## 7. Sharing and pairing
 
 - [x] 7.1 First run: "Start a shared list" with the name creates the space and the member, and sets `member_id`. Showing the code gives text plus QR. Verify with Playwright.
-- [ ] 7.2 Join by scanning or pasting the code (an invalid code is rejected), then "who am I" (an existing member, or "I'm new"), then the initial download. Verify with a two-context Playwright test against the local relay: the partner sees the full catalog, and both rate one title offline and then converge.
+- [x] 7.2 Join by scanning or pasting the code (an invalid code is rejected), then "who am I" (an existing member, or "I'm new"), then the initial download. Verify with a two-context Playwright test against the local relay: the partner sees the full catalog, and both rate one title offline and then converge.
 - [x] 7.3 Rename a member, change "who am I" in Settings, the trust disclosure text, Leave (with confirmation and an export offer, erasing local data) and "start a new space" carrying the catalog over. Verify with Playwright: after a new space, the old-code device receives nothing new.
 - [x] 7.4 Export and import from Settings. Verify with a Playwright download and re-import into a fresh context that gives an equal catalog.
 

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
-import { addByHand, expect, openApp, startList, tab, test } from './fixtures.ts';
+import { addByHand, expect, expectQrVisible, openApp, startList, tab, test } from './fixtures.ts';
 
 async function join(page: Page, code: string, me: { new: string } | { existing: string }) {
   await openApp(page);
@@ -21,6 +21,13 @@ async function syncNow(page: Page) {
   await page.getByRole('button', { name: 'Sync now' }).click();
   await expect(page.getByRole('button', { name: 'Sync now' })).toBeEnabled();
 }
+
+test('Settings → Show code renders a scannable QR', async ({ page }) => {
+  await startList(page, 'Ana');
+  await tab(page, 'Settings').click();
+  await page.getByRole('button', { name: 'Show code' }).click();
+  await expectQrVisible(page);
+});
 
 test('an invalid code is rejected', async ({ page }) => {
   await openApp(page);

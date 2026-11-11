@@ -237,6 +237,34 @@ function runQuery(d: CinefiloDb, q: Query): unknown {
   }
 }
 
+const MIN_W = 40;
+const MIN_H = 60;
+const MAX_H = 480;
+
+/** Decode, downscale to at most 480 px tall, re-encode as JPEG and cache. A poster is optional: any failure is `false`. */
+async function storePoster(d: CinefiloDb, titleId: string, image: Blob): Promise<boolean> {
+  try {
+    const bitmap = await createImageBitmap(image);
+    try {
+      if (bitmap.width < MIN_W || bitmap.height < MIN_H) return false;
+      const scale = Math.min(1, MAX_H / bitmap.height);
+      const width = Math.max(MIN_W, Math.round(bitmap.width * scale));
+      const height = Math.min(MAX_H, Math.round(bitmap.height * scale));
+      const canvas = new OffscreenCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      const jpeg = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.75 });
+      d.putPoster(titleId, 'image/jpeg', new Uint8Array(await jpeg.arrayBuffer()), new Date().toISOString());
+      return true;
+    } finally {
+      bitmap.close();
+    }
+  } catch {
+    return false;
+  }
+}
+
 function toClientError(e: unknown): ClientError {
   if (e instanceof BusyError) return { kind: 'Busy' };
   return { kind: 'Storage', message: e instanceof Error ? e.message : String(e) };
@@ -265,6 +293,18 @@ async function handle(req: Request): Promise<Response> {
         break;
       case 'export':
         reply = ok(d.exportText(new Date().toISOString() as Instant));
+        break;
+      case 'tmdbKey':
+        if (req.op.action === 'set') d.setMeta('tmdb_key', req.op.key.trim());
+        reply = ok(d.getMeta('tmdb_key') || null);
+        break;
+      case 'poster':
+        if (req.op.action === 'get') {
+          const p = d.getPoster(req.op.titleId);
+          reply = ok(p ? new Blob([p.bytes as Uint8Array<ArrayBuffer>], { type: p.mime }) : null);
+        } else {
+          reply = ok(await storePoster(d, req.op.titleId, req.op.image));
+        }
         break;
       case 'erase':
         await erase(d);

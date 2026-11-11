@@ -73,3 +73,11 @@ export const exportCatalog = () => call<string>({ kind: 'export' });
 export const importCatalog = (text: string) =>
   call<{ ok: true; value: { added: number; present: number } } | { ok: false; error: { field: string; reason: string } }>({ kind: 'import', text });
 export const eraseAll = () => call<null>({ kind: 'erase' });
+
+/** The TMDB key (device-local `meta.tmdb_key`); null when none is set. Only the shell's TMDB client and Settings read it. */
+export const tmdbKeyGet = () => call<string | null>({ kind: 'tmdbKey', op: { action: 'get' } });
+export const tmdbKeySet = (key: string) => call<string | null>({ kind: 'tmdbKey', op: { action: 'set', key } });
+
+export const posterGet = (titleId: string) => call<Blob | null>({ kind: 'poster', op: { action: 'get', titleId } });
+/** Downscale and cache a poster in the worker. `false` means the image was unusable; never an error. */
+export const posterStore = (titleId: string, image: Blob) => call<boolean>({ kind: 'poster', op: { action: 'store', titleId, image } });

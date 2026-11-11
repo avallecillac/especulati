@@ -5,12 +5,15 @@
   import { setMe } from '../lib/dbClient.ts';
   import { GENERIC_FAILURE, syncErrorText } from '../lib/syncText.ts';
   import { localDate } from '../lib/clock.ts';
+  import { saveTmdbKey, tmdb } from '../lib/tmdb.svelte.ts';
+  import TmdbLogo from './TmdbLogo.svelte';
 
   let shown = $state<{ code: string; svg: string } | null>(null);
   let error = $state<string | null>(null);
   let confirming = $state<'leave' | 'reset' | null>(null);
   let names = $state<Record<string, string>>({});
   let busy = $state(false);
+  let keyDraft = $state('');
 
   const status = $derived(app.sync);
 
@@ -76,6 +79,14 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
     return true;
+  }
+
+  async function saveKey(value: string) {
+    const ok = await saveTmdbKey(value);
+    if (!ok) return void (error = GENERIC_FAILURE);
+    error = null;
+    keyDraft = '';
+    showToast(value.trim() === '' ? 'TMDB key removed from this device.' : 'TMDB key saved on this device.');
   }
 
   async function leave() {
@@ -148,13 +159,34 @@
   </div>
 </section>
 
+<section class="card" aria-labelledby="tmdb-h">
+  <h2 id="tmdb-h">Movie search (TMDB)</h2>
+  <p class="muted">
+    Paste your own free TMDB key (the v3 API key or the v4 read access token) to search for titles and get posters. The key stays on this
+    device: it is never shared with your partner, synced or exported. Searches send only the text you type to TMDB.
+  </p>
+  <p data-testid="tmdb-key-status" class="muted small">{tmdb.key ? 'A key is saved on this device.' : 'No key yet. You can still add titles by hand.'}</p>
+  <label for="tmdb-key">TMDB key</label>
+  <input id="tmdb-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" bind:value={keyDraft} />
+  <div class="actions">
+    <button type="button" class="primary" onclick={() => void saveKey(keyDraft)} disabled={keyDraft.trim() === ''}>Save key</button>
+    {#if tmdb.key}<button type="button" onclick={() => void saveKey('')}>Remove key</button>{/if}
+  </div>
+</section>
+
+<section class="card" aria-labelledby="about-h">
+  <h2 id="about-h">About</h2>
+  <TmdbLogo />
+  <p data-testid="tmdb-attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+  <p class="muted small">Cinéfilo {__APP_VERSION__}</p>
+</section>
+
 <section class="card">
   <h2>Leave</h2>
   <p class="muted">Stops sharing and erases the list from this device. Other devices keep theirs.</p>
   <button type="button" class="danger" onclick={() => (confirming = 'leave')}>Leave the shared list</button>
 </section>
 
-<p class="muted small">Cinéfilo {__APP_VERSION__}</p>
 <p role="alert" class="error">{error ?? ''}</p>
 
 {#if confirming}

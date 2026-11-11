@@ -267,3 +267,11 @@ Decisions taken while implementing `cinefilo-core`; they refine, not change, the
 - Import adds only rows the device lacks, as local writes; it never overwrites existing rows, so a second import is a no-op.
 - The partner is the earliest-created live member other than this device's member. Watching is sorted newest first.
 - **Known limitation (accepted for v1):** if one manual title is linked to two different TMDB ids at the same time, or a 3-way merge picks a survivor after a row already merged elsewhere, reconcile skips that row. It stays hidden and later edits to it are lost; devices still converge. Fixing it needs core to re-point `merged_into`.
+
+## Implementation notes (group 6 and scan, reviewed)
+
+- The shell downloads a poster and the worker downscales and stores it (≤ 480 px tall, JPEG), so a slow TMDB never blocks the DB queue. Posters load lazily when a title renders, which covers titles synced from the partner.
+- The TMDB key lives in `meta.tmdb_key` on the device: never synced, exported, logged or put in error text. A v3 key is sent as `api_key`, a v4 token as a Bearer header.
+- Attribution ("Powered by TMDB" wordmark and the required notice) always shows in Settings → About.
+- Joining by camera uses a QR-only copy of lector's zxing-wasm scanner, loaded only when the scanner opens.
+- TMDB fixtures are hand-built in TMDB's documented shape; check them against the live API once a key is set.

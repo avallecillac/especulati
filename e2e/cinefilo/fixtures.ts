@@ -92,12 +92,21 @@ export async function openApp(page: Page, hash = '#/'): Promise<void> {
 }
 
 /** First run: start a shared list as `name` and continue past the code screen. Returns the sync code. */
+/** The shared QR must render at a scannable size (its SVG has only a viewBox, so it once collapsed to 0×0). */
+export async function expectQrVisible(page: Page): Promise<void> {
+  const svg = page.getByRole('img', { name: 'Sync code QR' }).locator('svg');
+  await expect(svg).toBeVisible();
+  await expect.poll(async () => (await svg.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(150);
+  await expect.poll(async () => (await svg.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(150);
+}
+
 export async function startList(page: Page, name: string): Promise<string> {
   await openApp(page);
   await page.getByRole('button', { name: 'Start a shared list' }).click();
   await page.getByLabel('Your name').fill(name);
   await page.getByRole('button', { name: 'Create the list' }).click();
   const code = (await page.getByTestId('sync-code').textContent()) ?? '';
+  await expectQrVisible(page);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible();
   return code;

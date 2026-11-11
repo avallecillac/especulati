@@ -36,6 +36,10 @@ export type Request = { id: number } & (
   | { kind: 'import'; text: string }
   /** Leave: stop sync and wipe this device's database. The next request opens a fresh one. */
   | { kind: 'erase' }
+  /** The TMDB key lives in `meta` (device-local, never synced or exported). `set` with '' removes it. */
+  | { kind: 'tmdbKey'; op: { action: 'get' } | { action: 'set'; key: string } }
+  /** The local poster cache. `store` downscales in the worker (the shell downloads, like lector's covers). */
+  | { kind: 'poster'; op: { action: 'get'; titleId: string } | { action: 'store'; titleId: string; image: Blob } }
 );
 export type Control = { kind: 'visibility'; visible: boolean };
 export type ClientError = { kind: 'Busy' } | { kind: 'Storage'; message: string };

@@ -4,6 +4,9 @@
   import { KIND_LABEL, STATUS_LABEL, statusesFor } from '../lib/labels.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast, write } from '../lib/state.svelte.ts';
+  import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
+  import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
+  import { coverCloth } from '../lib/posterArt.ts';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -15,12 +18,76 @@
   let error = $state<string | null>(null);
   let busy = $state(false);
 
+  let query = $state('');
+  let results = $state<TmdbResult[] | null>(null);
+  let searching = $state(false);
+  let searchNote = $state<string | null>(null);
+  let addingId = $state<number | null>(null);
+
   const statuses = $derived(statusesFor(kind));
   const needsDate = $derived(status === 'watched' || status === 'dropped');
 
   function setKind(k: Kind) {
     kind = k;
+    results = null;
     if (!statusesFor(k).includes(status)) status = 'later';
+  }
+
+  async function runSearch() {
+    const q = query.trim();
+    if (q === '' || searching) return;
+    searching = true;
+    searchNote = null;
+    results = null;
+    const r = await search(q, kind);
+    searching = false;
+    if (r.kind === 'ok') {
+      results = r.value;
+      if (r.value.length === 0) searchNote = 'No matches. Try another spelling, or add it by hand below.';
+    } else if (r.kind !== 'no-key') {
+      // Non-blocking: keep what was typed for manual entry.
+      if (title.trim() === '') title = q;
+      searchNote = `${failureText(r)} You can add it by hand below.`;
+    }
+  }
+
+  /** One tap: fetch TMDB's details for the hit (falling back to the search data) and add it. */
+  async function addResult(hit: TmdbResult) {
+    if (addingId !== null) return;
+    addingId = hit.tmdbId;
+    error = null;
+    const d = await details(hit.mediaKind, hit.tmdbId);
+    const info = d.kind === 'ok' ? d.value : null;
+    const name = info?.title ?? hit.title;
+    const year = info?.year ?? hit.year;
+    const poster = info?.posterPath ?? hit.posterPath;
+    const r = await write({
+      kind: 'AddTitle',
+      mediaKind: hit.mediaKind,
+      title: name,
+      tmdbId: hit.tmdbId,
+      status,
+      ...(needsDate ? { watchedOn } : {}),
+      ...(info?.originalTitle ?? hit.originalTitle ? { originalTitle: info?.originalTitle ?? hit.originalTitle } : {}),
+      ...(year ? { year } : {}),
+      ...(poster ? { posterUrl: poster } : {}),
+      ...(info && info.genres.length > 0 ? { genres: info.genres } : {}),
+      ...(info?.runtimeMin ? { runtimeMin: info.runtimeMin } : {}),
+      ...(info?.seasonCount ? { seasonCount: info.seasonCount } : {}),
+    });
+    addingId = null;
+    if (r.ok) {
+      onclose();
+      showToast(`Added ${name}.`);
+      return;
+    }
+    const e = r.error;
+    if (e.kind === 'AlreadyExists') {
+      const id = e.id;
+      onclose();
+      showToast('Already on your list.');
+      navigate(`/title/${encodeURIComponent(id)}`);
+    } else error = 'Could not save. Try again.';
   }
 
   async function save() {
@@ -57,21 +124,55 @@
   <div class="grabber" aria-hidden="true"></div>
   <h2>Add a title</h2>
 
-  <!-- Group 6 (TMDB): the search field, the Movie/Series toggle and the result rows with a 1-tap Add go here,
-       above "Add by hand". Without a key, offline or on failure the sheet shows only the form below. -->
+  <fieldset>
+    <legend>Kind</legend>
+    <div class="seg">
+      {#each ['movie', 'series'] as const as k (k)}
+        <button type="button" aria-pressed={kind === k} onclick={() => setKind(k)}>{KIND_LABEL[k]}</button>
+      {/each}
+    </div>
+  </fieldset>
+
+  <section>
+    {#if tmdb.key === null}
+      <p class="muted" data-testid="search-unavailable">Search needs a TMDB key. Add one in Settings, or add the title by hand below.</p>
+    {:else if !tmdb.online}
+      <p class="muted" data-testid="search-unavailable">You are offline, so search is unavailable. Add the title by hand below.</p>
+    {:else}
+      <label for="tmdb-q">Search TMDB</label>
+      <div class="actions">
+        <input id="tmdb-q" autocomplete="off" bind:value={query} onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void runSearch(); } }} />
+        <button type="button" onclick={() => void runSearch()} disabled={searching || query.trim() === ''}>Search</button>
+      </div>
+      {#if searchNote}<p role="status" class="muted" data-testid="search-note">{searchNote}</p>{/if}
+      {#if results && results.length > 0}
+        <label for="add-as">Add as</label>
+        <select id="add-as" bind:value={status}>
+          {#each statuses as s (s)}
+            <option value={s}>{STATUS_LABEL[s]}</option>
+          {/each}
+        </select>
+        <ul class="results" aria-label="Search results">
+          {#each results as hit (`${hit.mediaKind}-${hit.tmdbId}`)}
+            <li class="result">
+              <span class={`poster tile cloth-${coverCloth(String(hit.tmdbId))}`} aria-hidden="true">{hit.title.slice(0, 1).toUpperCase()}</span>
+              <span class="meta">
+                <span class="name">{hit.title}</span>
+                <span class="muted small">{KIND_LABEL[hit.mediaKind]}{hit.year ? ` · ${hit.year}` : ''}</span>
+              </span>
+              <button type="button" class="primary" disabled={addingId !== null} onclick={() => void addResult(hit)}>{`Add ${hit.title}${hit.year ? ` (${hit.year})` : ''}`}</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    {/if}
+  </section>
+
+  <h3>Or add by hand</h3>
 
   <form onsubmit={(e) => { e.preventDefault(); void save(); }}>
     <label for="add-title">Title</label>
     <input id="add-title" autocomplete="off" bind:value={title} />
-
-    <fieldset>
-      <legend>Kind</legend>
-      <div class="seg">
-        {#each ['movie', 'series'] as const as k (k)}
-          <button type="button" aria-pressed={kind === k} onclick={() => setKind(k)}>{KIND_LABEL[k]}</button>
-        {/each}
-      </div>
-    </fieldset>
 
     <label for="add-year">Year</label>
     <input id="add-year" inputmode="numeric" autocomplete="off" placeholder="Optional" bind:value={year} />

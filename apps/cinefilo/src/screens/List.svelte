@@ -4,6 +4,7 @@
   import { list } from '../lib/dbClient.ts';
   import { FILTER_LABEL, KIND_LABEL, VERDICT_GLYPH, VERDICT_LABEL } from '../lib/labels.ts';
   import { app } from '../lib/state.svelte.ts';
+  import Poster from './Poster.svelte';
 
   let { tab, onadd }: { tab: ListTab; onadd: () => void } = $props();
 
@@ -54,7 +55,7 @@
     {#each items as i (i.id)}
       <li>
         <a class="row" href={`#/title/${encodeURIComponent(i.id)}`}>
-          <span class="poster" aria-hidden="true">{i.title.slice(0, 1).toUpperCase()}</span>
+          <Poster titleId={i.id} title={i.title} path={i.posterUrl} />
           <span class="meta">
             <span class="name">{i.title}</span>
             <span class="muted small">{detail(i)}</span>

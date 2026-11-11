@@ -6,8 +6,9 @@
   import { app, refresh } from '../lib/state.svelte.ts';
   import { GENERIC_FAILURE, syncErrorText } from '../lib/syncText.ts';
   import { navigate } from '../lib/router.svelte.ts';
+  import Scan from './Scan.svelte';
 
-  type Step = 'choose' | 'start' | 'code' | 'join' | 'who';
+  type Step = 'choose' | 'start' | 'code' | 'join' | 'scan' | 'who';
 
   // Joined but never picked who we are (the app was closed in between): go straight to "who am I".
   let step = $state<Step>(app.sync?.on ? 'who' : 'choose');
@@ -45,6 +46,12 @@
     app.onboarding = false;
     await refresh();
     navigate('/later');
+  }
+
+  async function onScanned(text: string) {
+    pasted = text;
+    step = 'join';
+    await join();
   }
 
   async function join() {
@@ -112,8 +119,11 @@
       <label for="join-code">Sync code</label>
       <textarea id="join-code" rows="3" autocomplete="off" autocapitalize="characters" spellcheck="false" bind:value={pasted}></textarea>
       <button class="primary" type="submit" disabled={busy || pasted.trim() === ''}>Join</button>
+      <button type="button" onclick={() => { error = null; step = 'scan'; }}>Scan code</button>
       <button type="button" onclick={() => (step = 'choose')}>Back</button>
     </form>
+  {:else if step === 'scan'}
+    <Scan onscanned={(t) => void onScanned(t)} oncancel={() => (step = 'join')} />
   {:else}
     <h2>Who are you?</h2>
     {#each app.members as m (m.id)}

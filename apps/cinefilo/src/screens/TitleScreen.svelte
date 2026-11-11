@@ -1,11 +1,14 @@
 <script lang="ts">
   import { REVIEW_MAX, VERDICTS, type Status, type Verdict } from '@especulati/cinefilo-core';
   import type { TitleDetail } from '@especulati/cinefilo-db';
-  import { title as loadTitle } from '../lib/dbClient.ts';
+  import { findByTmdb, title as loadTitle } from '../lib/dbClient.ts';
+  import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
+  import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
   import { todayLocal, yesterdayLocal } from '../lib/clock.ts';
   import { KIND_LABEL, STATUS_LABEL, VERDICT_GLYPH, VERDICT_LABEL, statusesFor } from '../lib/labels.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
+  import Poster from './Poster.svelte';
 
   let { id }: { id: string } = $props();
 
@@ -13,6 +16,7 @@
   /** The review being typed; null while untouched, so a sync can still refresh what is shown. */
   let draft = $state<string | null>(null);
   let error = $state<string | null>(null);
+  let linking = $state<{ q: string; results: TmdbResult[] | null; note: string | null; busy: boolean } | null>(null);
 
   $effect(() => {
     void app.rev;
@@ -58,6 +62,55 @@
     if (await run({ kind: 'SetReview', titleId: id, review: text })) draft = null;
   }
 
+  async function runLinkSearch() {
+    const l = linking;
+    const t = detail?.title;
+    if (!l || !t || l.busy || l.q.trim() === '') return;
+    const q = l.q;
+    const kind = t.kind;
+    linking = { q, results: null, note: null, busy: true };
+    const r = await search(q, kind);
+    if (r.kind === 'ok') linking = { q, results: r.value, note: r.value.length === 0 ? 'No matches. Try another spelling.' : null, busy: false };
+    else linking = { q, results: null, note: r.kind === 'no-key' ? 'Add a TMDB key in Settings first.' : failureText(r), busy: false };
+  }
+
+  /** Fill the empty details from TMDB onto this same entry: status, watched date and both ratings stay (D4). */
+  async function link(hit: TmdbResult) {
+    const t = detail?.title;
+    if (!t || linking?.busy) return;
+    const q = linking?.q ?? '';
+    const titleId = t.id as string;
+    const kind = t.kind;
+    linking = { q, results: linking?.results ?? null, note: null, busy: true };
+    const d = await details(kind, hit.tmdbId);
+    const info = d.kind === 'ok' ? d.value : null;
+    const poster = info?.posterPath ?? hit.posterPath;
+    const year = info?.year ?? hit.year;
+    const original = info?.originalTitle ?? hit.originalTitle;
+    const r = await write({
+      kind: 'LinkToTmdb',
+      titleId,
+      tmdbId: hit.tmdbId,
+      details: {
+        ...(original ? { originalTitle: original } : {}),
+        ...(year ? { year } : {}),
+        ...(poster ? { posterUrl: poster } : {}),
+        ...(info && info.genres.length > 0 ? { genres: info.genres } : {}),
+        ...(info?.runtimeMin ? { runtimeMin: info.runtimeMin } : {}),
+        ...(info?.seasonCount ? { seasonCount: info.seasonCount } : {}),
+      },
+    });
+    if (!r.ok) {
+      linking = { q, results: null, note: r.error.kind === 'InvalidInput' ? 'This title is already linked to a different TMDB entry.' : 'Could not link. Try again.', busy: false };
+      return;
+    }
+    linking = null;
+    showToast('Linked to TMDB.');
+    // If the catalog already had this TMDB title, the two were merged into one entry: open that one.
+    const survivor = await findByTmdb(hit.tmdbId, kind);
+    if (survivor.ok && survivor.value && survivor.value !== titleId) navigate(`/title/${encodeURIComponent(survivor.value)}`);
+  }
+
   async function remove() {
     const t = detail?.title;
     if (!t) return;
@@ -81,7 +134,7 @@
   {@const t = detail.title}
   <a class="back" href={`#/${backTab(t.status)}`}>Back</a>
   <header class="hero">
-    <span class="poster big" aria-hidden="true">{t.title.slice(0, 1).toUpperCase()}</span>
+    <Poster titleId={t.id} title={t.title} path={t.posterUrl} big />
     <div>
       <h1>{t.title}</h1>
       <p class="muted">{KIND_LABEL[t.kind]}{t.year ? ` · ${t.year}` : ''}</p>
@@ -166,6 +219,41 @@
       {/each}
     </div>
   </section>
+
+  {#if t.tmdbId === null}
+    <section aria-labelledby="link-h">
+      <h2 id="link-h">TMDB</h2>
+      {#if tmdb.key === null}
+        <p class="muted">Add a TMDB key in Settings to link this title and get its details and poster.</p>
+      {:else if !tmdb.online}
+        <p class="muted">Linking needs a connection.</p>
+      {:else if linking === null}
+        <button type="button" onclick={() => (linking = { q: t.title, results: null, note: null, busy: false })}>Link to TMDB</button>
+      {:else}
+        {@const l = linking}
+        <label for="link-q">Search TMDB</label>
+        <div class="actions">
+          <input id="link-q" autocomplete="off" value={l.q} oninput={(e) => (linking = { ...l, q: e.currentTarget.value })} onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void runLinkSearch(); } }} />
+          <button type="button" onclick={() => void runLinkSearch()} disabled={l.busy || l.q.trim() === ''}>Search</button>
+          <button type="button" onclick={() => (linking = null)}>Cancel</button>
+        </div>
+        {#if l.note}<p role="status" class="muted">{l.note}</p>{/if}
+        {#if l.results}
+          <ul class="results" aria-label="TMDB matches">
+            {#each l.results as hit (hit.tmdbId)}
+              <li class="result">
+                <span class="meta">
+                  <span class="name">{hit.title}</span>
+                  <span class="muted small">{KIND_LABEL[hit.mediaKind]}{hit.year ? ` · ${hit.year}` : ''}</span>
+                </span>
+                <button type="button" class="primary" disabled={l.busy} onclick={() => void link(hit)}>{`Link ${hit.title}${hit.year ? ` (${hit.year})` : ''}`}</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {/if}
+    </section>
+  {/if}
 
   <p role="alert" class="error">{error ?? ''}</p>
 

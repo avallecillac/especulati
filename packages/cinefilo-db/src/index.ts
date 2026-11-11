@@ -4,6 +4,7 @@ import { cinefiloSchema, decide, err, ok, type Command, type Instant, type Rejec
 import type { DeviceId } from '@especulati/sync-core';
 import { exportData, exportText, importText, type ImportResult } from './io.ts';
 import { migrate } from './migrations.ts';
+import { getPoster, putPoster } from './posters.ts';
 import { findByTmdb, list, members, titleDetail, type ListItem, type ListTab, type MemberView, type TitleDetail } from './queries.ts';
 import { loadSnapshot } from './snapshot.ts';
 import type { DispatchEnv, DispatchOutcome } from './types.ts';
@@ -57,6 +58,15 @@ export class CinefiloDb {
   /** `meta.member_id`: the member this device acts as ("who am I"). Local only, never synced. */
   get memberId(): string | null {
     return readMeta(this.raw, 'member_id');
+  }
+
+  /** The local poster cache (never synced or exported). */
+  putPoster(titleId: string, mime: string, bytes: Uint8Array, fetchedAt: string): void {
+    putPoster(this.raw, titleId, mime, bytes, fetchedAt);
+  }
+
+  getPoster(titleId: string): { mime: string; bytes: Uint8Array } | null {
+    return getPoster(this.raw, titleId);
   }
 
   members(): MemberView[] {
