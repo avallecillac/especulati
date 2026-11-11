@@ -5,7 +5,7 @@ import { ARTICLE, expect, syncAndOpenArticles, test, turnOnSync } from './fixtur
  * Feature 008 US1/US2 on the Mac (T021): Save for later from the extension. The EXT_E2E build is
  * driven through its test hooks (the handlers behind the shortcut and the context menu).
  */
-const toastOf = (page: Page) => page.locator('#readerlog-toast');
+const toastOf = (page: Page) => page.locator('#lector-toast');
 const savedRows = (page: Page) => page.getByTestId('saved-row');
 const articleRows = (page: Page) => page.getByTestId('article-row');
 
@@ -78,7 +78,7 @@ test('Add tags "ai, design" adds both', async ({ ext, pwa, relay }) => {
   expect(ops.filter((o) => o.startsWith('tags:')).sort()).toEqual(['tags:ai', 'tags:design']);
   expect(ops.filter((o) => o.startsWith('item_tags:'))).toHaveLength(2);
   relay.failWith(null);
-  await ext.sw.evaluate(() => (globalThis as unknown as { readerlog: { flush(): Promise<void> } }).readerlog.flush());
+  await ext.sw.evaluate(() => (globalThis as unknown as { lector: { flush(): Promise<void> } }).lector.flush());
   await ext.sent();
 });
 
@@ -153,7 +153,7 @@ test('offline, a save stays pending, then flushes', async ({ ext, pwa, relay }) 
   expect(await ext.waiting()).toBe(1);
   await expect.poll(() => ext.badge()).toBe('1');
   relay.failWith(null);
-  await ext.sw.evaluate(() => (globalThis as unknown as { readerlog: { flush(): Promise<void> } }).readerlog.flush());
+  await ext.sw.evaluate(() => (globalThis as unknown as { lector: { flush(): Promise<void> } }).lector.flush());
   await ext.sent();
   await openSaved(pwa);
   await expect(savedRows(pwa)).toHaveCount(1);

@@ -7,8 +7,8 @@ import { expect, test } from '@playwright/test';
  * for all 20 and the word count within 15% for at least 18. Pages are served by page.route on a
  * fake host, so nothing touches the network.
  */
-const FIXTURES = fileURLToPath(new URL('../apps/extension/test/fixtures/', import.meta.url));
-const EXTRACT_JS = fileURLToPath(new URL('../apps/extension/dist-e2e/extract.js', import.meta.url));
+const FIXTURES = fileURLToPath(new URL('../apps/lector-extension/test/fixtures/', import.meta.url));
+const EXTRACT_JS = fileURLToPath(new URL('../apps/lector-extension/dist-e2e/extract.js', import.meta.url));
 
 interface Expected {
   title: string;
@@ -35,7 +35,7 @@ test('extractor: exact titles for 20 pages, words within 15% for at least 18 (SC
     await page.route(`http://${spec.host}/**`, (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
     await page.goto(`http://${spec.host}/${name}`);
     await page.addScriptTag({ path: EXTRACT_JS });
-    const got = await page.evaluate(() => (globalThis as unknown as { __readerlogExtract: () => Record<string, unknown> }).__readerlogExtract());
+    const got = await page.evaluate(() => (globalThis as unknown as { __lectorExtract: () => Record<string, unknown> }).__lectorExtract());
     await page.unroute(`http://${spec.host}/**`);
 
     expect(Object.keys(got).sort()).toEqual(['author', 'title', 'url', 'words']);

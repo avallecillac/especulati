@@ -1,4 +1,4 @@
-import { err, ok, type Result } from '@readerlog/core';
+import { err, ok, type Result } from '@especulati/lector-core';
 import { QR_PREFIX } from './frozen.ts';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';

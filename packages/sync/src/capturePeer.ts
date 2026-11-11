@@ -1,6 +1,6 @@
 // The extension's push-only sync peer (005 research R7, contracts/extension.md). It holds no
 // SQLite: state lives in a CaptureStore (chrome.storage.local in the extension, a Map in tests).
-// It must not import packages/db or engine.ts (dependency-cruiser `capture-peer-no-db`), so the
+// It must not import packages/lector-db or engine.ts (dependency-cruiser `capture-peer-no-db`), so the
 // extension bundle stays free of WASM. It never calls GET /batches (FR-012).
 import {
   decide,
@@ -23,7 +23,7 @@ import {
   type OpWire,
   type Table,
   type Result,
-} from '@readerlog/core';
+} from '@especulati/lector-core';
 import { parseSyncCode } from './code.ts';
 import { seal } from './envelope.ts';
 import { CAPTURE_ID_LABEL, HIGHLIGHT_ID_LABEL, ITEM_TAG_ID_LABEL, TAG_ID_LABEL } from './frozen.ts';

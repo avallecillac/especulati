@@ -14,8 +14,8 @@ import { openApp } from '../helpers.ts';
  */
 export const APP_ORIGIN = 'http://localhost:4173';
 export const ARTICLE_URL = `${APP_ORIGIN}/fixture/article.html`;
-const DIST = fileURLToPath(new URL('../../apps/extension/dist-e2e/', import.meta.url));
-const FIXTURES = fileURLToPath(new URL('../../apps/extension/test/fixtures/', import.meta.url));
+const DIST = fileURLToPath(new URL('../../apps/lector-extension/dist-e2e/', import.meta.url));
+const FIXTURES = fileURLToPath(new URL('../../apps/lector-extension/test/fixtures/', import.meta.url));
 const localChromium = process.env['PLAYWRIGHT_BROWSERS_PATH'] ? '/opt/pw-browsers/chromium' : undefined;
 
 /** The page every capture test uses: an English news article, about 650 words (~3 min). */
@@ -78,7 +78,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
         await sw.evaluate(
           async ([h, u]) => {
             const [tab] = await (globalThis as unknown as ChromeInSw).chrome.tabs.query({ url: u! });
-            const r = (globalThis as unknown as { readerlog: Record<string, (...a: unknown[]) => Promise<void>> }).readerlog;
+            const r = (globalThis as unknown as { lector: Record<string, (...a: unknown[]) => Promise<void>> }).lector;
             if (h === 'action') await r['captureTab']!(tab);
             else if (h === 'command') await r['onCommand']!('log-as-read', tab);
             else await r['onMenuClick']!({ menuItemId: 'log-as-read' }, tab);
@@ -90,7 +90,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
         await sw.evaluate(
           async ([h, u]) => {
             const [tab] = await (globalThis as unknown as ChromeInSw).chrome.tabs.query({ url: u! });
-            const r = (globalThis as unknown as { readerlog: Record<string, (...a: unknown[]) => Promise<void>> }).readerlog;
+            const r = (globalThis as unknown as { lector: Record<string, (...a: unknown[]) => Promise<void>> }).lector;
             if (h === 'command') await r['onCommand']!('save-highlight', tab);
             else await r['onMenuClick']!({ menuItemId: 'save-highlight' }, tab);
           },
@@ -101,7 +101,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
         await sw.evaluate(
           async ([h, u, link]) => {
             const [tab] = await (globalThis as unknown as ChromeInSw).chrome.tabs.query({ url: u! });
-            const r = (globalThis as unknown as { readerlog: Record<string, (...a: unknown[]) => Promise<void>> }).readerlog;
+            const r = (globalThis as unknown as { lector: Record<string, (...a: unknown[]) => Promise<void>> }).lector;
             if (h === 'command') await r['onCommand']!('save-for-later', tab);
             else if (h === 'menu') await r['onMenuClick']!({ menuItemId: 'save-later' }, tab);
             else await r['onMenuClick']!({ menuItemId: 'save-later', linkUrl: link }, tab);
@@ -120,7 +120,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
       },
       sent: () => expect.poll(() => ext.waiting()).toBe(0),
       badge: () => sw.evaluate(() => (globalThis as unknown as ChromeInSw).chrome.action.getBadgeText({})),
-      waiting: () => sw.evaluate(async () => (await (globalThis as unknown as { readerlog: { status(): Promise<{ waiting: number }> } }).readerlog.status()).waiting),
+      waiting: () => sw.evaluate(async () => (await (globalThis as unknown as { lector: { status(): Promise<{ waiting: number }> } }).lector.status()).waiting),
     };
     await use(ext);
     await context.close();

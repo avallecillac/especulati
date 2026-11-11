@@ -1,19 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
-import { normalizeQuote, passageUrl } from '../packages/core/src/highlight.ts';
+import { normalizeQuote, passageUrl } from '../packages/lector-core/src/highlight.ts';
 import { APP_ORIGIN, ARTICLE, expect, syncAndOpenArticles, test, turnOnSync } from './fixtures/extension.ts';
 
 /**
  * Feature 007 US1 (T015): saving a highlight from the extension. The EXT_E2E build is driven through
  * its test hooks (the handlers behind the shortcut and the context menu), against the shared relay.
  */
-const FIXTURES = fileURLToPath(new URL('../apps/extension/test/fixtures/', import.meta.url));
+const FIXTURES = fileURLToPath(new URL('../apps/lector-extension/test/fixtures/', import.meta.url));
 const expected = JSON.parse(readFileSync(`${FIXTURES}expected.json`, 'utf8')) as { host: string; pages: Record<string, unknown> };
 const names = Object.keys(expected.pages);
 
 const rows = (page: Page) => page.getByTestId('article-row');
-const toastOf = (page: Page) => page.locator('#readerlog-toast');
+const toastOf = (page: Page) => page.locator('#lector-toast');
 const entries = (page: Page) => page.getByRole('article', { name: /^(Highlight|Note)$/ });
 
 /** Select the longest paragraph (or list item) (a real Range, as a drag would make) and return its text as the page renders it. */
@@ -187,7 +187,7 @@ test('FR-006: offline, a save stays pending and is visible in the PWA once the r
   await expect.poll(() => ext.badge()).toBe('2');
 
   relay.failWith(null);
-  await ext.sw.evaluate(() => (globalThis as unknown as { readerlog: { flush(): Promise<void> } }).readerlog.flush());
+  await ext.sw.evaluate(() => (globalThis as unknown as { lector: { flush(): Promise<void> } }).lector.flush());
   await ext.sent();
   await expect.poll(() => ext.badge()).toBe('');
   await openFirstArticle(pwa);

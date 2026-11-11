@@ -22,6 +22,7 @@ See proposal.md (Why) for the motivation. Lector is installed on several devices
 | `DB_FILE = '/readerlog.db'` | `apps/pwa/src/worker/db.worker.ts:16` | The OPFS file name. Changing it opens an empty database, and the old data is orphaned. |
 | `installOpfsSAHPoolVfs({ name: 'readerlog-sahpool' })` | `apps/pwa/src/worker/db.worker.ts:66` | The SAH-pool directory. Changing it orphans the pool, and the data in it. |
 | `LOCK = 'readerlog-db'` | `apps/pwa/src/worker/db.worker.ts:15` | During an update, an old tab and a new tab must still exclude each other. Two holders mean two OPFS connections. |
+| `CHANNEL = 'readerlog'` | `apps/pwa/src/lib/protocol.ts:122` | The cross-tab BroadcastChannel. During an update, an old tab must still hear a new tab's change notices. |
 | `SALT = 'readerlog-sync-v1'` | `packages/sync/src/keys.ts:1` | The HKDF salt. Changing it derives a different `spaceId`, `authToken` and `encKey`, and the device leaves its space. |
 | AAD `` `readerlog/v1/${spaceId}/${batchId}` `` | `packages/sync/src/envelope.ts:34` | Changing it makes AES-GCM authentication fail for every existing batch. |
 | `QR_PREFIX = 'readerlog:sync:1:'` | `packages/sync/src/code.ts:4` | Existing printed or saved pairing QR codes and codes stop parsing. |

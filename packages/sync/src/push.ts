@@ -1,4 +1,4 @@
-import type { OpWire } from '@readerlog/core';
+import type { OpWire } from '@especulati/lector-core';
 import type { Envelope } from './envelope.ts';
 import type { RelayClient, RelayFailure } from './relayClient.ts';
 
@@ -9,7 +9,7 @@ type MaybePromise<T> = T | Promise<T>;
 /**
  * Where unpushed local ops live. The token is opaque to the pusher: the DB adapter uses a
  * change_log seq, a capture peer with an in-memory `pending: OpWire[]` uses a count.
- * This file must not import packages/db (dependency-cruiser `capture-peer-no-db`).
+ * This file must not import packages/lector-db (dependency-cruiser `capture-peer-no-db`).
  */
 export interface PushSource<T = unknown> {
   /**

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { OpWire } from '@readerlog/core';
+import type { OpWire } from '@especulati/lector-core';
 import { pushAll, PUSH_LIMIT, type PushDeps, type PushSource } from '../src/push.ts';
 import type { RelayResult } from '../src/relayClient.ts';
-import { openTestDb, uuid } from '../../db/test/helpers.ts';
+import { openTestDb, uuid } from '../../lector-db/test/helpers.ts';
 
 const op = (i: number) => ({ i }) as unknown as OpWire;
 

@@ -2,7 +2,7 @@
 // measurement (research R1, FR-023, SC-007). All randomness is a seeded PRNG in this file.
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { parseRemoteOp, tagKey, tierOf, type EventType, type OpWire } from '@readerlog/core';
+import { parseRemoteOp, tagKey, tierOf, type EventType, type OpWire } from '@especulati/lector-core';
 import { parseSyncCode } from '../src/code.ts';
 import { deriveKeys } from '../src/keys.ts';
 import { open } from '../src/envelope.ts';
@@ -20,7 +20,7 @@ const int = (rng: () => number, lo: number, hi: number) => lo + Math.floor(rng()
 let idN = 0x40000000;
 const newId = () => uuid(++idN);
 
-/** Same derivation as apps/pwa/src/lib/ids.ts (SHA-256, first 16 bytes, v4/variant bits), via node:crypto. */
+/** Same derivation as apps/lector/src/lib/ids.ts (SHA-256, first 16 bytes, v4/variant bits), via node:crypto. */
 function hashId(label: string): string {
   const b = createHash('sha256').update(label).digest().subarray(0, 16);
   b[6] = (b[6]! & 0x0f) | 0x40;
@@ -28,7 +28,7 @@ function hashId(label: string): string {
   const h = b.toString('hex');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
-/** Content-addressed v2 copy id, as in apps/pwa/src/lib/ids.ts: the source event's content, read from `p`. */
+/** Content-addressed v2 copy id, as in apps/lector/src/lib/ids.ts: the source event's content, read from `p`. */
 const mergeCopyId = (p: Peer, survivor: string, event: string): string => {
   const r = p.db.raw.selectObject('SELECT event_type, page, occurred_at, local_date FROM reading_events WHERE id = ?', [event])!;
   const page = r.page === null ? '' : (r.page as number);

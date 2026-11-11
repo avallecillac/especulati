@@ -1,5 +1,5 @@
-import { err, ok, parseRemoteOp, type Instant, type RemoteOp, type Result } from '@readerlog/core';
-import type { ReaderlogDb, SyncProblem, SyncStatus } from '@readerlog/db';
+import { err, ok, parseRemoteOp, type Instant, type RemoteOp, type Result } from '@especulati/lector-core';
+import type { LectorDb, SyncProblem, SyncStatus } from '@especulati/lector-db';
 import { formatSyncCode, newSyncSecret, parseSyncCode, qrPayload } from './code.ts';
 import { open, seal } from './envelope.ts';
 import { deriveKeys, type SyncKeys } from './keys.ts';
@@ -7,7 +7,7 @@ import { pushAll, type PushSource } from './push.ts';
 import { createRelayClient, type RelayClient, type RelayFailure } from './relayClient.ts';
 
 export interface SyncDeps {
-  db: ReaderlogDb;
+  db: LectorDb;
   fetch: typeof fetch;
   now: () => number;
   random: (n: number) => Uint8Array;

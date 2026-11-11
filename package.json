@@ -1,12 +1,12 @@
 {
-  "name": "readerlog",
+  "name": "especulati",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": { "node": ">=22" },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
-    "lint": "eslint . && depcruise packages apps/pwa/src apps/relay/src apps/extension/src --config .dependency-cruiser.cjs",
+    "lint": "eslint . && depcruise packages apps/lector/src apps/relay/src apps/lector-extension/src --config .dependency-cruiser.cjs",
     "test": "vitest run",
     "test:convergence": "CONVERGENCE_RUNS=1000 vitest run --project sync convergence",
     "e2e": "pnpm --filter e2e test"

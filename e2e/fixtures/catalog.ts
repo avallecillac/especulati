@@ -9,7 +9,7 @@ import { writeBarcode } from 'zxing-wasm/full';
  * recorded and aborted, and the `catalog` fixture (auto) fails the test afterwards.
  */
 
-const FIXTURES = fileURLToPath(new URL('../../apps/pwa/src/catalog/fixtures/', import.meta.url));
+const FIXTURES = fileURLToPath(new URL('../../apps/lector/src/catalog/fixtures/', import.meta.url));
 const COVER_JPG = fileURLToPath(new URL('./cover.jpg', import.meta.url));
 
 export type CatalogHost = 'openlibrary' | 'covers' | 'googleapis';

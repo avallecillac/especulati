@@ -1,4 +1,4 @@
-import { err, ok, type OpWire, type Result } from '@readerlog/core';
+import { err, ok, type OpWire, type Result } from '@especulati/lector-core';
 import { ENVELOPE_AAD_PREFIX } from './frozen.ts';
 
 export type { OpWire };

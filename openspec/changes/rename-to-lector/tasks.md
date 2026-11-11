@@ -10,11 +10,11 @@ Each numbered group is one commit. "Checks" means that `pnpm typecheck && pnpm l
 
 ## 2. Move the folders and rename the package scope (one commit)
 
-- [ ] 2.1 `git mv packages/core packages/lector-core`, `packages/db packages/lector-db`, `apps/pwa apps/lector`, `apps/extension apps/lector-extension`. Rename the package names per design D2, and set the root `package.json` name to `especulati`. Run `pnpm install` so the lockfile updates. Verify: `pnpm install --frozen-lockfile` succeeds afterwards.
-- [ ] 2.2 Rewrite every import of `@readerlog/*` as `@especulati/*`. Rename `ReaderlogDb` to `LectorDb`. Verify: `grep -rn "@readerlog/\|ReaderlogDb" --exclude-dir=node_modules --exclude-dir=specs .` returns nothing.
-- [ ] 2.3 Update `.dependency-cruiser.cjs`, `eslint.config.js`, `vitest.config.ts` (the roots and project names), the tsconfig references, the `functions/api/[[path]].ts` imports, `e2e/playwright.config.ts`, `e2e/fixtures/extension.ts` (the dist path) and `.github/workflows/ci.yml`. Verify: the boundary rules still reject a deliberate `lector-core` → `lector-db` import (try it, then revert it); checks pass.
-- [ ] 2.4 Rename the extension hooks to `globalThis.lector`, `__lectorExtract`, `__lectorToast`, `#lector-toast` and `lector-flush`. Update `check-manifest.mjs` and the e2e selectors and fixtures to match. Verify: `pnpm --filter @especulati/lector-extension build` rejects a planted `globalThis.lector =` in a release bundle, and accepts the real build; checks pass.
-- [ ] 2.5 Run the frozen-id guard tests from group 1 at their new paths. Verify: they're unchanged and green.
+- [x] 2.1 `git mv packages/core packages/lector-core`, `packages/db packages/lector-db`, `apps/pwa apps/lector`, `apps/extension apps/lector-extension`. Rename the package names per design D2, and set the root `package.json` name to `especulati`. Run `pnpm install` so the lockfile updates. Verify: `pnpm install --frozen-lockfile` succeeds afterwards.
+- [x] 2.2 Rewrite every import of `@readerlog/*` as `@especulati/*`. Rename `ReaderlogDb` to `LectorDb`. Verify: `grep -rn "@readerlog/\|ReaderlogDb" --exclude-dir=node_modules --exclude-dir=specs .` returns nothing.
+- [x] 2.3 Update `.dependency-cruiser.cjs`, `eslint.config.js`, `vitest.config.ts` (the roots and project names), the tsconfig references, the `functions/api/[[path]].ts` imports, `e2e/playwright.config.ts`, `e2e/fixtures/extension.ts` (the dist path) and `.github/workflows/ci.yml`. Verify: the boundary rules still reject a deliberate `lector-core` → `lector-db` import (try it, then revert it); checks pass.
+- [x] 2.4 Rename the extension hooks to `globalThis.lector`, `__lectorExtract`, `__lectorToast`, `#lector-toast` and `lector-flush`. Update `check-manifest.mjs` and the e2e selectors and fixtures to match. Verify: `pnpm --filter @especulati/lector-extension build` rejects a planted `globalThis.lector =` in a release bundle, and accepts the real build; checks pass.
+- [x] 2.5 Run the frozen-id guard tests from group 1 at their new paths. Verify: they're unchanged and green.
 
 ## 3. Change the visible name to Lector
 

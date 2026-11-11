@@ -27,34 +27,15 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@22.20.4)(vite@8.3.1(@types/node@22.20.4)(terser@5.51.2))
 
-  apps/extension:
+  apps/lector:
     dependencies:
-      '@mozilla/readability':
-        specifier: 0.6.0
-        version: 0.6.0
-      '@readerlog/core':
+      '@especulati/lector-core':
         specifier: workspace:*
-        version: link:../../packages/core
-      '@readerlog/sync':
+        version: link:../../packages/lector-core
+      '@especulati/lector-db':
         specifier: workspace:*
-        version: link:../../packages/sync
-    devDependencies:
-      '@types/chrome':
-        specifier: ^0.1.0
-        version: 0.1.43
-      vite:
-        specifier: ^8.3.0
-        version: 8.3.1(@types/node@22.20.4)(terser@5.51.2)
-
-  apps/pwa:
-    dependencies:
-      '@readerlog/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@readerlog/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@readerlog/sync':
+        version: link:../../packages/lector-db
+      '@especulati/sync':
         specifier: workspace:*
         version: link:../../packages/sync
       '@sqlite.org/sqlite-wasm':
@@ -89,6 +70,25 @@ importers:
         specifier: ^7.4.0
         version: 7.4.1
 
+  apps/lector-extension:
+    dependencies:
+      '@especulati/lector-core':
+        specifier: workspace:*
+        version: link:../../packages/lector-core
+      '@especulati/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
+      '@mozilla/readability':
+        specifier: 0.6.0
+        version: 0.6.0
+    devDependencies:
+      '@types/chrome':
+        specifier: ^0.1.0
+        version: 0.1.43
+      vite:
+        specifier: ^8.3.0
+        version: 8.3.1(@types/node@22.20.4)(terser@5.51.2)
+
   apps/relay:
     devDependencies:
       '@sqlite.org/sqlite-wasm':
@@ -107,25 +107,25 @@ importers:
         specifier: 3.1.4
         version: 3.1.4(@types/emscripten@1.41.6)
 
-  packages/core: {}
+  packages/lector-core: {}
 
-  packages/db:
+  packages/lector-db:
     dependencies:
-      '@readerlog/core':
+      '@especulati/lector-core':
         specifier: workspace:*
-        version: link:../core
+        version: link:../lector-core
       '@sqlite.org/sqlite-wasm':
         specifier: 3.53.4-build1
         version: 3.53.4-build1
 
   packages/sync:
     dependencies:
-      '@readerlog/core':
+      '@especulati/lector-core':
         specifier: workspace:*
-        version: link:../core
-      '@readerlog/db':
+        version: link:../lector-core
+      '@especulati/lector-db':
         specifier: workspace:*
-        version: link:../db
+        version: link:../lector-db
 
 packages:
 

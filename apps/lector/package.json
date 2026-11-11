@@ -1,0 +1,30 @@
+{
+  "name": "lector",
+  "version": "0.9.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "catalog:coverage": "node --experimental-strip-types scripts/catalog-coverage.ts",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@especulati/lector-core": "workspace:*",
+    "@especulati/lector-db": "workspace:*",
+    "@especulati/sync": "workspace:*",
+    "@sqlite.org/sqlite-wasm": "3.53.4-build1",
+    "qrcode-generator": "2.0.4",
+    "zxing-wasm": "3.1.4"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "svelte": "^5.57.0",
+    "svelte-check": "^4.7.0",
+    "vite": "^8.3.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-window": "^7.4.0",
+    "workbox-build": "^7.4.0"
+  }
+}

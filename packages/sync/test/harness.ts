@@ -1,8 +1,8 @@
 // Shared by engine.test.ts and convergence.test.ts. The fake relay is the real handler over the
 // SQLite test store, wrapped as `fetch`. Test files only: production sync code never imports apps/*.
-import type { DeviceId, Instant } from '@readerlog/core';
-import { ReaderlogDb, type DispatchEnv } from '../../db/src/index.ts';
-import { emptyDb, uuid } from '../../db/test/helpers.ts';
+import type { DeviceId, Instant } from '@especulati/lector-core';
+import { LectorDb, type DispatchEnv } from '../../lector-db/src/index.ts';
+import { emptyDb, uuid } from '../../lector-db/test/helpers.ts';
 import { handle } from '../../../apps/relay/src/handler.ts';
 import { sqliteStore, type TestStore } from '../../../apps/relay/test/sqliteStore.ts';
 import { createSyncEngine, type SyncEngine } from '../src/engine.ts';
@@ -110,7 +110,7 @@ export function fakeRelay(): FakeRelay {
 
 export interface Peer {
   n: number;
-  db: ReaderlogDb;
+  db: LectorDb;
   engine: SyncEngine;
   device: DeviceId;
   online: boolean;
@@ -124,7 +124,7 @@ export interface Peer {
 
 export function makePeer(n: number, relay: FakeRelay, rng: () => number = prng(n), start = Date.UTC(2026, 8, 27, 12, 0, 0)): Peer {
   const raw = emptyDb();
-  const db = new ReaderlogDb(raw);
+  const db = new LectorDb(raw);
   db.migrate();
   const device = db.ensureDeviceId(uuid(0xd000 + n));
   let wall = start;

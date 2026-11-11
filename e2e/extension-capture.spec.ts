@@ -23,7 +23,7 @@ test('toolbar capture: the toast shows the title and ~N min; the PWA lists it, d
   await ext.pair(await turnOnSync(pwa));
   const page = await ext.openArticle();
   await ext.capture('action');
-  const toast = page.locator('#readerlog-toast');
+  const toast = page.locator('#lector-toast');
   await expect(toast.getByText(ARTICLE.title)).toBeVisible();
   await expect(toast.getByText(new RegExp(`~${ARTICLE.minutes} min`))).toBeVisible();
   await expect(toast.getByRole('button', { name: 'Undo' })).toBeVisible();
@@ -40,10 +40,10 @@ test('the keyboard command and the context menu capture too', async ({ ext, pwa 
   await ext.pair(await turnOnSync(pwa));
   const a = await ext.openArticle(`${ARTICLE_URL}?via=command`);
   await ext.capture('command', `${ARTICLE_URL}?via=command`);
-  await expect(a.locator('#readerlog-toast').getByText(ARTICLE.title)).toBeVisible();
+  await expect(a.locator('#lector-toast').getByText(ARTICLE.title)).toBeVisible();
   const b = await ext.openArticle(`${ARTICLE_URL}?via=menu`);
   await ext.capture('menu', `${ARTICLE_URL}?via=menu`);
-  await expect(b.locator('#readerlog-toast').getByText(ARTICLE.title)).toBeVisible();
+  await expect(b.locator('#lector-toast').getByText(ARTICLE.title)).toBeVisible();
 
   await ext.sent();
   await syncAndOpenArticles(pwa);
@@ -54,10 +54,10 @@ test('duplicate: already logged; Cancel adds nothing; Log again adds a second', 
   await ext.pair(await turnOnSync(pwa));
   const page = await ext.openArticle();
   await ext.capture('action');
-  await expect(page.locator('#readerlog-toast').getByText(ARTICLE.title)).toBeVisible();
+  await expect(page.locator('#lector-toast').getByText(ARTICLE.title)).toBeVisible();
 
   await ext.capture('action');
-  const toast = page.locator('#readerlog-toast');
+  const toast = page.locator('#lector-toast');
   await expect(toast.getByText(/Already logged on/)).toBeVisible();
   await toast.getByRole('button', { name: 'Cancel' }).click();
   await expect(toast).toHaveCount(0);
@@ -78,8 +78,8 @@ test('undo removes the article in the PWA after sync', async ({ ext, pwa }) => {
   await ext.pair(await turnOnSync(pwa));
   const page = await ext.openArticle();
   await ext.capture('action');
-  await page.locator('#readerlog-toast').getByRole('button', { name: 'Undo' }).click();
-  await expect(page.locator('#readerlog-toast').getByText('Removed')).toBeVisible();
+  await page.locator('#lector-toast').getByRole('button', { name: 'Undo' }).click();
+  await expect(page.locator('#lector-toast').getByText('Removed')).toBeVisible();
   await ext.sent();
   await syncAndOpenArticles(pwa);
   await expect(pwa.getByText('No articles yet.')).toBeVisible();
@@ -90,12 +90,12 @@ test('offline: the badge shows 1, and the capture is sent once the relay works',
   const page = await ext.openArticle();
   relay.failWith(503);
   await ext.capture('action');
-  await expect(page.locator('#readerlog-toast').getByText(ARTICLE.title)).toBeVisible();
+  await expect(page.locator('#lector-toast').getByText(ARTICLE.title)).toBeVisible();
   expect(await ext.waiting()).toBe(1);
   await expect.poll(() => ext.badge()).toBe('1');
 
   relay.failWith(null);
-  await ext.sw.evaluate(() => (globalThis as unknown as { readerlog: { flush(): Promise<void> } }).readerlog.flush());
+  await ext.sw.evaluate(() => (globalThis as unknown as { lector: { flush(): Promise<void> } }).lector.flush());
   await ext.sent();
   await expect.poll(() => ext.badge()).toBe('');
   await ext.sent();

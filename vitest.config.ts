@@ -3,8 +3,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     projects: [
-      { test: { name: 'core', root: 'packages/core', environment: 'node' } },
-      { test: { name: 'db', root: 'packages/db', environment: 'node' } },
+      { test: { name: 'lector-core', root: 'packages/lector-core', environment: 'node' } },
+      { test: { name: 'lector-db', root: 'packages/lector-db', environment: 'node' } },
       { test: { name: 'sync', root: 'packages/sync', environment: 'node', passWithNoTests: true } },
       {
         test: {
@@ -16,7 +16,7 @@ export default defineConfig({
         },
       },
       {
-        test: { name: 'pwa', root: 'apps/pwa', environment: 'node', include: ['src/**/*.test.ts'] },
+        test: { name: 'lector', root: 'apps/lector', environment: 'node', include: ['src/**/*.test.ts'] },
       },
     ],
   },
