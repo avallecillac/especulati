@@ -52,7 +52,9 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
     // relay calls would miss the test relay. Read when a service worker starts.
     process.env['PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS'] = '1';
     const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), 'rl-ext-')), {
-      ...(localChromium ? { executablePath: localChromium } : {}),
+      // The headless shell (Playwright's default for headless) cannot load extensions; full
+      // Chromium in new headless mode can.
+      ...(localChromium ? { executablePath: localChromium } : { channel: 'chromium' }),
       headless: true,
       args: [`--disable-extensions-except=${DIST}`, `--load-extension=${DIST}`],
       timezoneId: 'America/New_York',
