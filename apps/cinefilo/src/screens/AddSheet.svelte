@@ -4,8 +4,9 @@
   import { KIND_LABEL, STATUS_LABEL, statusesFor } from '../lib/labels.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast, write } from '../lib/state.svelte.ts';
-  import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
+  import { failureText, thumbUrl, type TmdbResult } from '../catalog/tmdb.ts';
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
+  import { covers } from '../lib/covers.svelte.ts';
   import Cover from './Cover.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -155,12 +156,21 @@
         <ul class="results" aria-label="Search results">
           {#each results as hit (`${hit.mediaKind}-${hit.tmdbId}`)}
             <li class="result">
-              <Cover titleId={`tmdb-${hit.mediaKind}-${hit.tmdbId}`} />
+              {#if hit.posterPath && tmdb.online && covers.mode !== 'generated'}
+                <img class="thumb" src={thumbUrl(hit.posterPath)} alt="" width="46" height="69" loading="lazy" referrerpolicy="no-referrer" />
+              {:else}
+                <span class="thumb-cover"><Cover titleId={`tmdb-${hit.mediaKind}-${hit.tmdbId}`} /></span>
+              {/if}
               <span class="meta">
-                <span class="name">{hit.title}</span>
+                <span class="name clamp2">{hit.title}</span>
                 <span class="muted small">{KIND_LABEL[hit.mediaKind]}{hit.year ? ` · ${hit.year}` : ''}</span>
+                {#if hit.originalTitle}
+                  <span class="muted small clamp1">{hit.originalTitle}</span>
+                {:else if hit.overview}
+                  <span class="muted small clamp1">{hit.overview}</span>
+                {/if}
               </span>
-              <button type="button" class="primary" disabled={addingId !== null} onclick={() => void addResult(hit)}>{`Add ${hit.title}${hit.year ? ` (${hit.year})` : ''}`}</button>
+              <button type="button" class="primary add" aria-label={`Add ${hit.title}${hit.year ? ` (${hit.year})` : ''}`} disabled={addingId !== null} onclick={() => void addResult(hit)}><span aria-hidden="true">+ Add</span></button>
             </li>
           {/each}
         </ul>

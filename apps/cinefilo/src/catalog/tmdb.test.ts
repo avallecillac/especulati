@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { failureText, isV4Token, searchTmdb, tmdbDetails } from './tmdb.ts';
+import { failureText, isV4Token, searchTmdb, thumbUrl, tmdbDetails } from './tmdb.ts';
 import { fakeFetch, fixture } from './testkit.ts';
 
 const V3 = 'v3keyDISTINCTIVE0123456789abcdef';
@@ -16,6 +16,12 @@ describe('key shape', () => {
     expect(isV4Token(V4)).toBe(true);
     expect(isV4Token(V3)).toBe(false);
     expect(isV4Token('0123456789abcdef0123456789abcdef')).toBe(false);
+  });
+});
+
+describe('thumbUrl', () => {
+  it('points at the w92 image host with the path only, never a key', () => {
+    expect(thumbUrl('/abc.jpg')).toBe('https://image.tmdb.org/t/p/w92/abc.jpg');
   });
 });
 

@@ -22,6 +22,9 @@ const mediaKindOf = (t: unknown): TmdbKind | null => (t === 'movie' ? 'movie' : 
 /** The poster URL the shell/worker downloads (width 342). */
 export const posterUrl = (path: string): string => `${TMDB_IMAGE}${path}`;
 
+/** The small poster (width 92) the add sheet shows in search results. It loads straight from TMDB's image host and never carries the key. */
+export const thumbUrl = (path: string): string => `https://image.tmdb.org/t/p/w92${path}`;
+
 function mapResult(raw: unknown, forced?: TmdbKind): TmdbResult | null {
   const o = obj(raw);
   if (!o) return null;

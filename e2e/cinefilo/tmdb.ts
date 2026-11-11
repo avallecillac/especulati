@@ -34,13 +34,13 @@ export async function installTmdb(context: BrowserContext): Promise<Tmdb> {
     const json = (body: string, status = 200) => route.fulfill({ status, headers: cors, contentType: 'application/json', body });
 
     if (url.host === 'image.tmdb.org') {
-      if (!url.pathname.startsWith('/t/p/w342/')) return void (api.unmatched.push(req.url()), await route.abort());
-      posters++;
+      if (!/^\/t\/p\/w(342|92)\//.test(url.pathname)) return void (api.unmatched.push(req.url()), await route.abort());
+      if (url.pathname.startsWith('/t/p/w342/')) posters++;
       return route.fulfill({ status: 200, headers: cors, contentType: 'image/jpeg', body: POSTER });
     }
     if (forced !== null) return json('{"status_message":"forced"}', forced);
     const path = url.pathname.replace(/^\/3\//, '');
-    if (path === 'search/multi') return json(/severance/i.test(url.searchParams.get('query') ?? '') ? read('search-severance') : read('search-empty'));
+    if (path === 'search/multi') return json(/ebenezer/i.test(url.searchParams.get('query') ?? '') ? read('search-ebenezer') : /severance/i.test(url.searchParams.get('query') ?? '') ? read('search-severance') : read('search-empty'));
     if (path === 'tv/95396') return json(read('tv-95396'));
     if (path === 'movie/843') return json(read('movie-843'));
     api.unmatched.push(req.url());
