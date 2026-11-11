@@ -2,7 +2,7 @@
 // string persisted on devices has changed: revert the change, do not update the expectation.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DB_FILE, LOCK, SAH_POOL_NAME } from './worker/frozen.ts';
+import { CHANNEL, DB_FILE, LOCK, SAH_POOL_NAME } from './worker/frozen.ts';
 
 const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 
@@ -11,6 +11,7 @@ describe('frozen worker identifiers', () => {
     expect(DB_FILE).toBe('/cinefilo.db');
     expect(SAH_POOL_NAME).toBe('cinefilo-sahpool');
     expect(LOCK).toBe('cinefilo-db');
+    expect(CHANNEL).toBe('cinefilo-changes');
   });
 
   it('db.worker.ts uses the frozen constants and has no inline copies', () => {

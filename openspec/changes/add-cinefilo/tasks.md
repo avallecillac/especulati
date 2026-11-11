@@ -27,17 +27,17 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 3. Storage (`cinefilo-db`, in-memory SQLite)
 
-- [ ] 3.1 Migration 1 for the schema v1 tables (design D2) and the partial indexes, through the shared migration runner, plus a test that migrates an empty database to v1. Verify with `pnpm test --project cinefilo-db`.
-- [ ] 3.2 Apply decisions and remote ops through the shared plumbing, all-or-nothing, with `field_clock` and `change_log` updated. Verify with tests that the transaction rolls back on a failing op and that the allow-list skips bad ops.
-- [ ] 3.3 Read models: the three lists with their sort orders, the title detail with both ratings and member names, and the filters, all excluding `deleted_at` and `merged_into` rows. Verify with fixture database tests, including tombstones, merged rows and a removed title that has ratings.
-- [ ] 3.4 A convergence test: 2 members on 3 devices, random command streams (adding the same titles offline, concurrent status, season and rating edits, remove versus rate, link plus reconcile), and delivery in random order with duplicates. Every database must end identical. Verify that `pnpm test:convergence` includes cinefilo and passes 1,000 runs.
-- [ ] 3.5 Export and import against the database, with an idempotent merge by id that applies fully or not at all. Verify with tests for export → import into an empty database equals the original, and for importing twice being a no-op.
+- [x] 3.1 Migration 1 for the schema v1 tables (design D2) and the partial indexes, through the shared migration runner, plus a test that migrates an empty database to v1. Verify with `pnpm test --project cinefilo-db`.
+- [x] 3.2 Apply decisions and remote ops through the shared plumbing, all-or-nothing, with `field_clock` and `change_log` updated. Verify with tests that the transaction rolls back on a failing op and that the allow-list skips bad ops.
+- [x] 3.3 Read models: the three lists with their sort orders, the title detail with both ratings and member names, and the filters, all excluding `deleted_at` and `merged_into` rows. Verify with fixture database tests, including tombstones, merged rows and a removed title that has ratings.
+- [x] 3.4 A convergence test: 2 members on 3 devices, random command streams (adding the same titles offline, concurrent status, season and rating edits, remove versus rate, link plus reconcile), and delivery in random order with duplicates. Every database must end identical. Verify that `pnpm test:convergence` includes cinefilo and passes 1,000 runs.
+- [x] 3.5 Export and import against the database, with an idempotent merge by id that applies fully or not at all. Verify with tests for export → import into an empty database equals the original, and for importing twice being a no-op.
 
 ## 4. Sync wiring
 
-- [ ] 4.1 Instantiate the shared engine in the cinefilo DB worker with salt `cinefilo-sync-v1`, AAD `cinefilo/v1/`, QR prefix `cinefilo:sync:1:`, the allow-list and the single-tier `tierOf`. Verify with a sync test over the in-memory relay: two databases converge, and the relay store holds only `{ batchId, iv, ct }`.
-- [ ] 4.2 Run reconcile after each sync and after `AddTitle` and `LinkToTmdb`. Verify with a test: two devices, one adds the title by hand and the other from TMDB, and after sync and reconcile there is one live title with both ratings.
-- [ ] 4.3 Redaction: the sync code, keys, token and TMDB key never appear in errors, logs or `meta` exports. Verify with a test that forces errors and greps their messages.
+- [x] 4.1 Instantiate the shared engine in the cinefilo DB worker with salt `cinefilo-sync-v1`, AAD `cinefilo/v1/`, QR prefix `cinefilo:sync:1:`, the allow-list and the single-tier `tierOf`. Verify with a sync test over the in-memory relay: two databases converge, and the relay store holds only `{ batchId, iv, ct }`.
+- [x] 4.2 Run reconcile after each sync and after `AddTitle` and `LinkToTmdb`. Verify with a test: two devices, one adds the title by hand and the other from TMDB, and after sync and reconcile there is one live title with both ratings.
+- [x] 4.3 Redaction: the sync code, keys, token and TMDB key never appear in errors, logs or `meta` exports. Verify with a test that forces errors and greps their messages.
 
 ## 5. UI flows (Svelte, Playwright first)
 

@@ -259,3 +259,11 @@ Decisions taken while implementing `cinefilo-core`; they refine, not change, the
 - `parseRemoteOp` also checks reference ids, NOT NULL fields, enums, the review limit and `genres` shape, so one bad op is skipped instead of tripping a CHECK and rolling back a batch.
 - Value ranges: year 1850–2200, runtime ≤ 10,000 min, seasons 1–1,000, member name ≤ 50, title ≤ 500 characters; lengths count code points.
 - Filter "partner hasn't rated" includes titles nobody rated; "only me" doesn't.
+
+## Implementation notes (groups 3–4, reviewed)
+
+- Cinefilo's sync strings (`cinefilo-sync-v1`, `cinefilo/v1`, `cinefilo:sync:1:`) live in `packages/cinefilo-db/src/frozen.ts`; the cross-tab channel is `cinefilo-changes`. All are guarded.
+- No foreign keys: `cinefiloCanInsert` parks a rating until its title arrives.
+- Import adds only rows the device lacks, as local writes; it never overwrites existing rows, so a second import is a no-op.
+- The partner is the earliest-created live member other than this device's member. Watching is sorted newest first.
+- **Known limitation (accepted for v1):** if one manual title is linked to two different TMDB ids at the same time, or a 3-way merge picks a survivor after a row already merged elsewhere, reconcile skips that row. It stays hidden and later edits to it are lost; devices still converge. Fixing it needs core to re-point `merged_into`.

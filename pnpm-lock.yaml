@@ -161,6 +161,9 @@ importers:
       '@especulati/db-kit':
         specifier: workspace:*
         version: link:../db-kit
+      '@especulati/sync':
+        specifier: workspace:*
+        version: link:../sync
       '@especulati/sync-core':
         specifier: workspace:*
         version: link:../sync-core

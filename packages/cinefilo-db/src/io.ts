@@ -1,0 +1,75 @@
+import type { Database } from '@sqlite.org/sqlite-wasm';
+import {
+  cinefiloSchema, genresToDb, parseExport, serializeExport, EXPORT_FORMAT,
+  type Change, type CinefiloExport, type Instant, type ParseError, type Result, err, ok,
+} from '@especulati/cinefilo-core';
+import { applyChanges, rollbackQuietly } from '@especulati/db-kit';
+import type { DeviceId } from '@especulati/sync-core';
+import { rowToMember, rowToRating, rowToTitle } from './snapshot.ts';
+
+/** Everything the `cinefilo/v1` file holds: all titles (removed and merged too), members and ratings. Never meta, posters or keys. */
+export function exportData(db: Database, exportedAt: Instant): CinefiloExport {
+  return {
+    format: EXPORT_FORMAT,
+    exportedAt,
+    titles: db.selectObjects('SELECT * FROM titles ORDER BY id').map(rowToTitle),
+    members: db.selectObjects('SELECT * FROM members ORDER BY id').map(rowToMember),
+    ratings: db.selectObjects('SELECT * FROM ratings ORDER BY id').map(rowToRating),
+  };
+}
+
+export const exportText = (db: Database, exportedAt: Instant): string => serializeExport(exportData(db, exportedAt));
+
+export interface ImportResult {
+  /** Rows the file had that this database did not, now inserted. */
+  readonly added: number;
+  /** Rows already present: left as they are (the file never overwrites newer local edits). */
+  readonly present: number;
+}
+
+/**
+ * Merge a file by id, all or nothing: rows this database lacks are inserted as local writes (so they get
+ * clocks and are pushed to the space); rows it already has are left alone. Importing the same file twice is
+ * therefore a no-op, and a file never overwrites newer edits. The file is validated completely first.
+ */
+export function importText(
+  db: Database, text: string, deviceId: DeviceId, wallMs: () => number, newOpId: () => string,
+): Result<ImportResult, ParseError> {
+  const parsed = parseExport(text);
+  if (!parsed.ok) return err(parsed.error);
+  const f = parsed.value;
+  const missing = (tbl: string, id: string) => db.selectValue(`SELECT 1 FROM ${tbl} WHERE id = ?`, [id]) === undefined;
+  const changes: Change[] = [];
+  let present = 0;
+  for (const t of f.titles) {
+    if (!missing('titles', t.id)) { present++; continue; }
+    changes.push({
+      tbl: 'titles', rowId: t.id,
+      fields: {
+        kind: t.kind, title: t.title, original_title: t.originalTitle, year: t.year, tmdb_id: t.tmdbId, poster_url: t.posterUrl,
+        genres: genresToDb(t.genres), runtime_min: t.runtimeMin, season_count: t.seasonCount, status: t.status, watched_on: t.watchedOn,
+        current_season: t.currentSeason, merged_into: t.mergedInto, added_by: t.addedBy, created_at: t.createdAt, deleted_at: t.deletedAt,
+      },
+    });
+  }
+  for (const m of f.members) {
+    if (!missing('members', m.id)) { present++; continue; }
+    changes.push({ tbl: 'members', rowId: m.id, fields: { name: m.name, created_at: m.createdAt, deleted_at: m.deletedAt } });
+  }
+  for (const r of f.ratings) {
+    if (!missing('ratings', r.id)) { present++; continue; }
+    changes.push({
+      tbl: 'ratings', rowId: r.id,
+      fields: { title_id: r.titleId, member_id: r.memberId, verdict: r.verdict, review: r.review, updated_at: r.updatedAt, deleted_at: r.deletedAt },
+    });
+  }
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    applyChanges(db, cinefiloSchema, changes, deviceId, wallMs, newOpId);
+    db.exec('COMMIT');
+  } catch (e) {
+    rollbackQuietly(db, 'ROLLBACK');
+    throw e;
+  }
+  return ok({ added: changes.length, present });
+}

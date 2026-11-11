@@ -8,3 +8,5 @@ export const LOCK = 'cinefilo-db';
 export const DB_FILE = '/cinefilo.db';
 // frozen: storage/wire identifier — see openspec add-cinefilo
 export const SAH_POOL_NAME = 'cinefilo-sahpool';
+// frozen: storage/wire identifier — see openspec add-cinefilo
+export const CHANNEL = 'cinefilo-changes';
