@@ -3,6 +3,7 @@
 // Core has no crypto, so the shell hashes; decide() only checks the result is a well-formed UUID.
 
 import { uuidFromHash } from '@readerlog/sync';
+import { DISMISSAL_LABEL, MERGE_COPY_LABEL } from './frozen.ts';
 
 export { uuidFromHash };
 
@@ -10,7 +11,7 @@ export { uuidFromHash };
 export const mergeCopyId = (
   survivorId: string,
   e: { type: string; page: number | null; occurredAt: string; localDate: string },
-): Promise<string> => uuidFromHash(`readerlog-merge-v2|${survivorId}|${e.type}|${e.page ?? ''}|${e.occurredAt}|${e.localDate}`);
+): Promise<string> => uuidFromHash(`${MERGE_COPY_LABEL}|${survivorId}|${e.type}|${e.page ?? ''}|${e.occurredAt}|${e.localDate}`);
 
 export const dismissalId = (a: string, b: string): Promise<string> =>
-  uuidFromHash(`readerlog-dismiss-v1|${a < b ? a : b}|${a < b ? b : a}`);
+  uuidFromHash(`${DISMISSAL_LABEL}|${a < b ? a : b}|${a < b ? b : a}`);

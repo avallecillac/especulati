@@ -7,6 +7,7 @@
     <script>
       (function () {
         var p = null, m = matchMedia("(prefers-color-scheme: dark)").matches;
+        // frozen: storage/wire identifier — see openspec rename-to-lector
         try { p = localStorage.getItem("readerlog.appearance"); } catch (e) {}
         var t = p === "macondo" || p === "patriarca" ? p : m ? "patriarca" : "macondo";
         document.documentElement.dataset.theme = t;

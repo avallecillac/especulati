@@ -1,4 +1,5 @@
 import { err, ok, type OpWire, type Result } from '@readerlog/core';
+import { ENVELOPE_AAD_PREFIX } from './frozen.ts';
 
 export type { OpWire };
 export interface Plain {
@@ -31,7 +32,7 @@ function fromB64url(s: string): Uint8Array<ArrayBuffer> | null {
   }
 }
 
-const aadFor = (spaceId: string, batchId: string) => new TextEncoder().encode(`readerlog/v1/${spaceId}/${batchId}`);
+const aadFor = (spaceId: string, batchId: string) => new TextEncoder().encode(`${ENVELOPE_AAD_PREFIX}/${spaceId}/${batchId}`);
 
 async function pipe(data: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
   const out = new Response(new Blob([data as BlobPart]).stream().pipeThrough(stream));

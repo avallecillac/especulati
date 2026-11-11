@@ -1,4 +1,6 @@
-const SALT = new TextEncoder().encode('readerlog-sync-v1');
+import { SYNC_SALT } from './frozen.ts';
+
+const SALT = new TextEncoder().encode(SYNC_SALT);
 
 export interface SyncKeys {
   spaceId: string;

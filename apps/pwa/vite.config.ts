@@ -22,6 +22,7 @@ export default defineConfig({
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/fonts/'),
             handler: 'CacheFirst',
+            // frozen: storage/wire identifier — see openspec rename-to-lector
             options: { cacheName: 'readerlog-fonts', expiration: { maxEntries: 16 } },
           },
         ],

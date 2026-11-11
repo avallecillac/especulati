@@ -5,16 +5,17 @@
 // rows. The ids use the same labels as the convergence test (packages/sync/test/convergence.test.ts).
 
 import type { DispatchEnv, ReaderlogDb } from '@readerlog/db';
+import { HL_COPY_LABEL, ITEM_TAG_ID_LABEL } from './frozen.ts';
 import { uuidFromHash } from './ids.ts';
 
 /** Content-addressed copy of one highlight onto the survivor (as 004's merge copies). */
 export const highlightCopyId = (
   survivorId: string,
   h: { quote: string | null; note: string | null; page: number | null; createdAt: string; localDate: string },
-): Promise<string> => uuidFromHash(`readerlog-hl-copy-v1|${survivorId}|${JSON.stringify([h.quote, h.note, h.page, h.createdAt, h.localDate])}`);
+): Promise<string> => uuidFromHash(`${HL_COPY_LABEL}|${survivorId}|${JSON.stringify([h.quote, h.note, h.page, h.createdAt, h.localDate])}`);
 
 /** The assignment of a tag to an article (research R3). */
-export const itemTagId = (itemId: string, tagId: string): Promise<string> => uuidFromHash(`readerlog-item-tag-v1|${itemId}|${tagId}`);
+export const itemTagId = (itemId: string, tagId: string): Promise<string> => uuidFromHash(`${ITEM_TAG_ID_LABEL}|${itemId}|${tagId}`);
 
 /** A TEXT column; anything else means the schema changed. */
 function str(v: unknown): string {

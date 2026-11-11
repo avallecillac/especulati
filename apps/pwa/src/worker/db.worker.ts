@@ -5,6 +5,7 @@ import { err, ok, parseLocalDate, tagKey, type Command, type Instant, type Rejec
 import { createSyncEngine, type SyncEngine } from '@readerlog/sync';
 import { itemTagId, reconcileAll } from '../lib/reconcile.ts';
 import { uuidFromHash } from '../lib/ids.ts';
+import { DB_FILE, LOCK, SAH_POOL_NAME } from './frozen.ts';
 import { CHANNEL, type ClientError, type Control, type Query, type Request, type Response, type StorageInfo, type SyncOp, type TagOp } from '../lib/protocol.ts';
 
 /**
@@ -12,8 +13,6 @@ import { CHANNEL, type ClientError, type Control, type Query, type Request, type
  * time, so tabs take turns: the visible tab holds the Web Lock; a hidden tab closes the DB,
  * pauses the VFS and releases the lock. Requests wait until this tab owns the DB again.
  */
-const LOCK = 'readerlog-db';
-const DB_FILE = '/readerlog.db';
 const LOCK_TIMEOUT_MS = 5000;
 
 const channel = new BroadcastChannel(CHANNEL);
@@ -63,7 +62,7 @@ async function open(): Promise<ReaderlogDb> {
   await acquireLock();
   try {
     if (pool) await pool.unpauseVfs();
-    else pool = await sqlite3.installOpfsSAHPoolVfs({ name: 'readerlog-sahpool' });
+    else pool = await sqlite3.installOpfsSAHPoolVfs({ name: SAH_POOL_NAME });
     const raw = new pool.OpfsSAHPoolDb(DB_FILE);
     // WAL without shared memory needs EXCLUSIVE locking, set before the first read; we hold the
     // DB exclusively anyway (Web Lock). WAL + synchronous=FULL keeps every commit durable while

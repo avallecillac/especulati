@@ -1,4 +1,5 @@
 import { normalizeNote, normalizeQuote, normalizeUrl, parseWordCount, siteOf } from '@readerlog/core';
+import { CAPTURE_ID_LABEL, HIGHLIGHT_ID_LABEL } from './frozen.ts';
 import { uuidFromHash } from './ids.ts';
 
 /** A capture link's payload, validated (contracts/capture.md). */
@@ -104,12 +105,12 @@ export function decodeCapture(d: string) {
 
 /** The derived article id: the same link opened twice gives the same id (research R5). */
 export const captureId = (c: Pick<Capture, 'url' | 'at'>): Promise<string> =>
-  uuidFromHash(`readerlog-capture-v1|${c.url}|${c.at}`);
+  uuidFromHash(`${CAPTURE_ID_LABEL}|${c.url}|${c.at}`);
 
 /** The derived highlight id: the same link opened twice gives "Already saved" (research 007 R6). */
 export const highlightCaptureId = (url: string, at: string): Promise<string> =>
-  uuidFromHash(`readerlog-highlight-v1|${url}|${at}`);
+  uuidFromHash(`${HIGHLIGHT_ID_LABEL}|${url}|${at}`);
 
 /** The derived id of a saved article: the 005 label plus `|later` (contracts/capture-008.md). */
 export const saveCaptureId = (c: Pick<Capture, 'url' | 'at'>): Promise<string> =>
-  uuidFromHash(`readerlog-capture-v1|${c.url}|${c.at}|later`);
+  uuidFromHash(`${CAPTURE_ID_LABEL}|${c.url}|${c.at}|later`);

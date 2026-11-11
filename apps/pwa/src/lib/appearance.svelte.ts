@@ -3,9 +3,10 @@
  * applied to <html data-theme> and the theme-color meta, and follows the system when automatic.
  * The pre-paint script in index.html applies the same rule before first paint.
  */
+import { APPEARANCE_KEY } from './frozen.ts';
 import { isThemeId, resolveTheme, themeById, type Appearance } from '../theme/themes.ts';
 
-const KEY = 'readerlog.appearance';
+const KEY = APPEARANCE_KEY;
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 function readStored(): Appearance {

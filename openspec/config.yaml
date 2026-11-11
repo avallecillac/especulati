@@ -1,0 +1,28 @@
+schema: spec-driven
+
+context: |
+  Monorepo "especulati" (pnpm workspaces) holding two local-first PWAs:
+  - lector: the single-user reading log (formerly Readerlog). Shipped through
+    spec-kit features 001-008; specs/NNN-*/ and .specify/memory/constitution.md
+    are kept as history and the constitution still governs lector.
+  - cinefilo: a shared movies-and-series tracker for two people.
+  Both apps sync through the same zero-knowledge relay code (ciphertext only),
+  each in its own sync space, Cloudflare Pages project and D1 database.
+  Sync is per-field last-writer-wins on HLC plus union of events; no CRDT library.
+  Shared packages must not know either app's domain tables.
+  Lector's storage and wire identifiers (OPFS file and VFS names, HKDF salt,
+  envelope AAD, QR prefix, derived-id hash labels, export format "readerlog/v1",
+  localStorage keys) are frozen: changing any of them loses data or splits sync.
+  Lector stays at its current deployed URL; moving it is a separate change.
+  The Google Keep import into cinefilo is deferred to a later change.
+
+rules:
+  proposal:
+    - State what is out of scope.
+    - Name any lector storage or wire identifier the change touches; touching one needs a migration plan.
+  design:
+    - Include a constitution check for lector-facing changes (principles I, II, IV are non-negotiable).
+    - For synced tables, state the merge rule per field and how concurrent inserts converge (derived ids).
+  tasks:
+    - Tests first; core with no mocks, db against in-memory SQLite, user flows in Playwright.
+    - Each task ends with the checks that prove it (typecheck, lint, test, e2e as relevant).

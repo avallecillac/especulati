@@ -26,6 +26,7 @@ import {
 } from '@readerlog/core';
 import { parseSyncCode } from './code.ts';
 import { seal } from './envelope.ts';
+import { CAPTURE_ID_LABEL, HIGHLIGHT_ID_LABEL, ITEM_TAG_ID_LABEL, TAG_ID_LABEL } from './frozen.ts';
 import { uuidFromHash } from './ids.ts';
 import { deriveKeys, type SyncKeys } from './keys.ts';
 import { pushAll, type PushSource } from './push.ts';
@@ -308,7 +309,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         if (!(await store.get<string>('syncKey'))) return err('notPaired' as const);
         const url = normalizeUrl(p.url);
         if (!url.ok) return err('invalid' as const);
-        const itemId = await uuidFromHash(`readerlog-capture-v1|${url.value}|${p.at}`);
+        const itemId = await uuidFromHash(`${CAPTURE_ID_LABEL}|${url.value}|${p.at}`);
         const captured = (await store.get<Captured>('captured')) ?? {};
         const known = captured[url.value];
         // Same url and at: the same capture again, nothing to do.
@@ -351,7 +352,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         if (!(await store.get<string>('syncKey'))) return err('notPaired' as const);
         const url = normalizeUrl(p.url);
         if (!url.ok) return err('invalid' as const);
-        const itemId = await uuidFromHash(`readerlog-capture-v1|${url.value}|${p.at}|later`);
+        const itemId = await uuidFromHash(`${CAPTURE_ID_LABEL}|${url.value}|${p.at}|later`);
         const captured = (await store.get<Captured>('captured')) ?? {};
         const known = captured[url.value];
         if (known && known.itemId === itemId) return ok({ itemId });
@@ -390,9 +391,9 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
           }
           seen.add(key);
           // Research R3 step 2: the extension cannot see the tag list, so it uses the derived id.
-          const tagId = await uuidFromHash(`readerlog-tag-v1|${key}`);
+          const tagId = await uuidFromHash(`${TAG_ID_LABEL}|${key}`);
           if (tagIds.includes(tagId)) continue; // already tagged from here: nothing to add
-          const itemTagId = await uuidFromHash(`readerlog-item-tag-v1|${itemId}|${tagId}`);
+          const itemTagId = await uuidFromHash(`${ITEM_TAG_ID_LABEL}|${itemId}|${tagId}`);
           const snapshot: TagSnapshot = {
             item: { id: itemId, type: 'article', deletedAt: null },
             tag: null,
@@ -434,7 +435,7 @@ export function createCapturePeer(store: CaptureStore, deps: CapturePeerDeps): C
         const captured = (await store.get<Captured>('captured')) ?? {};
         const url = Object.keys(captured).find((u) => captured[u]!.itemId === p.itemId && !captured[u]!.removed);
         if (url === undefined) return err('invalid' as const);
-        const highlightId = await uuidFromHash(`readerlog-highlight-v1|${url}|${p.at}`);
+        const highlightId = await uuidFromHash(`${HIGHLIGHT_ID_LABEL}|${url}|${p.at}`);
         const highlights = (await store.get<Highlights>('highlights')) ?? {};
         // 008 FR-006: a highlight on a saved article marks it read first.
         let markChanges: readonly Change[] = [];

@@ -1,7 +1,7 @@
 import { err, ok, type Result } from '@readerlog/core';
+import { QR_PREFIX } from './frozen.ts';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-const QR_PREFIX = 'readerlog:sync:1:';
 const CHECK_BYTES = 3;
 const SECRET_BYTES = 32;
 const CODE_CHARS = ((SECRET_BYTES + CHECK_BYTES) * 8) / 5; // 56

@@ -1,5 +1,6 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import { tagKey } from '@readerlog/core';
+import { TAG_ID_LABEL } from './frozen.ts';
 import { text } from './snapshot.ts';
 
 /** One live tag on one article (008). */
@@ -99,7 +100,7 @@ export async function resolveTagId(db: Database, name: string, hash: (label: str
     const row = db.selectArrays('SELECT deleted_at FROM tags WHERE id = ?', [id])[0];
     return row === undefined || row[0] !== null;
   };
-  const label = `readerlog-tag-v1|${key}`;
+  const label = `${TAG_ID_LABEL}|${key}`;
   const derived = await hash(label);
   if (usable(derived)) return derived;
   for (let n = 1; ; n++) {

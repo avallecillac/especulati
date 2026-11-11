@@ -15,6 +15,7 @@ export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, loadReconcileSnapshot, loadTagSnapshot, mergeChainIds } from './snapshot.ts';
 export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
+export { TAG_ID_LABEL } from './frozen.ts';
 export { SearchIndex } from './search.ts';
 export type { SearchHit, SearchOptions, SearchPassage } from './search.ts';
 export type { ItemTagView, TagSummary } from './tags.ts';
