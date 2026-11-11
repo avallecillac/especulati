@@ -1,4 +1,14 @@
-# Readerlog
+# especulati
+
+A monorepo of small, local-first apps that sync end-to-end encrypted through a relay
+that only ever sees ciphertext.
+
+| App | What it is | Where |
+|---|---|---|
+| **Lector** | A personal log of books and web articles, with reading stats (formerly Readerlog) | `apps/lector`, `apps/lector-extension` |
+| **Cinéfilo** | A shared movies-and-series tracker for two people (planned: `openspec/changes/add-cinefilo`) | — |
+
+## Lector
 
 A personal, local-first app for logging books and web articles and seeing reading stats.
 
@@ -7,21 +17,21 @@ A personal, local-first app for logging books and web articles and seeing readin
 - **iOS Shortcut** that logs articles from Chrome's share sheet on the iPhone.
 - **End-to-end-encrypted sync** through a tiny relay that only ever sees ciphertext.
 
-## Install the extension (Chrome or Brave)
+### Install the extension (Chrome or Brave)
 
-1. Build it: `pnpm install && pnpm --filter @readerlog/extension build`.
+1. Build it: `pnpm install && pnpm --filter @especulati/lector-extension build`.
 2. Open `chrome://extensions` (or `brave://extensions`), turn on **Developer mode**,
-   choose **Load unpacked**, and pick `apps/extension/dist`.
-3. Open the extension's **Options**, enter your Readerlog address, paste the sync code
-   (Readerlog → Settings → Sync → Show code), and choose **Pair**.
+   choose **Load unpacked**, and pick `apps/lector-extension/dist`.
+3. Open the extension's **Options**, enter your Lector address, paste the sync code
+   (Lector → Settings → Sync → Show code), and choose **Pair**.
 4. On an article: click the toolbar icon, press **Alt+Shift+L**, or right-click and
    choose **Log as read**.
 5. To keep a passage, select it, then press **Alt+Shift+H** or right-click → **Save
-   highlight to Readerlog**. On the iPhone, see "Highlight in Readerlog" in
+   highlight to Lector**. On the iPhone, see "Highlight in Lector" in
    [the Shortcut guide](docs/ios-shortcut.md).
 6. To keep an article for later, press **Alt+Shift+S** or right-click (on a page or a
    link) → **Save for later**. It goes to **Library → Saved**, and logging it later
-   marks it read. On the iPhone, see "Save to Readerlog" in the Shortcut guide.
+   marks it read. On the iPhone, see "Save to Lector" in the Shortcut guide.
 7. Tag articles on their screen (or **Add tags** right after capturing), then use
    **Library → Search articles** to find them by title, site, tag, or a phrase from your
    highlights and notes.
@@ -31,12 +41,13 @@ A personal, local-first app for logging books and web articles and seeing readin
 - [Architecture](docs/architecture.md): the current design. The original native-iOS
   spec is kept at [docs/architecture-v1-native-ios.md](docs/architecture-v1-native-ios.md).
 - [Log articles from your iPhone](docs/ios-shortcut.md): building the Shortcut and pairing Chrome.
-- [Constitution](.specify/memory/constitution.md): the project's non-negotiable rules.
-- [Specs](specs/): one folder per feature, written with
-  [spec-kit](https://github.com/github/spec-kit).
+- [Constitution](.specify/memory/constitution.md): Lector's non-negotiable rules.
+- [Specs](specs/): Lector features 001–008, written with
+  [spec-kit](https://github.com/github/spec-kit). Kept as history.
+- [OpenSpec](openspec/): specs and change proposals for all new work.
 
 ## Workflow
 
-Every feature goes through the spec-kit skills in this order:
+New work uses [OpenSpec](https://github.com/Fission-AI/OpenSpec):
 
-`/speckit-specify` → `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-analyze` → `/speckit-implement`
+`/openspec-propose` → review the proposal, design, specs and tasks → `/openspec-apply-change` → `/openspec-archive-change`

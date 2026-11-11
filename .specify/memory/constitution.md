@@ -173,4 +173,12 @@ Rationale: stats that are silently wrong are worse than no stats.
 - **Runtime guidance.** `docs/architecture.md` is the runtime architecture reference.
   When the two disagree, this document wins, and the architecture doc MUST be updated.
 
-**Version**: 1.2.0 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-10-04
+## Scope (1.2.1)
+
+- This constitution governs **Lector** (formerly Readerlog) in the especulati monorepo.
+- Its spec-kit wording (feature folders, `/speckit-*` steps, `specs/NNN-*/`) is
+  historical. New work follows OpenSpec (`openspec/`): a change's design records the
+  Constitution Check, and its proposal and design stand in for the spec-kit plan.
+- The principles themselves are unchanged.
+
+**Version**: 1.2.1 | **Ratified**: 2026-09-27 | **Last Amended**: 2026-11-11

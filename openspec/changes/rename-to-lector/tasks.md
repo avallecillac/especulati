@@ -23,10 +23,10 @@ Each numbered group is one commit. "Checks" means that `pnpm typecheck && pnpm l
 
 ## 4. Update the docs and replace spec-kit with openspec
 
-- [ ] 4.1 Update `README.md`, `docs/architecture.md` and `docs/ios-shortcut.md`: the name becomes Lector, the paths change, and the Shortcut becomes "Log in Lector". Add a note that installed Shortcuts keep their name. Verify: no path or filter in the docs refers to a folder that no longer exists (spot-check with `ls`).
-- [ ] 4.2 Delete `.claude/skills/speckit-*`, plus `.specify/scripts`, `templates`, `workflows`, `integrations`, `init-options.json` and `integration.json`. Keep `specs/` and `.specify/memory/constitution.md`. Verify: `ls .specify` shows only `memory/`.
-- [ ] 4.3 Rewrite CLAUDE.md as described in design D4: an especulati title, a section per app, the new commands and filters, the openspec workflow, and model roles with openspec step names. Update the description in `.claude/agents/implementer.md`. Verify: every command in CLAUDE.md runs (`pnpm --filter lector dev` starts; the extension build command builds).
-- [ ] 4.4 Add a PATCH amendment to the constitution (1.2.1, Last Amended 2026-11-11): it governs Lector, and new work follows openspec. Verify: the version line is updated, and no principle text changed.
+- [x] 4.1 Update `README.md`, `docs/architecture.md` and `docs/ios-shortcut.md`: the name becomes Lector, the paths change, and the Shortcut becomes "Log in Lector". Add a note that installed Shortcuts keep their name. Verify: no path or filter in the docs refers to a folder that no longer exists (spot-check with `ls`).
+- [x] 4.2 Delete `.claude/skills/speckit-*`, plus `.specify/scripts`, `templates`, `workflows`, `integrations`, `init-options.json` and `integration.json`. Keep `specs/` and `.specify/memory/constitution.md`. Verify: `ls .specify` shows only `memory/`.
+- [x] 4.3 Rewrite CLAUDE.md as described in design D4: an especulati title, a section per app, the new commands and filters, the openspec workflow, and model roles with openspec step names. Update the description in `.claude/agents/implementer.md`. Verify: every command in CLAUDE.md runs (`pnpm --filter lector dev` starts; the extension build command builds).
+- [x] 4.4 Add a PATCH amendment to the constitution (1.2.1, Last Amended 2026-11-11): it governs Lector, and new work follows openspec. Verify: the version line is updated, and no principle text changed.
 
 ## 5. User actions before merging
 

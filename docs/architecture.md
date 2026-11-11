@@ -1,4 +1,4 @@
-# Readerlog — Architecture (v2, local-first)
+# Lector — Architecture (v2, local-first)
 
 > This version supersedes the original native-iOS spec (v1). It was revised
 > because the owner has no paid Apple Developer account, reads many articles
@@ -8,10 +8,10 @@
 
 ## 1. Product summary
 
-Readerlog is a **personal, single-user app** for logging books and web articles
+Lector is a **personal, single-user app** for logging books and web articles
 and viewing reading stats.
 
-- **It is not a reader.** Readerlog has no in-app reading and never stores article text,
+- **It is not a reader.** Lector has no in-app reading and never stores article text,
   apart from passages the user explicitly saves as highlights (constitution v1.2.0).
 - **Books** are logged through progress updates. These drive the headline stat:
   *reading days per year*.
@@ -37,7 +37,7 @@ and viewing reading stats.
 
 A native iOS app, whether Swift or Expo, would need a paid Apple Developer
 account for App Groups (widgets and share extensions), iCloud containers, and
-builds that don't expire every 7 days. Readerlog is therefore:
+builds that don't expire every 7 days. Lector is therefore:
 
 | Surface | Technology | Role |
 |---|---|---|
@@ -71,17 +71,17 @@ Accepted losses compared with the native spec:
 ## 5. Code architecture: functional core, imperative shell
 
 ```
-packages/core   pure TS: branded types, decide(), HLC, merge rules, interchange v1, stat math
-packages/db     SQLite schema + migrations, repositories, stats SQL (browser worker + Node tests)
+packages/lector-core   pure TS: branded types, decide(), HLC, merge rules, interchange v1, stat math
+packages/lector-db     SQLite schema + migrations, repositories, stats SQL (browser worker + Node tests)
 packages/sync   HKDF keys, AES-GCM envelopes, relay client, push/pull loop
-apps/pwa        Svelte UI, DB worker, service worker, barcode scanner, /capture route
-apps/extension  Chrome/Brave MV3 extension: Readability extractor, toast, push-only capture peer (no SQLite)
+apps/lector        Svelte UI, DB worker, service worker, barcode scanner, /capture route
+apps/lector-extension  Chrome/Brave MV3 extension: Readability extractor, toast, push-only capture peer (no SQLite)
 apps/relay      zero-knowledge relay handler (+ functions/ = Cloudflare Pages Functions adapter, D1)
 shortcuts/      iOS Shortcut + JS snippet + install guide
 e2e/            Playwright scenarios
 ```
 
-- `packages/core` never touches the DOM, SQLite, `fetch`, the clock, or
+- `packages/lector-core` never touches the DOM, SQLite, `fetch`, the clock, or
   randomness. The shell passes in `now` and new IDs. CI enforces this boundary.
 - Every mutation follows one path:
   1. `decide(state, command, now) → Result<Change[], Rejection>`. New IDs are generated
@@ -291,12 +291,12 @@ Details: `specs/002-isbn-scan-metadata/`.
   collects the URL, title, author, and a readability-style word count from the
   live DOM, so it also works on paywalled or logged-in pages. The article is
   saved with `read_on = today` in the Mac's local timezone.
-- **iPhone (Chrome share sheet → Readerlog Shortcut), feature 005:**
+- **iPhone (Chrome share sheet → Lector Shortcut), feature 005:**
   - Chrome on iOS shares only the URL. The Shortcut fetches the page's readable
     version itself and opens `https://<app>/#/capture?d=<base64 JSON>` in **Chrome**,
     the default browser.
   - iOS home-screen apps have isolated storage and can't receive links, so
-    **Readerlog in Chrome on the iPhone is paired as its own sync device**. It saves
+    **Lector in Chrome on the iPhone is paired as its own sync device**. It saves
     the capture and pushes it at once, and the home-screen app receives it on its next
     sync.
   - Safari is not supported.
@@ -306,12 +306,12 @@ Details: `specs/002-isbn-scan-metadata/`.
 
 ### Save a highlight (feature 007)
 - **Mac:** select text, then press **Alt+Shift+H** or right-click → **Save highlight
-  to Readerlog**.
+  to Lector**.
   - Only the selection is read, through the existing on-click access.
   - An article that isn't logged yet is logged in the same step, and one Undo removes
     both.
   - The toast offers **Add note**.
-- **iPhone:** select, **Copy**, then **Share → Highlight in Readerlog**. The Shortcut
+- **iPhone:** select, **Copy**, then **Share → Highlight in Lector**. The Shortcut
   adds the clipboard as `quote` to the capture link.
 - **In the app:** **Add highlight** or **Add note** on any article.
 - **Jump back:** tapping a quote opens the article at the passage, through a text
@@ -320,7 +320,7 @@ Details: `specs/002-isbn-scan-metadata/`.
 - **Save:**
   - **Mac:** **Alt+Shift+S**, or right-click → **Save for later** (on a link it saves
     the URL only).
-  - **iPhone:** a capture link with `later: 1`, through the "Save to Readerlog"
+  - **iPhone:** a capture link with `later: 1`, through the "Save to Lector"
     Shortcut.
   - **In the app:** **Read later** in Add article.
 - **Read:**
@@ -343,7 +343,7 @@ The headline stat is **reading days per year**. It counts books only.
 
 **How stats are computed:**
 - One query loads every live event of every live book.
-- Pure functions in `packages/core/src/stats.ts` compute each stat. See
+- Pure functions in `packages/lector-core/src/stats.ts` compute each stat. See
   `specs/003-reading-stats/` for the full rules.
 
 | Stat | Source |
@@ -372,20 +372,20 @@ Streaks and reading days count books only. Article stats have their own section.
 
 ## 10a. Themes (feature 006)
 
-Colours live only in `apps/pwa/src/theme/`; screens use tokens (`--paper`, `--ink`, `--accent`, ...). A
+Colours live only in `apps/lector/src/theme/`; screens use tokens (`--paper`, `--ink`, `--accent`, ...). A
 theme is a palette, nothing more.
 
 ### Adding a theme
 
-1. Copy `apps/pwa/src/theme/macondo.css` to `<id>.css` and change the values. It must set exactly the
+1. Copy `apps/lector/src/theme/macondo.css` to `<id>.css` and change the values. It must set exactly the
    contract tokens (`specs/006-illustrated-edition-ui/contracts/theme-tokens.md`) inside one
    `:root[data-theme='<id>']` rule. `theme-tokens.test.ts` checks this, and
    `test-fixtures/test-theme.css` is the test-only proof that a CSS file alone is enough.
-2. Import the file in `apps/pwa/src/main.ts` next to the other theme CSS, and add an entry to `THEMES` in
+2. Import the file in `apps/lector/src/main.ts` next to the other theme CSS, and add an entry to `THEMES` in
    `src/theme/themes.ts` (`id`, `name`, `scheme`, `swatch` = paper, accent, ornament, and `themeColor` =
    the bar colour). The tests check that `swatch` and `themeColor` equal the CSS values, and
    `theme-contrast.test.ts` checks the WCAG pairs.
-3. Update the **pre-paint script in `apps/pwa/index.html`**. It runs before any module loads, so it hard-codes
+3. Update the **pre-paint script in `apps/lector/index.html`**. It runs before any module loads, so it hard-codes
    the theme ids and the `theme-color` values, and cannot import `THEMES`. `prepaint.test.ts` runs that
    script against the registry and fails if it disagrees. The manifest colours come from the default theme.
 

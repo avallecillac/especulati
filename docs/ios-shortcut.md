@@ -1,8 +1,12 @@
 # Log articles from your iPhone
 
-Readerlog can't run inside Safari's share sheet, so an iPhone Shortcut reads the article
-and opens a **capture link** in Chrome. Readerlog running in Chrome saves the article and
+Lector can't run inside Safari's share sheet, so an iPhone Shortcut reads the article
+and opens a **capture link** in Chrome. Lector running in Chrome saves the article and
 sends it to your other devices through sync.
+
+> **Renamed from Readerlog.** Shortcuts you already installed keep their old names
+> (for example **Log in Readerlog**) and keep working: only their names differ from this
+> guide. Rename them in the Shortcuts app if you like.
 
 The Shortcut sends only the address, title, author and word count. The article text is
 counted on your phone and never stored or sent.
@@ -14,20 +18,20 @@ counted on your phone and never stored or sent.
 Settings → Chrome → Default Browser App → **Chrome**. Shortcuts opens links in the
 default browser, so with Safari as the default the capture link would open there instead.
 
-### 2. Pair Readerlog in Chrome on the iPhone
+### 2. Pair Lector in Chrome on the iPhone
 
 The home-screen app and Chrome keep separate data, so Chrome on the iPhone is one more
 sync device.
 
-1. On a device that already syncs, open Readerlog → Settings → Sync → **Show code**.
-2. In Chrome on the iPhone, open your Readerlog address.
+1. On a device that already syncs, open Lector → Settings → Sync → **Show code**.
+2. In Chrome on the iPhone, open your Lector address.
 3. Settings → Sync → **Join**, and paste (or scan) the sync code.
 
 If sync isn't on anywhere yet, turn it on first (Settings → Sync → **Turn on sync**).
 
 ### 3. Build the Shortcut
 
-Open the Shortcuts app, tap **+**, and name it **Log in Readerlog**. Add these actions in
+Open the Shortcuts app, tap **+**, and name it **Log in Lector**. Add these actions in
 order:
 
 1. **Receive** *URLs* input from **Share Sheet** (if there's no input, *Stop and Respond*).
@@ -66,7 +70,7 @@ order:
    **Line Breaks** to **None**: a line break ends the link, so everything after the
    first 76 characters would be lost.
 8. **URL Encode** the Base64 text.
-9. **Text**. Type `https://<your-readerlog-address>/#/capture?d=`, then, with the cursor
+9. **Text**. Type `https://<your-lector-address>/#/capture?d=`, then, with the cursor
    right after `d=`, insert the output of step 8 as a variable. Don't type its name:
    tap **Select Variable** in the bar above the keyboard (or long-press → **Insert
    Variable**), then tap **URL Encoded Text** in step 8. It appears as a blue pill, with
@@ -78,12 +82,12 @@ with **Share Sheet Types** set to **URLs** only.
 
 ## Using it
 
-In Chrome (or Safari), tap Share, then **Log in Readerlog**. Chrome opens Readerlog and
+In Chrome (or Safari), tap Share, then **Log in Lector**. Chrome opens Lector and
 shows **Logged: title · site · ~N min**. Tap **Undo** within 6 seconds to remove it. The
-article is sent to your other devices straight away; the installed Readerlog app picks it
+article is sent to your other devices straight away; the installed Lector app picks it
 up the next time it syncs (open it, or tap the sync button).
 
-If the address is already in your log, Readerlog asks whether to **Log again** or
+If the address is already in your log, Lector asks whether to **Log again** or
 **Cancel**. Opening the same capture link twice never saves twice.
 
 ## Troubleshooting
@@ -110,14 +114,14 @@ If the address is already in your log, Readerlog asks whether to **Log again** o
 - **Sync stopped after a long time unused.** Chrome may have cleared the site's data. Join
   again with your sync code (setup step 2).
 
-## Highlight in Readerlog
+## Highlight in Lector
 
 A second Shortcut keeps a passage you selected, together with the article, in one go.
 
 ### Build it
 
-1. In the Shortcuts app, touch and hold **Log in Readerlog**, then tap **Duplicate**.
-2. Open the copy and rename it **Highlight in Readerlog**. It still appears in the Share
+1. In the Shortcuts app, touch and hold **Log in Lector**, then tap **Duplicate**.
+2. Open the copy and rename it **Highlight in Lector**. It still appears in the Share
    Sheet for **URLs** only.
 3. Add **Get Clipboard** right after *Get Article using Safari Reader*.
 4. In the **Dictionary**, add one more key: `quote`, type **Text**. For its value tap
@@ -127,9 +131,9 @@ A second Shortcut keeps a passage you selected, together with the article, in on
 ### Using it
 
 1. In Chrome (or Safari), select the passage and tap **Copy**.
-2. Tap Share, then **Highlight in Readerlog**.
+2. Tap Share, then **Highlight in Lector**.
 
-Readerlog opens and shows **Highlight saved** with the passage. If the article wasn't in
+Lector opens and shows **Highlight saved** with the passage. If the article wasn't in
 your log yet, it is logged too. Tap **Add note** to write a note, or **Undo** within 6
 seconds to remove the highlight (and the article, if this link just logged it).
 
@@ -149,21 +153,21 @@ twice never saves twice.
 - **Anything else.** The *Troubleshooting* list above applies too: the rest of the Shortcut
   is the same.
 
-## Save to Readerlog
+## Save to Lector
 
 A third Shortcut keeps an article for later, without counting it as read.
 
 ### Build it
 
-1. In the Shortcuts app, touch and hold **Log in Readerlog**, then tap **Duplicate**.
-2. Open the copy and rename it **Save to Readerlog**. It still appears in the Share Sheet
+1. In the Shortcuts app, touch and hold **Log in Lector**, then tap **Duplicate**.
+2. Open the copy and rename it **Save to Lector**. It still appears in the Share Sheet
    for **URLs** only.
 3. In the **Dictionary**, add one more key: `later`, type **Number**, value `1`. Leave the
    other keys as they are.
 
 ### Using it
 
-In Chrome (or Safari), tap Share, then **Save to Readerlog**. Readerlog opens and shows
+In Chrome (or Safari), tap Share, then **Save to Lector**. Lector opens and shows
 **Saved for later** with the title and site. Tap **Undo** within 6 seconds to remove it.
 The article appears in **Library**, under **Saved**, and doesn't change your stats.
 
