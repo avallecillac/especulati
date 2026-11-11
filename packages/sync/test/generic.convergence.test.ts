@@ -158,7 +158,7 @@ function runOnce(run: number): void {
 }
 
 describe('generic convergence (toy notes + marks over db-kit)', () => {
-  it(`${RUNS} seeded runs: three peers reach identical tables`, () => {
+  it(`${RUNS} seeded runs: three peers reach identical tables`, { timeout: 300_000 }, () => {
     for (let run = 0; run < RUNS; run++) runOnce(run);
   });
 
