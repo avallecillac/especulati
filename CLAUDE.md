@@ -6,8 +6,9 @@ through a zero-knowledge relay (Cloudflare Pages Functions + D1).
 - **Lector** (formerly Readerlog): the single-user reading log, plus a Chrome extension.
   Read `docs/architecture.md` and `.specify/memory/constitution.md` before changing
   anything in Lector. The constitution wins over this file.
-- **Cinéfilo**: a shared movies-and-series tracker for two people. Planned in
-  `openspec/changes/add-cinefilo/`; not built yet.
+- **Cinéfilo**: a shared movies-and-series tracker for two people (`apps/cinefilo`,
+  `packages/cinefilo-*`). Read `docs/cinefilo.md` and `openspec/changes/add-cinefilo/design.md`
+  before changing it; its frozen identifiers are listed there and guarded by tests.
 
 ## Commands
 

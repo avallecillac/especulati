@@ -61,8 +61,8 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 8. Integration and deploy
 
-- [ ] 8.1 Make sure CI (typecheck, lint, unit tests) covers the cinefilo packages, and run cinefilo's e2e and convergence locally before merging (e2e is not run in GitHub Actions; see CLAUDE.md). Confirm lector's suites are untouched. Verify that the CI run is green and the local e2e passes.
-- [ ] 8.2 Document cinefilo in `docs/` (architecture, deploy steps, pairing a partner, the TMDB key) and in the repository README. Verify that the documented deploy steps work against the preview project.
+- [x] 8.1 Make sure CI (typecheck, lint, unit tests) covers the cinefilo packages, and run cinefilo's e2e and convergence locally before merging (e2e is not run in GitHub Actions; see CLAUDE.md). Confirm lector's suites are untouched. Verify that the CI run is green and the local e2e passes.
+- [x] 8.2 Document cinefilo in `docs/` (architecture, deploy steps, pairing a partner, the TMDB key) and in the repository README. Verify that the documented deploy steps work against the preview project.
 - [ ] 8.3 Production deploy and real pairing on both partners' phones. Verify by hand: a title added offline on one phone appears on the other, and both ratings show.
 
 ## Workflow follow-up

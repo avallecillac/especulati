@@ -6,7 +6,7 @@ that only ever sees ciphertext.
 | App | What it is | Where |
 |---|---|---|
 | **Lector** | A personal log of books and web articles, with reading stats (formerly Readerlog) | `apps/lector`, `apps/lector-extension` |
-| **Cinéfilo** | A shared movies-and-series tracker for two people (planned: `openspec/changes/add-cinefilo`) | — |
+| **Cinéfilo** | A shared movies-and-series tracker for two people, with each person's own verdict and review ([guide](docs/cinefilo.md)) | `apps/cinefilo` |
 
 ## Lector
 
