@@ -17,6 +17,8 @@
   /** The review being typed; null while untouched, so a sync can still refresh what is shown. */
   let draft = $state<string | null>(null);
   let error = $state<string | null>(null);
+  /** Undated watched title: true while the date controls are open ('Add date'). */
+  let addingDate = $state(false);
   let linking = $state<{ q: string; results: TmdbResult[] | null; note: string | null; busy: boolean } | null>(null);
 
   $effect(() => {
@@ -154,12 +156,17 @@
       {/each}
     </div>
 
-    {#if t.status === 'watched' || t.status === 'dropped'}
+    {#if t.status === 'watched' && t.watchedOn === null && !addingDate}
+      <div class="date-row">
+        <span class="muted" data-testid="date-unknown">Watched · date unknown</span>
+        <button type="button" onclick={() => (addingDate = true)}>Add date</button>
+      </div>
+    {:else if t.status === 'watched' || t.status === 'dropped'}
       <div class="date-row">
         <span class="muted">{t.status === 'dropped' ? 'Dropped on' : 'Watched on'}</span>
-        <time datetime={t.watchedOn ?? ''}>{t.watchedOn}</time>
-        <button type="button" aria-pressed={t.watchedOn === todayLocal()} onclick={() => void setStatus(t.status, todayLocal())}>Today</button>
-        <button type="button" aria-pressed={t.watchedOn === yesterdayLocal()} onclick={() => void setStatus(t.status, yesterdayLocal())}>Yesterday</button>
+        {#if t.watchedOn}<time datetime={t.watchedOn}>{t.watchedOn}</time>{/if}
+        <button type="button" aria-pressed={t.watchedOn === todayLocal()} onclick={() => void setStatus(t.status, todayLocal()).then(() => (addingDate = false))}>Today</button>
+        <button type="button" aria-pressed={t.watchedOn === yesterdayLocal()} onclick={() => void setStatus(t.status, yesterdayLocal()).then(() => (addingDate = false))}>Yesterday</button>
         <input
           type="date"
           aria-label="Pick a date"
@@ -167,7 +174,7 @@
           max={todayLocal()}
           onchange={(e) => {
             const v = e.currentTarget.value;
-            if (v) void setStatus(t.status, v);
+            if (v) void setStatus(t.status, v).then(() => (addingDate = false));
           }} />
       </div>
     {/if}

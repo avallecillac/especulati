@@ -39,9 +39,18 @@ describe('SetStatus', () => {
       expect(r.ok).toBe(false);
     }
   });
-  it('watched and dropped require a valid date', () => {
-    expect(run(setStatus('watched'), { title: title() }).ok).toBe(false);
+  it('watched needs a valid date when one is given; dropped always requires one', () => {
     expect(run(setStatus('watched', '2026-02-30'), { title: title() }).ok).toBe(false);
+    expect(run(setStatus('dropped'), { title: series({ status: 'watching' }) }).ok).toBe(false);
+    expect(run(setStatus('dropped', '2026-02-30'), { title: series({ status: 'watching' }) }).ok).toBe(false);
+  });
+  it('watched without a date is allowed and writes watched_on: null (import-keep-lists D1)', () => {
+    expect(run(setStatus('watched'), { title: title() })).toEqual({
+      ok: true, value: { changes: [{ tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: null } }] },
+    });
+  });
+  it('adding a date to an undated watched title keeps it watched', () => {
+    expect(fieldsOf(setStatus('watched', '2026-09-24'), { title: title({ status: 'watched', watchedOn: null }) })).toEqual({ status: 'watched', watched_on: '2026-09-24' });
   });
   it('rejects unknown statuses', () => {
     expect(run(setStatus('done'), { title: title() }).ok).toBe(false);

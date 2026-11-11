@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { eraseAll, exportCatalog, importCatalog, syncReset, syncShowCode, syncTurnOn, type CodeView } from '../lib/dbClient.ts';
+  import { eraseAll, exportCatalog, importCatalog, importTitlesList, type TitlesImportPreview, syncReset, syncShowCode, syncTurnOn, type CodeView } from '../lib/dbClient.ts';
   import { qrSvg } from '../lib/qr.ts';
   import { app, refresh, runSync, showToast, write } from '../lib/state.svelte.ts';
   import { setMe } from '../lib/dbClient.ts';
@@ -17,6 +17,7 @@
   let names = $state<Record<string, string>>({});
   let busy = $state(false);
   let keyDraft = $state('');
+  let listPreview = $state<{ text: string; counts: TitlesImportPreview } | null>(null);
 
   const status = $derived(app.sync);
 
@@ -123,6 +124,36 @@
     await refresh();
     showToast(`Imported ${r.value.value.added} ${r.value.value.added === 1 ? 'item' : 'items'}.`);
   }
+
+  /** Import list, step 1: read the file and show the preview. Nothing is written yet. */
+  async function onPickList(e: Event & { currentTarget: HTMLInputElement }) {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = '';
+    if (!file) return;
+    const text = await file.text();
+    const r = await importTitlesList(text, true);
+    if (!r.ok) return void (error = GENERIC_FAILURE);
+    if (!r.value.ok) return void (error = `That file can't be imported (${r.value.error.field}: ${r.value.error.reason}).`);
+    error = null;
+    listPreview = { text, counts: r.value.value };
+  }
+
+  /** Step 2: the member confirmed. One transaction in the worker, or nothing. */
+  async function confirmList() {
+    const p = listPreview;
+    if (!p || busy) return;
+    const text = p.text;
+    busy = true;
+    const r = await importTitlesList(text, false);
+    busy = false;
+    listPreview = null;
+    if (!r.ok) return void (error = GENERIC_FAILURE);
+    if (!r.value.ok) return void (error = `That file can't be imported (${r.value.error.field}: ${r.value.error.reason}).`);
+    error = null;
+    await refresh();
+    const n = r.value.value.new;
+    showToast(`Imported ${n} ${n === 1 ? 'title' : 'titles'}.`);
+  }
 </script>
 
 <header class="bar"><h1>Settings</h1></header>
@@ -195,6 +226,15 @@
   </div>
 </section>
 
+<section class="card" aria-labelledby="list-h">
+  <h2 id="list-h">Import list</h2>
+  <p class="muted">Add many titles at once from a Cinéfilo titles file (<code>cinefilo-titles/v1</code>). You see a preview first, and titles already in the list are left as they are.</p>
+  <div class="actions">
+    <label class="button" for="import-list-file">Import list</label>
+    <input id="import-list-file" class="visually-hidden" type="file" accept="application/json,.json" onchange={onPickList} />
+  </div>
+</section>
+
 <section class="card" aria-labelledby="tmdb-h">
   <h2 id="tmdb-h">Movie search (TMDB)</h2>
   <p class="muted">
@@ -224,6 +264,34 @@
 </section>
 
 <p role="alert" class="error">{error ?? ''}</p>
+
+{#if listPreview}
+  {@const c = listPreview.counts}
+  <div class="backdrop" role="presentation" onclick={() => (listPreview = null)}></div>
+  <div class="sheet" role="dialog" aria-label="Import list preview">
+    <h2>Import list</h2>
+    <ul class="preview" data-testid="import-preview">
+      <li><strong data-testid="preview-new">{c.new}</strong> new</li>
+      <li><strong data-testid="preview-existing">{c.existing}</strong> already in your list</li>
+      <li><strong data-testid="preview-invalid">{c.invalid}</strong> invalid</li>
+    </ul>
+    {#if c.reasons.length > 0}
+      <ul class="small muted">
+        {#each c.reasons.slice(0, 5) as x (x.index)}<li>{x.title}: {x.reason}</li>{/each}
+        {#if c.reasons.length > 5}<li>and {c.reasons.length - 5} more</li>{/if}
+      </ul>
+      <p class="muted">Nothing can be imported until these are fixed.</p>
+    {:else if c.new === 0}
+      <p class="muted">Nothing new to import.</p>
+    {/if}
+    <div class="actions">
+      <button type="button" class="primary" disabled={busy || c.new === 0 || c.invalid > 0} onclick={() => void confirmList()}>
+        {c.new === 1 ? 'Import 1 title' : `Import ${c.new} titles`}
+      </button>
+      <button type="button" onclick={() => (listPreview = null)}>Cancel</button>
+    </div>
+  </div>
+{/if}
 
 {#if confirming}
   <div class="backdrop" role="presentation" onclick={() => (confirming = null)}></div>

@@ -3,9 +3,10 @@ import { SqliteSyncStore, applyChanges, readMeta, rollbackQuietly, writeMeta } f
 import { cinefiloSchema, decide, err, ok, type Command, type Instant, type Rejection, type Result, type Table, type VerdictFilter, type Kind } from '@especulati/cinefilo-core';
 import type { DeviceId } from '@especulati/sync-core';
 import { exportData, exportText, importText, type ImportResult } from './io.ts';
+import { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
 import { migrate } from './migrations.ts';
 import { getPoster, putPoster } from './posters.ts';
-import { findByTmdb, list, members, titleDetail, type ListItem, type ListTab, type MemberView, type TitleDetail } from './queries.ts';
+import { findByTmdb, list, members, needsDetails, titleDetail, type ListItem, type NeedsDetails, type ListTab, type MemberView, type TitleDetail } from './queries.ts';
 import { loadSnapshot } from './snapshot.ts';
 import type { DispatchEnv, DispatchOutcome } from './types.ts';
 import { cinefiloCanInsert } from './sync.ts';
@@ -15,8 +16,9 @@ export { cinefiloCanInsert } from './sync.ts';
 export { cinefiloSyncApp } from './syncApp.ts';
 export { ENVELOPE_AAD_PREFIX, QR_PREFIX, SYNC_SALT } from './frozen.ts';
 export { reconcileAll, type Hash } from './reconcile.ts';
+export { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
 export { exportData, exportText, importText, type ImportResult } from './io.ts';
-export type { ListItem, ListTab, MemberView, RatingView, TitleDetail } from './queries.ts';
+export type { ListItem, ListTab, NeedsDetails, MemberView, RatingView, TitleDetail } from './queries.ts';
 export { loadSnapshot, loadReconcileSnapshot } from './snapshot.ts';
 
 export type { DispatchEnv, DispatchOutcome } from './types.ts';
@@ -81,6 +83,10 @@ export class CinefiloDb {
     return titleDetail(this.raw, id);
   }
 
+  needsDetails(limit = 20): NeedsDetails[] {
+    return needsDetails(this.raw, limit);
+  }
+
   findByTmdb(tmdbId: number, kind: Kind): string | null {
     return findByTmdb(this.raw, tmdbId, kind);
   }
@@ -98,6 +104,16 @@ export class CinefiloDb {
     const deviceId = this.#deviceId;
     if (!deviceId) throw new Error('ensureDeviceId() must run before import()');
     return importText(this.raw, text, deviceId, env.wallMs, env.newOpId);
+  }
+
+  /**
+   * Import a `cinefilo-titles/v1` list as this device's member: preview with `dryRun`, otherwise one transaction.
+   * Any invalid entry blocks the write (all or nothing).
+   */
+  importTitles(text: string, env: ImportEnv, opts: { dryRun?: boolean } = {}): Promise<Result<ImportTitlesResult, { field: string; reason: string }>> {
+    const deviceId = this.#deviceId;
+    if (!deviceId) throw new Error('ensureDeviceId() must run before importTitles()');
+    return importTitles(this.raw, text, deviceId, this.memberId, env, opts);
   }
 
   /** Read → decide → apply in one transaction; nothing is ever partially applied. */

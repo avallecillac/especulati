@@ -29,7 +29,7 @@ export type Command =
       readonly title: string;
       readonly tmdbId?: number | null;
       readonly status?: Status;
-      /** Required for watched and dropped; ignored otherwise. */
+      /** Required for dropped, optional for watched (unknown date); ignored otherwise. */
       readonly watchedOn?: string;
       readonly addedBy: string;
     } & TitleDetails)
@@ -37,7 +37,7 @@ export type Command =
   | { readonly kind: 'LinkToTmdb'; readonly titleId: string; readonly tmdbId: number; readonly details: TitleDetails & { readonly title?: string } }
   | { readonly kind: 'RemoveTitle'; readonly titleId: string }
   | { readonly kind: 'RestoreTitle'; readonly titleId: string }
-  /** `watchedOn` is required for watched and dropped, and ignored (cleared) for later and watching. */
+  /** `watchedOn` is required for dropped, optional for watched, and ignored (cleared) for later and watching. */
   | { readonly kind: 'SetStatus'; readonly titleId: string; readonly status: Status; readonly watchedOn?: string }
   | { readonly kind: 'SetCurrentSeason'; readonly titleId: string; readonly season: number }
   /**

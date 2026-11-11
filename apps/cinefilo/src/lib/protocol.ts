@@ -8,7 +8,8 @@ export type Query =
   | { name: 'title'; id: string }
   | { name: 'members' }
   | { name: 'me' }
-  | { name: 'findByTmdb'; tmdbId: number; kind: Kind };
+  | { name: 'findByTmdb'; tmdbId: number; kind: Kind }
+  | { name: 'needsDetails'; limit: number };
 
 export type SyncOp =
   | { action: 'run'; reason: SyncReason }
@@ -34,6 +35,8 @@ export type Request = { id: number } & (
   | { kind: 'identity'; op: IdentityOp }
   | { kind: 'export' }
   | { kind: 'import'; text: string }
+  /** A `cinefilo-titles/v1` list: `dryRun` previews (counts, reasons) without writing. */
+  | { kind: 'importTitles'; text: string; dryRun: boolean }
   /** Leave: stop sync and wipe this device's database. The next request opens a fresh one. */
   | { kind: 'erase' }
   /** The TMDB key lives in `meta` (device-local, never synced or exported). `set` with '' removes it. */

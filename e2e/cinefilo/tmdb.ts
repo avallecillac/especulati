@@ -11,7 +11,7 @@ export const KEY = 'e2eKeyDISTINCTIVE0123456789abcdef';
 
 export interface Tmdb {
   /** Every request seen on TMDB hosts: method, host, path and whether it carried the key. */
-  requests: { host: string; path: string; hasKey: boolean }[];
+  requests: { host: string; path: string; hasKey: boolean; at: number }[];
   unmatched: string[];
   /** Answer every API call with this status (null to serve fixtures again). */
   failWith(status: number | null): void;
@@ -30,7 +30,7 @@ export async function installTmdb(context: BrowserContext): Promise<Tmdb> {
     const url = new URL(req.url());
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     const headers = await req.allHeaders();
-    api.requests.push({ host: url.host, path: url.pathname, hasKey: url.search.includes(KEY) || (headers['authorization'] ?? '').includes(KEY) });
+    api.requests.push({ host: url.host, path: url.pathname, at: Date.now(), hasKey: url.search.includes(KEY) || (headers['authorization'] ?? '').includes(KEY) });
     const json = (body: string, status = 200) => route.fulfill({ status, headers: cors, contentType: 'application/json', body });
 
     if (url.host === 'image.tmdb.org') {

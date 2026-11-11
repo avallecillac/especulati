@@ -67,11 +67,12 @@ function detailFields(d: TitleDetails): Result<Record<string, FieldValue>, Rejec
 /** Statuses a kind may hold (cinefilo-watchlist: watching and dropped are series only). */
 export const statusAllowed = (kind: Kind, status: Status): boolean => kind === 'series' || status === 'later' || status === 'watched';
 
-/** Status and watched_on together: set for watched and dropped, cleared otherwise (D5). */
+/** Status and watched_on together: set for watched and dropped, cleared otherwise (D5). Watched may have no date (unknown). */
 export function statusFields(kind: Kind, status: Status, watchedOn: string | undefined): Result<Record<string, FieldValue>, Rejection> {
   if (!statusAllowed(kind, status)) return err(bad('status', `${status} is not allowed for a ${kind}`));
+  if (status === 'watched' && watchedOn === undefined) return ok({ status, watched_on: null });
   if (status === 'watched' || status === 'dropped') {
-    if (watchedOn === undefined) return err(bad('watchedOn', 'required for watched and dropped'));
+    if (watchedOn === undefined) return err(bad('watchedOn', 'required for dropped'));
     const d = need(parseLocalDate(watchedOn));
     if (!d.ok) return d;
     return ok({ status, watched_on: d.value });

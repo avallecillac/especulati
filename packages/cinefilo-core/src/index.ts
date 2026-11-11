@@ -9,4 +9,5 @@ export * from './reconcile.ts';
 export * from './filters.ts';
 export * from './remoteOps.ts';
 export * from './export.ts';
+export * from './titlesFile.ts';
 export * from './frozen.ts';

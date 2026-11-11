@@ -1,5 +1,7 @@
 <script lang="ts">
   import { app, startApp } from './lib/state.svelte.ts';
+  import { runBackfill } from './lib/backfill.svelte.ts';
+  import { tmdb } from './lib/tmdb.svelte.ts';
   import { router } from './lib/router.svelte.ts';
   import Welcome from './screens/Welcome.svelte';
   import List from './screens/List.svelte';
@@ -17,6 +19,12 @@
   let adding = $state(false);
 
   startApp();
+
+  // Imported titles only have a TMDB id: fill details and posters in the background (never blocks the UI).
+  $effect(() => {
+    void app.rev;
+    if (app.ready && app.memberId !== null && !app.onboarding && tmdb.key !== null && tmdb.online) void runBackfill();
+  });
 
   const route = $derived(router.route);
   const current = $derived(route.name === 'list' ? route.tab : route.name === 'settings' ? 'settings' : null);

@@ -34,9 +34,10 @@ describe('AddTitle', () => {
       title: 'Severance', tmdb_id: 95396, original_title: 'Severance', poster_url: '/p.jpg', genres: '["Drama","Sci-Fi"]', season_count: 2,
     });
   });
-  it('picking another status while adding: watched needs a date', () => {
+  it('picking another status while adding: watched may have no date, dropped needs one', () => {
     expect(changes(add({ status: 'watched', watchedOn: '2026-09-20' }))[0]!.fields).toMatchObject({ status: 'watched', watched_on: '2026-09-20' });
-    expect(run(add({ status: 'watched' })).ok).toBe(false);
+    expect(changes(add({ status: 'watched' }))[0]!.fields).toMatchObject({ status: 'watched', watched_on: null });
+    expect(run(add({ status: 'dropped', mediaKind: 'series' })).ok).toBe(false);
   });
   it('a movie cannot be added as watching or dropped', () => {
     expect(run(add({ status: 'watching' })).ok).toBe(false);

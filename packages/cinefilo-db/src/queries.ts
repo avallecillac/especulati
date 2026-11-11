@@ -113,6 +113,22 @@ export function titleDetail(db: Database, id: string): TitleDetail | null {
   return { title, ratings };
 }
 
+/** A title linked to TMDB that has neither poster nor genres yet (an imported one): the shell fills it in the background. */
+export interface NeedsDetails {
+  readonly id: string;
+  readonly kind: Kind;
+  readonly tmdbId: number;
+}
+
+export function needsDetails(db: Database, limit: number): NeedsDetails[] {
+  return db
+    .selectObjects(
+      `SELECT id, kind, tmdb_id FROM titles WHERE tmdb_id IS NOT NULL AND poster_url IS NULL AND genres IS NULL AND ${LIVE} ORDER BY created_at DESC, id LIMIT ?`,
+      [limit],
+    )
+    .map((r) => ({ id: text(r['id'], 'id'), kind: text(r['kind'], 'kind') as Kind, tmdbId: Number(r['tmdb_id']) }));
+}
+
 /** The live title with this TMDB id and kind, if any (the UI opens it instead of adding a duplicate). */
 export function findByTmdb(db: Database, tmdbId: number, kind: Kind): string | null {
   return textOrNull(db.selectValue(`SELECT id FROM titles WHERE tmdb_id = ? AND kind = ? AND ${LIVE} ORDER BY created_at, id LIMIT 1`, [tmdbId, kind]), 'id');

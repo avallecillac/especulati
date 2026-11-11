@@ -234,6 +234,8 @@ function runQuery(d: CinefiloDb, q: Query): unknown {
       return { memberId: d.memberId, deviceId: d.getMeta('device_id') ?? '' };
     case 'findByTmdb':
       return d.findByTmdb(q.tmdbId, q.kind);
+    case 'needsDetails':
+      return d.needsDetails(q.limit);
   }
 }
 
@@ -310,6 +312,16 @@ async function handle(req: Request): Promise<Response> {
         await erase(d);
         reply = ok(null);
         break;
+      case 'importTitles': {
+        const r = await d.importTitles(req.text, { ...env(), hash: uuidFromHash }, { dryRun: req.dryRun });
+        if (r.ok && r.value.applied) {
+          // Imported TMDB titles may pair up with manual ones that were linked meanwhile (D4): reconcile once.
+          await reconcileAll(d, env, uuidFromHash);
+          channel.postMessage({ type: 'changed' });
+        }
+        reply = ok(r); // like `import`: a bad file is an answer, `{ ok: false, error: { field, reason } }`
+        break;
+      }
       case 'import': {
         const r = d.import(req.text, env());
         if (r.ok) channel.postMessage({ type: 'changed' });

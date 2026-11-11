@@ -30,7 +30,7 @@ export function send(req: WithoutId<Request>): Promise<Response> {
 
 // Typed calls the screens use (group 5+). Every one goes through the worker; the UI never touches SQLite.
 import type { Rejection, VerdictFilter, Kind } from '@especulati/cinefilo-core';
-import type { ListItem, ListTab, MemberView, TitleDetail } from '@especulati/cinefilo-db';
+import type { ListItem, ListTab, MemberView, NeedsDetails, TitleDetail } from '@especulati/cinefilo-db';
 import type { SyncRunResult, SyncStatusView } from '@especulati/sync';
 import type { UiCommand } from './commands.ts';
 import type { ClientError, IdentityOp, Query, SyncOp } from './protocol.ts';
@@ -54,6 +54,8 @@ export const members = () => query<MemberView[]>({ name: 'members' });
 export const me = () => query<{ memberId: string | null; deviceId: string }>({ name: 'me' });
 export const findByTmdb = (tmdbId: number, kind: Kind) => query<string | null>({ name: 'findByTmdb', tmdbId, kind });
 
+export const needsDetails = (limit: number) => query<NeedsDetails[]>({ name: 'needsDetails', limit });
+
 export type CodeView = { code: string; qr: string };
 type SyncResult<T> = { ok: true; value: T } | { ok: false; error: { kind: string; status?: number } };
 export const syncRun = (reason: Extract<SyncOp, { action: 'run' }>['reason']) => sync<SyncRunResult>({ action: 'run', reason });
@@ -72,6 +74,9 @@ export const setMe = (memberId: string) => identity<{ memberId: string }>({ acti
 export const exportCatalog = () => call<string>({ kind: 'export' });
 export const importCatalog = (text: string) =>
   call<{ ok: true; value: { added: number; present: number } } | { ok: false; error: { field: string; reason: string } }>({ kind: 'import', text });
+export type TitlesImportPreview = { new: number; existing: number; invalid: number; reasons: { index: number; title: string; reason: string }[]; applied: boolean };
+export const importTitlesList = (text: string, dryRun: boolean) =>
+  call<{ ok: true; value: TitlesImportPreview } | { ok: false; error: { field: string; reason: string } }>({ kind: 'importTitles', text, dryRun });
 export const eraseAll = () => call<null>({ kind: 'erase' });
 
 /** The TMDB key (device-local `meta.tmdb_key`); null when none is set. Only the shell's TMDB client and Settings read it. */
