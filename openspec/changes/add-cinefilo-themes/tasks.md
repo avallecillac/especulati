@@ -15,12 +15,12 @@ Each group is one commit. "Checks" = `pnpm typecheck`, eslint, depcruise, `pnpm 
 
 ## 3. Covers, art and details
 
-- [ ] 3.1 Tests first, then `lib/coverArt.ts` (D4) and `Cover.svelte`; replace the letter tiles in List, TitleScreen and AddSheet results.
-- [ ] 3.2 `Poster.svelte` posters option with `--poster-filter` and fallback to the generated cover. Verify with the mocked TMDB route: posters off shows the cover; on shows the filtered poster; no poster falls back.
-- [ ] 3.3 `art/BetonElevation.svelte`, `art/WillisRoom.svelte` (D6) on the welcome screen; the title screen header uses the hero cover.
-- [ ] 3.4 `theme/details.css` (D7): numbered tabs in Béton, `Verdict.svelte`, the both-loved mark. Verify with Playwright: verdict buttons keep their accessible names in both themes.
+- [x] 3.1 Tests first, then `lib/coverArt.ts` (D4) and `Cover.svelte`; replace the letter tiles in List, TitleScreen and AddSheet results.
+- [x] 3.2 `Poster.svelte` posters option with `--poster-filter` and fallback to the generated cover. Verify with the mocked TMDB route: posters off shows the cover; on shows the filtered poster; no poster falls back.
+- [x] 3.3 `art/BetonElevation.svelte`, `art/WillisRoom.svelte` (D6) on the welcome screen; the title screen header uses the hero cover.
+- [x] 3.4 `theme/details.css` (D7): numbered tabs in Béton, `Verdict.svelte`, the both-loved mark. Verify with Playwright: verdict buttons keep their accessible names in both themes.
 
 ## 4. Visual check and deploy
 
-- [ ] 4.1 Playwright captures each main screen in both themes at 390×844 to `e2e/cinefilo/__screens__/` (not committed). The main session compares them with the design canvas and fixes differences.
+- [x] 4.1 Playwright captures each main screen in both themes at 390×844 to `e2e/cinefilo/__screens__/` (not committed). The main session compares them with the design canvas and fixes differences.
 - [ ] 4.2 Full gate (checks + `pnpm test:convergence` + `pnpm e2e`), merge to `main`, confirm the production deploy serves both themes.

@@ -7,6 +7,9 @@
   import { GENERIC_FAILURE, syncErrorText } from '../lib/syncText.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import Scan from './Scan.svelte';
+  import BetonElevation from '../art/BetonElevation.svelte';
+  import WillisRoom from '../art/WillisRoom.svelte';
+  import { theme } from '../lib/appearance.svelte.ts';
 
   type Step = 'choose' | 'start' | 'code' | 'join' | 'scan' | 'who';
 
@@ -93,6 +96,11 @@
 </script>
 
 <main class="welcome">
+  {#if step === 'choose'}
+    <div class="welcome-art" aria-hidden="true">
+      {#if theme.id === 'willis'}<WillisRoom />{:else}<BetonElevation />{/if}
+    </div>
+  {/if}
   <h1>Cinéfilo</h1>
 
   {#if step === 'choose'}

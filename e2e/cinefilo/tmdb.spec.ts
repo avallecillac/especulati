@@ -28,6 +28,7 @@ test('Settings → About shows the TMDB logo and the required notice', async ({ 
 
 test('search, add in one tap, poster shows and survives offline; the key goes only to TMDB', async ({ page, context }) => {
   const tmdb = await installTmdb(context);
+  await page.addInitScript(() => localStorage.setItem('cinefilo.covers', 'posters'));
   await startList(page, 'Ana');
   await saveKey(page);
   await tab(page, 'Watch later').click();
@@ -95,6 +96,7 @@ test('offline: the add sheet offers manual entry only; a TMDB failure keeps the 
 
 test('Link to TMDB fills details and keeps status, date and both ratings', async ({ page: a, newDevice, context }) => {
   await installTmdb(context);
+  await a.addInitScript(() => localStorage.setItem('cinefilo.covers', 'posters'));
   const code = await startList(a, 'Ana');
   await addByHand(a, { title: 'Severance', kind: 'Series', status: 'Watched' });
   const sync = async (p: typeof a) => {

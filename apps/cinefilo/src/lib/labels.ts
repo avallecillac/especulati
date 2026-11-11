@@ -1,7 +1,6 @@
 import type { Kind, Status, Verdict, VerdictFilter } from '@especulati/cinefilo-core';
 
 export const VERDICT_LABEL: Readonly<Record<Verdict, string>> = { like: 'Like', meh: 'Meh', dislike: "Didn't like" };
-export const VERDICT_GLYPH: Readonly<Record<Verdict, string>> = { like: '▲', meh: '●', dislike: '▼' };
 
 export const FILTER_LABEL: Readonly<Record<VerdictFilter, string>> = {
   bothLiked: 'Both liked',

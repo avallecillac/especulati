@@ -38,16 +38,13 @@ describe.each(THEMES)('contrast: $id', (theme) => {
     expect(ratio(c('accent'), c('bg'))).toBeGreaterThanOrEqual(3);
   });
 
+  it('control-border is >= 3 on bg (borders of buttons, inputs, chips and steppers)', () => {
+    expect(ratio(c('control-border'), c('bg'))).toBeGreaterThanOrEqual(3);
+  });
+
   it.each(['danger', 'like', 'meh', 'dislike'])('%s is >= 4.5 on bg', (t) => {
     expect(ratio(c(t), c('bg'))).toBeGreaterThanOrEqual(4.5);
   });
-});
-
-// Willis draws 1px decorative hairline rules (design token sheet: #3A3127), so the 3:1 control-border
-// check on --rule applies to Béton, whose 2px rules are structural. See the implementer's report.
-it('beton rule is >= 3 on bg', () => {
-  const { tokens } = parseTheme('beton');
-  expect(ratio(tokens.get('rule')!, tokens.get('bg')!)).toBeGreaterThanOrEqual(3);
 });
 
 it('the contrast helper itself is sound', () => {

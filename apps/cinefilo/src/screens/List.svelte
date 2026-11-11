@@ -2,9 +2,11 @@
   import { VERDICT_FILTERS, type VerdictFilter } from '@especulati/cinefilo-core';
   import type { ListItem, ListTab } from '@especulati/cinefilo-db';
   import { list } from '../lib/dbClient.ts';
-  import { FILTER_LABEL, KIND_LABEL, VERDICT_GLYPH, VERDICT_LABEL } from '../lib/labels.ts';
+  import { FILTER_LABEL, KIND_LABEL, VERDICT_LABEL } from '../lib/labels.ts';
   import { app } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
+  import SeasonProgress from './SeasonProgress.svelte';
+  import Verdict from './Verdict.svelte';
 
   let { tab, onadd }: { tab: ListTab; onadd: () => void } = $props();
 
@@ -13,6 +15,9 @@
   let filter = $state<VerdictFilter | null>(null);
   let items = $state<ListItem[] | null>(null);
   const partner = $derived(app.members.find((m) => !m.me)?.name ?? 'Partner');
+  const initial = (n: string) => (n.trim().charAt(0) || '?').toUpperCase();
+  const myInitial = $derived(initial(app.members.find((m) => m.me)?.name ?? 'Me'));
+  const partnerInitial = $derived(initial(partner));
 
   // Reload whenever anything was written, or the filter changes. `rev` is read to subscribe.
   $effect(() => {
@@ -55,14 +60,18 @@
     {#each items as i (i.id)}
       <li>
         <a class="row" href={`#/title/${encodeURIComponent(i.id)}`}>
-          <Poster titleId={i.id} title={i.title} path={i.posterUrl} />
+          <Poster titleId={i.id} path={i.posterUrl} />
           <span class="meta">
             <span class="name">{i.title}</span>
             <span class="muted small">{detail(i)}</span>
+            {#if i.kind === 'series' && i.status === 'watching' && i.currentSeason && i.seasonCount}
+              <SeasonProgress current={i.currentSeason} total={i.seasonCount} />
+            {/if}
           </span>
           <span class="verdicts">
-            <span class={`glyph ${i.mine ?? 'none'}`} aria-label={`You: ${i.mine ? VERDICT_LABEL[i.mine] : 'not rated'}`}>{i.mine ? VERDICT_GLYPH[i.mine] : '–'}</span>
-            <span class={`glyph ${i.partner ?? 'none'}`} aria-label={`${partner}: ${i.partner ? VERDICT_LABEL[i.partner] : 'not rated'}`}>{i.partner ? VERDICT_GLYPH[i.partner] : '–'}</span>
+            {#if i.mine === 'like' && i.partner === 'like'}<span class="both" role="img" aria-label="You both loved it"></span>{/if}
+            <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><Verdict v={i.mine} label={`You: ${i.mine ? VERDICT_LABEL[i.mine] : 'not rated'}`} /></span>
+            <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><Verdict v={i.partner} label={`${partner}: ${i.partner ? VERDICT_LABEL[i.partner] : 'not rated'}`} /></span>
           </span>
         </a>
       </li>

@@ -13,3 +13,4 @@ playwright-report/
 .vscode/
 .idea/
 dist-e2e/
+e2e/cinefilo/__screens__/

@@ -1,0 +1,59 @@
+/* Theme-specific details through CSS only (D7). Tokens only, no colours; selectors per theme id. */
+
+/* Béton numbers the three list tabs: 01, 02, 03 (Settings stays unnumbered). */
+:root[data-theme='beton'] .tabbar { counter-reset: tab; }
+:root[data-theme='beton'] .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; font-size: 10px; letter-spacing: 0.02em; }
+:root[data-theme='beton'] .tabbar a:nth-child(-n + 3)::before { counter-increment: tab; content: counter(tab, decimal-leading-zero); }
+
+/* Verdict marks: one element, `data-v` picks the mark. Béton draws squares; Willis writes the word. */
+.vmark { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; }
+.vmark[data-v='none']::before, .vmark[data-v='none']::after { content: '–'; color: var(--ink-soft); }
+:root[data-theme='beton'] .vmark:not([data-v='none'])::before { content: ''; width: 12px; height: 12px; box-sizing: border-box; border: 1.5px solid var(--ink); }
+:root[data-theme='beton'] .vmark[data-v='like']::before { background: var(--ink); }
+:root[data-theme='beton'] .vmark[data-v='meh']::before { background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); }
+:root[data-theme='beton'] .vmark[data-v='dislike']::before { background: transparent; }
+:root[data-theme='beton'] .vmark::after { content: none; }
+:root[data-theme='willis'] .vmark::before { content: none; }
+:root[data-theme='willis'] .vmark:not([data-v='none'])::after { font-family: var(--font-text); font-size: 0.95rem; color: var(--accent); white-space: nowrap; }
+:root[data-theme='willis'] .vmark[data-v='like']::after { content: 'loved'; }
+:root[data-theme='willis'] .vmark[data-v='meh']::after { content: 'meh'; }
+:root[data-theme='willis'] .vmark[data-v='dislike']::after { content: 'no'; }
+/* Inside the verdict buttons the label is already written, so Willis shows no second word. */
+:root[data-theme='willis'] .verdict .vmark, :root[data-theme='willis'] .verdict-read .vmark { display: none; }
+
+/* "Both loved": a dot (Willis) or a square (Béton) in --both-loved. */
+.both { display: inline-block; width: 8px; height: 8px; background: var(--both-loved); }
+:root[data-theme='willis'] .both { border-radius: 50%; width: 7px; height: 7px; }
+
+/* Season progress: Béton a 16-cell grid, Willis one bar per season. */
+.progress { display: flex; gap: 3px; height: 3px; margin-top: 6px; }
+.progress .cell { flex: 1; background: var(--hairline); }
+.progress .cell.on { background: var(--accent); }
+:root[data-theme='beton'] .progress.grid { display: grid; grid-template-columns: repeat(4, 10px); grid-auto-rows: 10px; gap: 2px; height: auto; width: max-content; }
+:root[data-theme='beton'] .progress.grid .cell { background: transparent; outline: 1px solid var(--ink-soft); outline-offset: -1px; }
+:root[data-theme='beton'] .progress.grid .cell.on { background: var(--ink); outline: 0; }
+:root[data-theme='beton'] .progress.grid .cell.last { background: var(--accent); }
+
+/* Welcome art, covers and the title header. */
+.welcome-art { margin: calc(-1 * (var(--gutter) + env(safe-area-inset-top))) calc(-1 * var(--gutter)) 0; }
+.welcome-art .art { display: block; width: 100%; height: min(500px, 52vh); }
+.cover { flex: none; display: block; width: 52px; height: 72px; }
+.cover.hero { width: calc(100% + 2 * var(--gutter)); height: 200px; margin: 0 calc(-1 * var(--gutter)); }
+img.poster { flex: none; width: 52px; height: 72px; object-fit: cover; filter: var(--poster-filter); background: var(--surface-2); border-radius: var(--radius); }
+img.poster.hero { width: calc(100% + 2 * var(--gutter)); height: 200px; margin: 0 calc(-1 * var(--gutter)); border-radius: 0; }
+:root[data-theme='beton'] .cover.hero, :root[data-theme='beton'] img.poster.hero { border-bottom: var(--rule-width) solid var(--rule); }
+.hero h1 { margin-top: 16px; }
+
+/* Selected state is FILLED: Béton ink on bg-coloured text, Willis brass with dark text (status, date shortcuts, verdicts, chips, radios). */
+:root[data-theme='beton'] button[aria-pressed='true'], :root[data-theme='beton'] .choice button[role='radio'][aria-checked='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+:root[data-theme='willis'] button[aria-pressed='true'], :root[data-theme='willis'] .choice button[role='radio'][aria-checked='true'] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+:root[data-theme='beton'] button.verdict { text-transform: uppercase; }
+
+/* Back: a 44px square (Béton) or circle (Willis) with an arrow. */
+:root[data-theme='willis'] .back { border-radius: 50%; }
+
+/* Whose mark: the member's initial before each verdict mark in list rows. */
+.who { color: var(--ink-soft); }
+:root[data-theme='beton'] .who { font-family: var(--font-label); font-size: 10px; }
+:root[data-theme='willis'] .who { font-family: var(--font-label); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+:root[data-theme='beton'] .vmark { min-width: 0; }

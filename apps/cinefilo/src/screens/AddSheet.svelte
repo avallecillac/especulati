@@ -6,7 +6,7 @@
   import { showToast, write } from '../lib/state.svelte.ts';
   import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
-  import { coverCloth } from '../lib/posterArt.ts';
+  import Cover from './Cover.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -155,7 +155,7 @@
         <ul class="results" aria-label="Search results">
           {#each results as hit (`${hit.mediaKind}-${hit.tmdbId}`)}
             <li class="result">
-              <span class={`poster tile cloth-${coverCloth(String(hit.tmdbId))}`} aria-hidden="true">{hit.title.slice(0, 1).toUpperCase()}</span>
+              <Cover titleId={`tmdb-${hit.mediaKind}-${hit.tmdbId}`} />
               <span class="meta">
                 <span class="name">{hit.title}</span>
                 <span class="muted small">{KIND_LABEL[hit.mediaKind]}{hit.year ? ` · ${hit.year}` : ''}</span>

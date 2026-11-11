@@ -5,10 +5,11 @@
   import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
   import { todayLocal, yesterdayLocal } from '../lib/clock.ts';
-  import { KIND_LABEL, STATUS_LABEL, VERDICT_GLYPH, VERDICT_LABEL, statusesFor } from '../lib/labels.ts';
+  import { KIND_LABEL, STATUS_LABEL, VERDICT_LABEL, statusesFor } from '../lib/labels.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
+  import VerdictMark from './Verdict.svelte';
 
   let { id }: { id: string } = $props();
 
@@ -125,20 +126,24 @@
   }
 </script>
 
+{#snippet back(href: string)}
+  <a class="back" {href} aria-label="Back">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 12H5M11 5l-7 7 7 7" /></svg>
+  </a>
+{/snippet}
+
 {#if detail === undefined}
   <p class="muted">Loading</p>
 {:else if detail === null}
-  <p><a class="back" href="#/later">Back</a></p>
+  {@render back('#/later')}
   <p class="empty">This title is not on the list any more.</p>
 {:else}
   {@const t = detail.title}
-  <a class="back" href={`#/${backTab(t.status)}`}>Back</a>
+  {@render back(`#/${backTab(t.status)}`)}
   <header class="hero">
-    <Poster titleId={t.id} title={t.title} path={t.posterUrl} big />
-    <div>
-      <h1>{t.title}</h1>
-      <p class="muted">{KIND_LABEL[t.kind]}{t.year ? ` · ${t.year}` : ''}</p>
-    </div>
+    <Poster titleId={t.id} path={t.posterUrl} hero />
+    <h1>{t.title}</h1>
+    <p class="muted">{KIND_LABEL[t.kind]}{t.year ? ` · ${t.year}` : ''}</p>
   </header>
 
   <section aria-labelledby="status-h">
@@ -153,8 +158,8 @@
       <div class="date-row">
         <span class="muted">{t.status === 'dropped' ? 'Dropped on' : 'Watched on'}</span>
         <time datetime={t.watchedOn ?? ''}>{t.watchedOn}</time>
-        <button type="button" onclick={() => void setStatus(t.status, todayLocal())}>Today</button>
-        <button type="button" onclick={() => void setStatus(t.status, yesterdayLocal())}>Yesterday</button>
+        <button type="button" aria-pressed={t.watchedOn === todayLocal()} onclick={() => void setStatus(t.status, todayLocal())}>Today</button>
+        <button type="button" aria-pressed={t.watchedOn === yesterdayLocal()} onclick={() => void setStatus(t.status, yesterdayLocal())}>Yesterday</button>
         <input
           type="date"
           aria-label="Pick a date"
@@ -189,7 +194,7 @@
           <div class="verdicts-big" role="group" aria-label="Your verdict">
             {#each VERDICTS as v (v)}
               <button type="button" class={`verdict ${v}`} aria-pressed={mine.verdict === v} onclick={() => verdict(v)}>
-                <span aria-hidden="true">{VERDICT_GLYPH[v]}</span>
+                <VerdictMark {v} decorative />
                 {VERDICT_LABEL[v]}
               </button>
             {/each}
@@ -210,7 +215,7 @@
         <div class="col" data-testid="rating-partner">
           <h3>{o.name}</h3>
           {#if o.verdict || o.review}
-            {#if o.verdict}<p class={`verdict-read ${o.verdict}`}><span aria-hidden="true">{VERDICT_GLYPH[o.verdict]}</span> {VERDICT_LABEL[o.verdict]}</p>{/if}
+            {#if o.verdict}<p class={`verdict-read ${o.verdict}`}><VerdictMark v={o.verdict} decorative /> {VERDICT_LABEL[o.verdict]}</p>{/if}
             {#if o.review}<p class="review">{o.review}</p>{/if}
           {:else}
             <p class="muted">Not rated yet</p>

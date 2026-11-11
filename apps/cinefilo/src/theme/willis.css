@@ -8,13 +8,16 @@
   --ink-soft: #a39478;
   --rule: #3a3127;
   --hairline: #2a231c;
+  /* Borders of buttons and inputs: 4.2:1 on --bg (>= 3:1); --rule stays the decorative hairline. */
+  --control-border: #7a6a55;
   --accent: #d4a253;
   --on-accent: #0d0b09;
   --both-loved: #d9762b;
   --danger: #e8806a;
-  --like: #7ed08a;
-  --meh: #e3b85c;
-  --dislike: #e8806a;
+  /* Verdicts are monochrome plus brass in the design. */
+  --like: #d4a253;
+  --meh: #a39478;
+  --dislike: #a39478;
   --bar: rgb(13 11 9 / 0.92);
   --backdrop: rgb(0 0 0 / 0.6);
   --font-title: 'Italiana', 'Iowan Old Style', Georgia, serif;

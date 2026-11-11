@@ -9,13 +9,15 @@
   --ink-soft: #5b5851;
   --rule: #161615;
   --hairline: #a8a399;
+  --control-border: #161615;
   --accent: #9c3d24;
   --on-accent: #f2efe8;
   --both-loved: #9c3d24;
   --danger: #8a2c1c;
-  --like: #1f5f2e;
-  --meh: #6f5400;
-  --dislike: #8a2c1c;
+  /* Verdicts are monochrome in the design: the marks differ in shape, not in hue. */
+  --like: #161615;
+  --meh: #161615;
+  --dislike: #161615;
   --bar: rgb(213 209 200 / 0.94);
   --backdrop: rgb(22 22 21 / 0.5);
   --font-title: 'Archivo', ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;

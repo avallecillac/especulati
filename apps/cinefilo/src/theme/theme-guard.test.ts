@@ -34,7 +34,7 @@ describe('no literal colours outside src/theme', () => {
   it('the theme files define the tokens screens rely on', () => {
     for (const id of ['beton', 'willis']) {
       const css = readFileSync(join(SRC, 'theme', `${id}.css`), 'utf8');
-      for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'accent', 'on-accent', 'danger', 'like', 'meh', 'dislike', 'backdrop', 'font-title', 'font-label']) {
+      for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'control-border', 'accent', 'on-accent', 'danger', 'like', 'meh', 'dislike', 'backdrop', 'font-title', 'font-label']) {
         expect(css).toContain(`--${t}:`);
       }
     }
@@ -43,6 +43,20 @@ describe('no literal colours outside src/theme', () => {
   it('screening-room.css is gone and --font-display is not used', () => {
     expect(readdirSync(join(SRC, 'theme'))).not.toContain('screening-room.css');
     const offenders = walk(SRC).filter((f) => /\.(svelte|css|ts)$/.test(f) && !f.endsWith('.test.ts') && readFileSync(f, 'utf8').includes('var(--font-display)'));
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('control borders use --control-border; --rule and --hairline stay decorative', () => {
+  const css = readFileSync(join(SRC, 'app.css'), 'utf8');
+  it('the shared control rule borders with --control-border', () => {
+    const i = css.indexOf('button, .button, input, select, textarea {');
+    const body = css.slice(i, css.indexOf('}', i));
+    expect(body).toContain('border: var(--rule-width) solid var(--control-border)');
+    expect(body).not.toContain('var(--rule)');
+  });
+  it('no control selector borders with --rule or --hairline', () => {
+    const offenders = css.split('\n').filter((l) => /(button|input|select|textarea|\.chip|\.stepper|\.seg)/.test(l.split('{')[0]!) && /border[^;]*var\(--(rule|hairline)\)/.test(l));
     expect(offenders).toEqual([]);
   });
 });

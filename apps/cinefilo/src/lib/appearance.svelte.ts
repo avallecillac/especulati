@@ -19,10 +19,14 @@ function readStored(): Appearance {
 
 export const appearance = $state<{ value: Appearance }>({ value: 'automatic' });
 
+/** The theme on screen right now (a theme id, never 'automatic'); art and covers follow it. */
+export const theme = $state<{ id: string }>({ id: document.documentElement.dataset['theme'] ?? 'beton' });
+
 function apply(): void {
   const dark = typeof matchMedia === 'function' && matchMedia(DARK_QUERY).matches;
   const id = resolveTheme(appearance.value, dark);
   document.documentElement.dataset['theme'] = id;
+  theme.id = id;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeById(id).themeColor);
 }
 
