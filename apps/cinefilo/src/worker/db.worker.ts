@@ -199,7 +199,7 @@ async function identity(d: CinefiloDb, op: IdentityOp): Promise<Reply> {
 
 /** Dispatch one UI command, then the follow-up every local write needs (reconcile, other tabs). */
 async function commit(d: CinefiloDb, req: Extract<Request, { kind: 'dispatch' }>): Promise<Reply> {
-  const resolved = await resolveCommand(d.memberId, req.cmd);
+  const resolved = await resolveCommand(d.memberId, req.cmd, d.members().find((m) => !m.me)?.id ?? null);
   if (!resolved.ok) return rejected(resolved.error);
   const r = d.dispatch(resolved.cmd, env());
   if (!r.ok) return rejected(r.error);
@@ -225,7 +225,9 @@ async function erase(d: CinefiloDb): Promise<void> {
 function runQuery(d: CinefiloDb, q: Query): unknown {
   switch (q.name) {
     case 'list':
-      return d.list(q.tab, q.filter);
+      return d.list(q.tab, q.filter, q.scope);
+    case 'pendingRecommendations':
+      return d.pendingRecommendations();
     case 'title':
       return d.title(q.id);
     case 'members':

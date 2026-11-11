@@ -30,7 +30,7 @@ export function send(req: WithoutId<Request>): Promise<Response> {
 
 // Typed calls the screens use (group 5+). Every one goes through the worker; the UI never touches SQLite.
 import type { Rejection, VerdictFilter, Kind } from '@especulati/cinefilo-core';
-import type { ListItem, ListTab, MemberView, NeedsDetails, TitleDetail } from '@especulati/cinefilo-db';
+import type { ListItem, ListScope, ListTab, MemberView, NeedsDetails, PendingRecommendation, TitleDetail } from '@especulati/cinefilo-db';
 import type { SyncRunResult, SyncStatusView } from '@especulati/sync';
 import type { UiCommand } from './commands.ts';
 import type { ClientError, IdentityOp, Query, SyncOp } from './protocol.ts';
@@ -48,7 +48,9 @@ const sync = <T>(op: SyncOp) => call<T>({ kind: 'sync', op });
 
 export const dispatch = (cmd: UiCommand) => call<{ changes: number }>({ kind: 'dispatch', cmd });
 
-export const list = (tab: ListTab, filter?: VerdictFilter) => query<ListItem[]>({ name: 'list', tab, ...(filter ? { filter } : {}) });
+export const list = (tab: ListTab, filter?: VerdictFilter, scope?: ListScope) =>
+  query<ListItem[]>({ name: 'list', tab, ...(filter ? { filter } : {}), ...(scope ? { scope } : {}) });
+export const pendingRecommendations = () => query<PendingRecommendation[]>({ name: 'pendingRecommendations' });
 export const title = (id: string) => query<TitleDetail | null>({ name: 'title', id });
 export const members = () => query<MemberView[]>({ name: 'members' });
 export const me = () => query<{ memberId: string | null; deviceId: string }>({ name: 'me' });

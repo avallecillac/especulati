@@ -3,7 +3,8 @@ import type { Change, Command, Decision, FieldValue, Rejection, Snapshot, TitleD
 import { reconcileTitles } from './reconcile.ts';
 import { genresToDb, type TitleRow } from './rows.ts';
 import {
-  fail, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseRatingId, parseReview, parseSeason, parseStatus, parseTitle, parseTitleId, parseVerdict, REVIEW_MAX, type Instant, type Kind, type Status,
+  fail, parseAnswer, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseMemberStatus, parseMemberStatusId, parseRatingId, parseRecommendationId, parseReview, parseSeason,
+  parseStatus, parseTitle, parseTitleId, parseVerdict, REVIEW_MAX, type Instant, type Kind, type Status,
 } from './types.ts';
 
 type Decided = Result<Decision, Rejection>;
@@ -91,7 +92,15 @@ function addTitle(snap: Snapshot, cmd: Extract<Command, { kind: 'AddTitle' }>, n
   const mk = need(parseKind(cmd.mediaKind));
   if (!mk.ok) return mk;
   const existing = snap.title ?? null;
-  if (existing && existing.deletedAt === null) return err({ kind: 'AlreadyExists', id: existing.mergedInto ?? existing.id });
+  if (cmd.to === 'me') return addJustMe(snap, cmd, id.value, added.value, mk.value, now);
+  if (existing && existing.deletedAt === null) {
+    if (existing.mergedInto !== null || existing.status !== null) return err({ kind: 'AlreadyExists', id: existing.mergedInto ?? existing.id });
+    // In the catalog but not on Together (it was added "Just me"): adding it to Together sets its status.
+    const s = need(parseStatus(cmd.status ?? 'later'));
+    if (!s.ok) return s;
+    const f = statusFields(existing.kind, s.value, cmd.watchedOn);
+    return f.ok ? decided([{ tbl: 'titles', rowId: existing.id, fields: f.value }]) : f;
+  }
   const title = need(parseTitle(cmd.title), titleRejection);
   if (!title.ok) return title;
   const details = detailFields(cmd);
@@ -109,6 +118,53 @@ function addTitle(snap: Snapshot, cmd: Extract<Command, { kind: 'AddTitle' }>, n
   // A removed row with this derived id is revived: a fresh insert under another id is impossible.
   if (existing) fields['deleted_at'] = null;
   return decided([{ tbl: 'titles', rowId: id.value, fields }]);
+}
+
+/** Status and watched_on of a personal status (D2): null takes the title off the list; never dropped. */
+function memberStatusFields(kind: Kind, status: string | null, watchedOn: string | undefined): Result<Record<string, FieldValue>, Rejection> {
+  if (status === null) return ok({ status: null, watched_on: null });
+  const s = need(parseMemberStatus(status));
+  if (!s.ok) return s;
+  return statusFields(kind, s.value, watchedOn);
+}
+
+/** Insert carries the full key (title_id, member_id); later edits carry only what changes. */
+function memberStatusChange(
+  snap: Snapshot, t: { titleId: string; memberId: string; msId: string }, edit: Record<string, FieldValue>, now: Instant,
+): Change {
+  const ms = snap.memberStatus ?? null;
+  const fields: Record<string, FieldValue> = ms ? (ms.deletedAt === null ? {} : { deleted_at: null }) : { title_id: t.titleId, member_id: t.memberId };
+  return { tbl: 'member_status', rowId: ms?.id ?? t.msId, fields: { ...fields, ...edit, updated_at: now } };
+}
+
+/** D3: add to my own list. The title is created (or revived) without a Together status; an existing live one is left alone. */
+function addJustMe(snap: Snapshot, cmd: Extract<Command, { kind: 'AddTitle' }>, titleId: string, addedBy: string, mediaKind: Kind, now: Instant): Decided {
+  if (snap.deviceMemberId == null || snap.deviceMemberId !== addedBy) return err({ kind: 'NotYourList' });
+  const msid = need(parseMemberStatusId(cmd.memberStatusId ?? ''));
+  if (!msid.ok) return msid;
+  const existing = snap.title ?? null;
+  if (existing && existing.deletedAt === null && existing.mergedInto !== null) return err({ kind: 'AlreadyExists', id: existing.mergedInto });
+  const ms = snap.memberStatus ?? null;
+  if (existing && existing.deletedAt === null && ms && ms.deletedAt === null && ms.status !== null) return err({ kind: 'AlreadyExists', id: existing.id });
+  const st = memberStatusFields(existing?.kind ?? mediaKind, cmd.status ?? 'later', cmd.watchedOn);
+  if (!st.ok) return st;
+  const changes: Change[] = [];
+  if (!existing || existing.deletedAt !== null) {
+    const title = need(parseTitle(cmd.title), titleRejection);
+    if (!title.ok) return title;
+    const details = detailFields(cmd);
+    if (!details.ok) return details;
+    const fields: Record<string, FieldValue> = { kind: mediaKind, title: title.value, ...details.value, status: null, added_by: addedBy, created_at: now };
+    if (cmd.tmdbId !== undefined && cmd.tmdbId !== null) {
+      const t = need(parseTmdbId(cmd.tmdbId));
+      if (!t.ok) return t;
+      fields['tmdb_id'] = t.value;
+    }
+    if (existing) fields['deleted_at'] = null;
+    changes.push({ tbl: 'titles', rowId: titleId, fields });
+  }
+  changes.push(memberStatusChange(snap, { titleId, memberId: addedBy, msId: msid.value }, st.value, now));
+  return decided(changes);
 }
 
 function editDetails(snap: Snapshot, cmd: Extract<Command, { kind: 'EditTitleDetails' }>): Decided {
@@ -220,6 +276,105 @@ function setReview(snap: Snapshot, cmd: Extract<Command, { kind: 'SetReview' }>,
   return ratingChange(snap, t.value, { review: review.value }, now);
 }
 
+/** The own-list target: ids parsed, the device acts as `memberId`, the member and the title are live. */
+function ownListTarget(snap: Snapshot, cmd: { titleId: string; memberId: string; memberStatusId: string }): Result<{ titleId: string; memberId: string; msId: string; title: TitleRow }, Rejection> {
+  const tid = need(parseTitleId(cmd.titleId));
+  if (!tid.ok) return tid;
+  const mid = need(parseMemberId(cmd.memberId));
+  if (!mid.ok) return mid;
+  const sid = need(parseMemberStatusId(cmd.memberStatusId));
+  if (!sid.ok) return sid;
+  if (snap.deviceMemberId == null || snap.deviceMemberId !== mid.value) return err({ kind: 'NotYourList' });
+  if (!snap.member || snap.member.id !== mid.value || snap.member.deletedAt !== null) return err({ kind: 'UnknownMember' });
+  const title = liveTitle(snap.title);
+  if (!title) return err({ kind: 'NotFound' });
+  return ok({ titleId: tid.value, memberId: mid.value, msId: sid.value, title });
+}
+
+function setMyStatus(snap: Snapshot, cmd: Extract<Command, { kind: 'SetMyStatus' }>, now: Instant): Decided {
+  const t = ownListTarget(snap, cmd);
+  if (!t.ok) return t;
+  const f = memberStatusFields(t.value.title.kind, cmd.status, cmd.watchedOn);
+  if (!f.ok) return f;
+  return decided([memberStatusChange(snap, t.value, f.value, now)]);
+}
+
+function setMySeason(snap: Snapshot, cmd: Extract<Command, { kind: 'SetMySeason' }>, now: Instant): Decided {
+  const t = ownListTarget(snap, cmd);
+  if (!t.ok) return t;
+  const title = t.value.title;
+  if (title.kind !== 'series') return err({ kind: 'NotASeries' });
+  const season = need(parseSeason(cmd.season), () => ({ kind: 'SeasonOutOfRange', max: title.seasonCount }));
+  if (!season.ok) return season;
+  if (title.seasonCount !== null && season.value > title.seasonCount) return err({ kind: 'SeasonOutOfRange', max: title.seasonCount });
+  return decided([memberStatusChange(snap, t.value, { current_season: season.value }, now)]);
+}
+
+function recommend(snap: Snapshot, cmd: Extract<Command, { kind: 'Recommend' }>, now: Instant): Decided {
+  const tid = need(parseTitleId(cmd.titleId));
+  if (!tid.ok) return tid;
+  const from = need(parseMemberId(cmd.fromMember));
+  if (!from.ok) return from;
+  const to = need(parseMemberId(cmd.toMember));
+  if (!to.ok) return to;
+  const rid = need(parseRecommendationId(cmd.recommendationId));
+  if (!rid.ok) return rid;
+  if (snap.deviceMemberId == null || snap.deviceMemberId !== from.value) return err({ kind: 'NotYours' });
+  if (from.value === to.value) return err(bad('toMember', 'cannot recommend to yourself'));
+  if (!snap.member || snap.member.id !== to.value || snap.member.deletedAt !== null) return err({ kind: 'UnknownMember' });
+  if (!liveTitle(snap.title)) return err({ kind: 'NotFound' });
+  const existing = snap.recommendation ?? null;
+  if (!existing) {
+    return decided([{ tbl: 'recommendations', rowId: rid.value, fields: { title_id: tid.value, from_member: from.value, to_member: to.value, created_at: now } }]);
+  }
+  // Open or answered: nothing to send again. A withdrawn one is re-sent by clearing `withdrawn_at`, a field only the
+  // recommender writes (the recipient's `answered` is never touched by the sender).
+  if (existing.withdrawnAt === null && existing.deletedAt === null) return err({ kind: 'AlreadyExists', id: existing.id });
+  if (existing.answered !== null) return err({ kind: 'AlreadyExists', id: existing.id });
+  const fields: Record<string, FieldValue> = { withdrawn_at: null, created_at: now };
+  if (existing.deletedAt !== null) fields['deleted_at'] = null;
+  return decided([{ tbl: 'recommendations', rowId: existing.id, fields }]);
+}
+
+function withdrawRecommendation(snap: Snapshot, cmd: Extract<Command, { kind: 'WithdrawRecommendation' }>, now: Instant): Decided {
+  const id = need(parseRecommendationId(cmd.id));
+  if (!id.ok) return id;
+  const r = snap.recommendation ?? null;
+  if (!r || r.deletedAt !== null) return err({ kind: 'NotFound' });
+  if (snap.deviceMemberId == null || snap.deviceMemberId !== r.fromMember) return err({ kind: 'NotYours' });
+  if (r.withdrawnAt !== null || r.answered !== null) return decided([]);
+  return decided([{ tbl: 'recommendations', rowId: r.id, fields: { withdrawn_at: now } }]);
+}
+
+function answerRecommendation(snap: Snapshot, cmd: Extract<Command, { kind: 'AnswerRecommendation' }>, now: Instant): Decided {
+  const id = need(parseRecommendationId(cmd.id));
+  if (!id.ok) return id;
+  const tid = need(parseTitleId(cmd.titleId));
+  if (!tid.ok) return tid;
+  const mid = need(parseMemberId(cmd.memberId));
+  if (!mid.ok) return mid;
+  const sid = need(parseMemberStatusId(cmd.memberStatusId));
+  if (!sid.ok) return sid;
+  const answer = need(parseAnswer(cmd.answer));
+  if (!answer.ok) return answer;
+  if (snap.deviceMemberId == null || snap.deviceMemberId !== mid.value) return err({ kind: 'NotYours' });
+  const r = snap.recommendation ?? null;
+  if (!r || r.deletedAt !== null) return err({ kind: 'NotFound' });
+  if (r.toMember !== mid.value) return err({ kind: 'NotYours' });
+  if (r.titleId !== tid.value) return err(bad('titleId', 'not the title of this recommendation'));
+  if (r.answered !== null) return decided([]);
+  if (r.withdrawnAt !== null) return err({ kind: 'NotFound' });
+  const changes: Change[] = [{ tbl: 'recommendations', rowId: r.id, fields: { answered: answer.value, answered_at: now } }];
+  if (answer.value === 'accepted') {
+    if (!liveTitle(snap.title)) return err({ kind: 'NotFound' });
+    const ms = snap.memberStatus ?? null;
+    if (!ms || ms.deletedAt !== null || ms.status === null) {
+      changes.push(memberStatusChange(snap, { titleId: tid.value, memberId: mid.value, msId: sid.value }, { status: 'later', watched_on: null }, now));
+    }
+  }
+  return decided(changes);
+}
+
 function createMember(snap: Snapshot, cmd: Extract<Command, { kind: 'CreateMember' }>, now: Instant): Decided {
   const id = need(parseMemberId(cmd.memberId));
   if (!id.ok) return id;
@@ -268,6 +423,16 @@ export function decide(snapshot: Snapshot, cmd: Command, now: Instant): Decided 
       return setVerdict(snapshot, cmd, now);
     case 'SetReview':
       return setReview(snapshot, cmd, now);
+    case 'SetMyStatus':
+      return setMyStatus(snapshot, cmd, now);
+    case 'SetMySeason':
+      return setMySeason(snapshot, cmd, now);
+    case 'Recommend':
+      return recommend(snapshot, cmd, now);
+    case 'WithdrawRecommendation':
+      return withdrawRecommendation(snapshot, cmd, now);
+    case 'AnswerRecommendation':
+      return answerRecommendation(snapshot, cmd, now);
     case 'CreateMember':
       return createMember(snapshot, cmd, now);
     case 'RenameMember':

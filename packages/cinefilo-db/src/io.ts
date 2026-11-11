@@ -5,9 +5,9 @@ import {
 } from '@especulati/cinefilo-core';
 import { applyChanges, rollbackQuietly } from '@especulati/db-kit';
 import type { DeviceId } from '@especulati/sync-core';
-import { rowToMember, rowToRating, rowToTitle } from './snapshot.ts';
+import { rowToMember, rowToMemberStatus, rowToRating, rowToRecommendation, rowToTitle } from './snapshot.ts';
 
-/** Everything the `cinefilo/v1` file holds: all titles (removed and merged too), members and ratings. Never meta, posters or keys. */
+/** Everything the `cinefilo/v1` file holds: all titles (removed and merged too), members, ratings, personal statuses and recommendations. Never meta, posters or keys. */
 export function exportData(db: Database, exportedAt: Instant): CinefiloExport {
   return {
     format: EXPORT_FORMAT,
@@ -15,6 +15,8 @@ export function exportData(db: Database, exportedAt: Instant): CinefiloExport {
     titles: db.selectObjects('SELECT * FROM titles ORDER BY id').map(rowToTitle),
     members: db.selectObjects('SELECT * FROM members ORDER BY id').map(rowToMember),
     ratings: db.selectObjects('SELECT * FROM ratings ORDER BY id').map(rowToRating),
+    memberStatus: db.selectObjects('SELECT * FROM member_status ORDER BY id').map(rowToMemberStatus),
+    recommendations: db.selectObjects('SELECT * FROM recommendations ORDER BY id').map(rowToRecommendation),
   };
 }
 
@@ -61,6 +63,23 @@ export function importText(
     changes.push({
       tbl: 'ratings', rowId: r.id,
       fields: { title_id: r.titleId, member_id: r.memberId, verdict: r.verdict, review: r.review, updated_at: r.updatedAt, deleted_at: r.deletedAt },
+    });
+  }
+  for (const s of f.memberStatus) {
+    if (!missing('member_status', s.id)) { present++; continue; }
+    changes.push({
+      tbl: 'member_status', rowId: s.id,
+      fields: { title_id: s.titleId, member_id: s.memberId, status: s.status, watched_on: s.watchedOn, current_season: s.currentSeason, updated_at: s.updatedAt, deleted_at: s.deletedAt },
+    });
+  }
+  for (const r of f.recommendations) {
+    if (!missing('recommendations', r.id)) { present++; continue; }
+    changes.push({
+      tbl: 'recommendations', rowId: r.id,
+      fields: {
+        title_id: r.titleId, from_member: r.fromMember, to_member: r.toMember, created_at: r.createdAt, withdrawn_at: r.withdrawnAt,
+        answered: r.answered, answered_at: r.answeredAt, deleted_at: r.deletedAt,
+      },
     });
   }
   db.exec('BEGIN IMMEDIATE');

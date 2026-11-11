@@ -1,4 +1,4 @@
-import { RATING_LABEL_PREFIX, TITLE_LABEL_PREFIX } from './frozen.ts';
+import { MEMBER_STATUS_LABEL_PREFIX, RATING_LABEL_PREFIX, RECOMMENDATION_LABEL_PREFIX, TITLE_LABEL_PREFIX } from './frozen.ts';
 import type { Kind } from './types.ts';
 
 /**
@@ -23,3 +23,10 @@ export const manualTitleLabel = (kind: Kind, title: string, year: number | null)
 
 /** Label for the rating of `memberId` on `titleId`. */
 export const ratingLabel = (titleId: string, memberId: string): string => `${RATING_LABEL_PREFIX}|${titleId}|${memberId}`;
+
+/** Label for the personal status of `memberId` on `titleId` (D1). */
+export const memberStatusLabel = (titleId: string, memberId: string): string => `${MEMBER_STATUS_LABEL_PREFIX}|${titleId}|${memberId}`;
+
+/** Label for the recommendation of `titleId` from one member to another (D1). */
+export const recommendationLabel = (titleId: string, fromMember: string, toMember: string): string =>
+  `${RECOMMENDATION_LABEL_PREFIX}|${titleId}|${fromMember}|${toMember}`;

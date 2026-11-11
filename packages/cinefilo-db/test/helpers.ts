@@ -92,6 +92,31 @@ export function rate(t: TestDb, titleId: string, verdict: 'like' | 'meh' | 'disl
 /** Deterministic dump of the logical state (not change_log: op ids differ per device). */
 export function dump(raw: Database): string {
   return JSON.stringify(
-    ['titles ORDER BY id', 'members ORDER BY id', 'ratings ORDER BY id', 'field_clock ORDER BY tbl, row_id, field'].map((t) => raw.selectArrays(`SELECT * FROM ${t}`)),
+    ['titles ORDER BY id', 'members ORDER BY id', 'ratings ORDER BY id', 'member_status ORDER BY id', 'recommendations ORDER BY id', 'field_clock ORDER BY tbl, row_id, field'].map((t) => raw.selectArrays(`SELECT * FROM ${t}`)),
   );
+}
+
+export const mstatusIdOf = (titleId: string, memberId: string): string => hashId(`cinefilo-mstatus-v1|${titleId}|${memberId}`);
+export const recIdOf = (titleId: string, from: string, to: string): string => hashId(`cinefilo-rec-v1|${titleId}|${from}|${to}`);
+
+/** Personal-list helpers: act as `t.db.memberId`. Throw on rejection. */
+export function setMine(t: TestDb, titleId: string, status: 'later' | 'watching' | 'watched' | null, watchedOn?: string): void {
+  const memberId = t.db.memberId!;
+  t.tick();
+  const r = t.db.dispatch({ kind: 'SetMyStatus', titleId, memberId, memberStatusId: mstatusIdOf(titleId, memberId), status, ...(watchedOn ? { watchedOn } : {}) }, t.env);
+  if (!r.ok) throw new Error(`setMine: ${r.error.kind}`);
+}
+
+/** Add a manual title to the device member's own list only ("Just me"). */
+export function addJustMe(t: TestDb, title: string, extra: Partial<{ year: number; mediaKind: 'movie' | 'series'; status: 'later' | 'watching' | 'watched'; watchedOn: string }> = {}): string {
+  const mediaKind = extra.mediaKind ?? 'movie';
+  const id = hashId(`cinefilo-title-v1|manual|${mediaKind}|${title.toLowerCase()}|${extra.year ?? ''}`);
+  const memberId = t.db.memberId ?? ANA;
+  t.tick();
+  const r = t.db.dispatch(
+    { kind: 'AddTitle', titleId: id, mediaKind, title, addedBy: memberId, to: 'me', memberStatusId: mstatusIdOf(id, memberId), ...(extra.year ? { year: extra.year } : {}), ...(extra.status ? { status: extra.status } : {}), ...(extra.watchedOn ? { watchedOn: extra.watchedOn } : {}) },
+    t.env,
+  );
+  if (!r.ok) throw new Error(`addJustMe: ${r.error.kind}`);
+  return id;
 }

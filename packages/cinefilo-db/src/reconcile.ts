@@ -4,7 +4,7 @@
 // write the same values. Runs in the DB worker (or a test); the UI never calls it.
 
 import {
-  ratingLabel, tmdbTitleLabel,
+  memberStatusLabel, ratingLabel, recommendationLabel, tmdbTitleLabel,
   type Kind,
 } from '@especulati/cinefilo-core';
 import type { Database } from '@sqlite.org/sqlite-wasm';
@@ -58,8 +58,22 @@ async function pass(db: ReconcileTarget, env: () => DispatchEnv, hash: Hash): Pr
       const ratingIds = await Promise.all(
         members.map(async (memberId) => ({ titleId: survivor.id, memberId, ratingId: await hash(ratingLabel(survivor.id, memberId)) })),
       );
+      const memberStatusIds = await Promise.all(
+        db.raw
+          .selectValues('SELECT DISTINCT member_id FROM member_status WHERE title_id = ? ORDER BY member_id', [loser.id])
+          .map(String)
+          .map(async (memberId) => ({ titleId: survivor.id, memberId, id: await hash(memberStatusLabel(survivor.id, memberId)) })),
+      );
+      const recommendationIds = await Promise.all(
+        db.raw
+          .selectObjects('SELECT DISTINCT from_member, to_member FROM recommendations WHERE title_id = ? ORDER BY from_member, to_member', [loser.id])
+          .map(async (r) => {
+            const [fromMember, toMember] = [text(r['from_member'], 'from_member'), text(r['to_member'], 'to_member')];
+            return { titleId: survivor.id, fromMember, toMember, id: await hash(recommendationLabel(survivor.id, fromMember, toMember)) };
+          }),
+      );
       const r = db.dispatch(
-        { kind: 'ReconcileTitles', titleA: survivor.id, titleB: loser.id, tmdbTitleId, ratingIds },
+        { kind: 'ReconcileTitles', titleA: survivor.id, titleB: loser.id, tmdbTitleId, ratingIds, memberStatusIds, recommendationIds },
         env(),
       );
       if (r.ok && r.value.changes > 0) changed++;

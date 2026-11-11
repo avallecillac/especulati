@@ -53,3 +53,14 @@ Commands: `SetMyStatus{titleId, status|null, watchedOn?}`, `SetMySeason{titleId,
 - **A device still on the old version shows titles added "Just me" without status** → those `titles` ops are tier `p`, so the old device never sees them until it updates.
 - **Members are trusted** → a modified client could write the partner's list; same accepted risk as ratings (`cinefilo-sharing`).
 - **Preview builds share the production D1** → pairing a preview with the real space writes real (encrypted) ops. The preview is for viewing with a fresh test space; tasks say so.
+
+## Implementation notes (groups 1–2, reviewed)
+
+- Commands carry the ids the shell derives: `SetMyStatus`/`SetMySeason` (`memberId`, `memberStatusId`), `Recommend` (`fromMember`, `toMember`, `recommendationId`), `AnswerRecommendation` (`id`, `titleId`, `memberId`, `memberStatusId`; core checks the title matches). Rejections `NotYourList`, `NotYours`; recommending to oneself is `InvalidInput`.
+- Re-recommending after a withdrawal clears `withdrawn_at` (the recommender's own field); an answered recommendation can't be re-sent (`AlreadyExists`), keeping each field single-writer.
+- Adding to Together a title that is only on someone's personal list sets its Together status instead of `AlreadyExists`.
+- Reconcile never lets a NULL Together status replace a real one; a real one fills a NULL survivor with its date.
+- A pending recommendation is hidden once the recipient has any personal status for the title.
+- Personal lists sort by `member_status.updated_at`, newest first; Watched by `watched_on` first.
+- Migration 2 rebuilds `titles` (SQLite can't relax NOT NULL in place), recreating both v1 indexes unchanged, then resets the cursor.
+- An old-version peer may lag on tier-`p` title ops (added "Just me") until it upgrades; everything else converges (convergence scenario).

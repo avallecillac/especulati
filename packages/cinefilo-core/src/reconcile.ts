@@ -1,5 +1,5 @@
 import { compareHlc, err, ok, type Result } from '@especulati/sync-core';
-import type { Change, ClockedRating, ClockedTitle, Command, Decision, FieldValue, ReconcileSnapshot, Rejection } from './commands.ts';
+import type { Change, ClockedRating, ClockedRecommendation, ClockedTitle, Command, Decision, FieldClocks, FieldValue, ReconcileSnapshot, Rejection } from './commands.ts';
 import { genresToDb, type TitleRow } from './rows.ts';
 import { parseMemberId, parseTitleId } from './types.ts';
 
@@ -24,6 +24,20 @@ const loserWins = (l: ClockedTitle['clocks'], s: ClockedTitle['clocks'], field: 
 
 const byId = (a: { row: { memberId: string } }, b: { row: { memberId: string } }) =>
   a.row.memberId < b.row.memberId ? -1 : a.row.memberId > b.row.memberId ? 1 : 0;
+
+const byMember = (a: { row: { memberId: string } }, b: { row: { memberId: string } }) => byId(a, b);
+
+/** Fields of a loser row to copy onto the survivor's (or onto a new row): those the loser wrote later, or the survivor never did. */
+function carryFields<R extends { row: object; clocks: FieldClocks }>(
+  lr: R, sr: R | undefined, cols: readonly (readonly [string, (r: R['row']) => FieldValue])[],
+): Record<string, FieldValue> {
+  const fields: Record<string, FieldValue> = {};
+  for (const [col, get] of cols) {
+    const lv = get(lr.row);
+    if (loserWins(lr.clocks, sr?.clocks ?? {}, col) && (sr === undefined || lv !== get(sr.row))) fields[col] = lv;
+  }
+  return fields;
+}
 
 /**
  * Design D4. Deterministic: no clock, no randomness, no `now`; every list is processed in id order, so
@@ -50,8 +64,11 @@ export function reconcileTitles(snap: ReconcileSnapshot | null, cmd: Extract<Com
 
   const changes: Change[] = [];
   const titleFields: Record<string, FieldValue> = {};
+  // A title can be in the catalog without being on Together (status null). A null never replaces a real status, and a
+  // real one fills a survivor that is off Together; the date travels with the status it belongs to.
+  const takeStatus = loser.row.status !== null && (survivor.row.status === null || loserWins(loser.clocks, survivor.clocks, 'status'));
   for (const [col, get] of TITLE_FIELDS) {
-    if (!loserWins(loser.clocks, survivor.clocks, col)) continue;
+    if (col === 'status' ? !takeStatus : col === 'watched_on' ? !(takeStatus || (loser.row.status !== null && survivor.row.status !== null && loserWins(loser.clocks, survivor.clocks, col))) : !loserWins(loser.clocks, survivor.clocks, col)) continue;
     const v = get(loser.row);
     if (v !== get(survivor.row)) titleFields[col] = v;
   }
@@ -84,6 +101,55 @@ export function reconcileTitles(snap: ReconcileSnapshot | null, cmd: Extract<Com
       Object.assign(fields, { title_id: survivor.row.id, member_id: lr.row.memberId, updated_at: lr.row.updatedAt });
     }
     changes.push({ tbl: 'ratings', rowId, fields });
+  }
+
+  const toSurvivor = { survivor: survivor.row.id, loser: loser.row.id };
+  const missing = (what: string, who: string) => err(bad(what, `missing the derived id of the survivor for ${who}`));
+
+  // Personal statuses (D3): per member, by field clock, like ratings.
+  const msIds = cmd.memberStatusIds ?? [];
+  const loserStatuses = (snap.memberStatuses ?? []).filter((r) => r.row.titleId === toSurvivor.loser && r.row.deletedAt === null).sort(byMember);
+  const survivorStatusByMember = new Map((snap.memberStatuses ?? []).filter((r) => r.row.titleId === toSurvivor.survivor).map((r) => [r.row.memberId as string, r]));
+  for (const lr of loserStatuses) {
+    const sr = survivorStatusByMember.get(lr.row.memberId);
+    const fields = carryFields(lr, sr, [
+      ['status', (r) => r.status], ['watched_on', (r) => r.watchedOn], ['current_season', (r) => r.currentSeason],
+    ]);
+    if (Object.keys(fields).length === 0) continue;
+    let rowId: string;
+    if (sr) {
+      rowId = sr.row.id;
+      if (lr.row.updatedAt > sr.row.updatedAt) fields['updated_at'] = lr.row.updatedAt;
+    } else {
+      const given = msIds.find((x) => x.titleId === toSurvivor.survivor && x.memberId === lr.row.memberId);
+      if (!given) return missing('memberStatusIds', `member ${lr.row.memberId}`);
+      rowId = given.id;
+      Object.assign(fields, { title_id: toSurvivor.survivor, member_id: lr.row.memberId, updated_at: lr.row.updatedAt });
+    }
+    changes.push({ tbl: 'member_status', rowId, fields });
+  }
+
+  // Recommendations (D3): per (from, to), by field clock. Each field keeps its single writer.
+  const recIds = cmd.recommendationIds ?? [];
+  const pairKey = (r: ClockedRecommendation) => `${r.row.fromMember}|${r.row.toMember}`;
+  const loserRecs = (snap.recommendations ?? []).filter((r) => r.row.titleId === toSurvivor.loser && r.row.deletedAt === null).sort((a, b) => (pairKey(a) < pairKey(b) ? -1 : pairKey(a) > pairKey(b) ? 1 : 0));
+  const survivorRecByPair = new Map((snap.recommendations ?? []).filter((r) => r.row.titleId === toSurvivor.survivor).map((r) => [pairKey(r), r]));
+  for (const lr of loserRecs) {
+    const sr = survivorRecByPair.get(pairKey(lr));
+    const fields = carryFields(lr, sr, [
+      ['withdrawn_at', (r) => r.withdrawnAt], ['answered', (r) => r.answered], ['answered_at', (r) => r.answeredAt],
+    ]);
+    if (Object.keys(fields).length === 0) continue;
+    let rowId: string;
+    if (sr) {
+      rowId = sr.row.id;
+    } else {
+      const given = recIds.find((x) => x.titleId === toSurvivor.survivor && x.fromMember === lr.row.fromMember && x.toMember === lr.row.toMember);
+      if (!given) return missing('recommendationIds', `${lr.row.fromMember} to ${lr.row.toMember}`);
+      rowId = given.id;
+      Object.assign(fields, { title_id: toSurvivor.survivor, from_member: lr.row.fromMember, to_member: lr.row.toMember, created_at: lr.row.createdAt });
+    }
+    changes.push({ tbl: 'recommendations', rowId, fields });
   }
 
   if (loser.row.mergedInto === null) changes.push({ tbl: 'titles', rowId: loser.row.id, fields: { merged_into: survivor.row.id } });

@@ -5,4 +5,6 @@
  */
 export const TITLE_LABEL_PREFIX = 'cinefilo-title-v1';
 export const RATING_LABEL_PREFIX = 'cinefilo-rating-v1';
+export const MEMBER_STATUS_LABEL_PREFIX = 'cinefilo-mstatus-v1';
+export const RECOMMENDATION_LABEL_PREFIX = 'cinefilo-rec-v1';
 export const EXPORT_FORMAT = 'cinefilo/v1';

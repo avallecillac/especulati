@@ -48,8 +48,8 @@ describe('remote-op allow-list', () => {
 });
 
 describe('schema', () => {
-  it('has exactly the three tables, writable fields never include id', () => {
-    expect(Object.keys(cinefiloSchema.writable).sort()).toEqual(['members', 'ratings', 'titles']);
+  it('has exactly the five tables, writable fields never include id', () => {
+    expect(Object.keys(cinefiloSchema.writable).sort()).toEqual(['member_status', 'members', 'ratings', 'recommendations', 'titles']);
     for (const set of Object.values(WRITABLE_FIELDS)) expect(set.has('id')).toBe(false);
   });
   it('local-only data (posters, meta, tmdb key) is not writable', () => {

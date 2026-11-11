@@ -3,7 +3,7 @@ import {
 } from '@especulati/sync-core';
 import type { Table } from './commands.ts';
 import { genresFromDb } from './rows.ts';
-import { isUuid, KINDS, REVIEW_MAX, STATUSES, VERDICTS } from './types.ts';
+import { ANSWERS, isUuid, KINDS, MEMBER_STATUSES, REVIEW_MAX, STATUSES, VERDICTS } from './types.ts';
 
 /**
  * Columns a Change (local or remote) may set, per table. Guards against building SQL from untrusted
@@ -17,6 +17,8 @@ export const WRITABLE_FIELDS: Readonly<Record<Table, ReadonlySet<string>>> = {
   ]),
   members: new Set(['name', 'created_at', 'deleted_at']),
   ratings: new Set(['title_id', 'member_id', 'verdict', 'review', 'updated_at', 'deleted_at']),
+  member_status: new Set(['title_id', 'member_id', 'status', 'watched_on', 'current_season', 'updated_at', 'deleted_at']),
+  recommendations: new Set(['title_id', 'from_member', 'to_member', 'created_at', 'withdrawn_at', 'answered', 'answered_at', 'deleted_at']),
 };
 
 /** Fields an op must carry to create a row that does not exist yet (else it is parked). */
@@ -24,10 +26,21 @@ export const INSERT_FIELDS: Readonly<Record<Table, readonly string[]>> = {
   titles: ['kind', 'title', 'status', 'added_by', 'created_at'],
   members: ['name', 'created_at'],
   ratings: ['title_id', 'member_id', 'updated_at'],
+  member_status: ['title_id', 'member_id', 'updated_at'],
+  recommendations: ['title_id', 'from_member', 'to_member', 'created_at'],
 };
 
-/** Schema v1 has one tier for every table; a future table gets its own tier here (D9). */
-export const tierOf = (_tbl: Table, _fields: Readonly<Record<string, FieldValue>>): 'base' => 'base';
+/**
+ * Batch tier (personal-lists D4): a pushed batch never mixes tiers, so a device on an older version skips only the
+ * batches it cannot read. `p` is the personal-lists tier: `member_status`, `recommendations`, and any `titles` op that
+ * writes `status: null` (a title that is not on Together; the old schema refuses NULL). The key must be present with
+ * a null value, so an insert without a Together status names `status` explicitly. Everything else is `base`.
+ */
+export function tierOf(tbl: Table, fields: Readonly<Record<string, FieldValue>>): 'base' | 'p' {
+  if (tbl === 'member_status' || tbl === 'recommendations') return 'p';
+  if (tbl === 'titles' && Object.prototype.hasOwnProperty.call(fields, 'status') && fields['status'] === null) return 'p';
+  return 'base';
+}
 
 export const cinefiloSchema: SyncSchema<Table> = { writable: WRITABLE_FIELDS, insertRequired: INSERT_FIELDS, tierOf };
 
@@ -38,11 +51,16 @@ const REF_FIELDS: Readonly<Record<Table, readonly string[]>> = {
   titles: ['added_by', 'merged_into'],
   members: [],
   ratings: ['title_id', 'member_id'],
+  member_status: ['title_id', 'member_id'],
+  recommendations: ['title_id', 'from_member', 'to_member'],
 };
+// `titles.status` is nullable since personal lists (a title can be in the catalog without being on Together).
 const NOT_NULL: Readonly<Record<Table, readonly string[]>> = {
-  titles: ['kind', 'title', 'status', 'added_by', 'created_at'],
+  titles: ['kind', 'title', 'added_by', 'created_at'],
   members: ['name', 'created_at'],
   ratings: ['title_id', 'member_id', 'updated_at'],
+  member_status: ['title_id', 'member_id', 'updated_at'],
+  recommendations: ['title_id', 'from_member', 'to_member', 'created_at'],
 };
 
 const bad = (field: string, reason: string) => err<ParseError>({ field, reason });
@@ -54,7 +72,7 @@ function checkValues(tbl: Table, f: Readonly<Record<string, FieldValue>>): Parse
   for (const k of REF_FIELDS[tbl]) if (k in f && f[k] !== null && !isUuid(f[k])) return { field: k, reason: 'not a lowercase uuid' };
   if (tbl === 'titles') {
     if ('kind' in f && !inEnum(KINDS, f['kind'])) return { field: 'kind', reason: 'unknown kind' };
-    if ('status' in f && !inEnum(STATUSES, f['status'])) return { field: 'status', reason: 'unknown status' };
+    if ('status' in f && f['status'] !== null && !inEnum(STATUSES, f['status'])) return { field: 'status', reason: 'unknown status' };
     const g = f['genres'];
     if (g !== undefined && g !== null && (typeof g !== 'string' || genresFromDb(g) === null)) return { field: 'genres', reason: 'not a JSON array of strings' };
   }
@@ -63,6 +81,14 @@ function checkValues(tbl: Table, f: Readonly<Record<string, FieldValue>>): Parse
     if (v !== undefined && v !== null && !inEnum(VERDICTS, v)) return { field: 'verdict', reason: 'unknown verdict' };
     const r = f['review'];
     if (r !== undefined && r !== null && (typeof r !== 'string' || [...r].length > REVIEW_MAX)) return { field: 'review', reason: 'not a review of at most 1,000 characters' };
+  }
+  if (tbl === 'member_status') {
+    const s = f['status'];
+    if (s !== undefined && s !== null && !inEnum(MEMBER_STATUSES, s)) return { field: 'status', reason: 'unknown status' };
+  }
+  if (tbl === 'recommendations') {
+    const a = f['answered'];
+    if (a !== undefined && a !== null && !inEnum(ANSWERS, a)) return { field: 'answered', reason: 'unknown answer' };
   }
   return null;
 }

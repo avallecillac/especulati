@@ -1,10 +1,12 @@
 import type { Kind, Rejection, VerdictFilter } from '@especulati/cinefilo-core';
-import type { ListTab } from '@especulati/cinefilo-db';
+import type { ListScope, ListTab } from '@especulati/cinefilo-db';
 import type { SyncReason } from '@especulati/sync';
 import type { UiCommand } from './commands.ts';
 
 export type Query =
-  | { name: 'list'; tab: ListTab; filter?: VerdictFilter }
+  | { name: 'list'; tab: ListTab; filter?: VerdictFilter; scope?: ListScope }
+  /** Open recommendations to this device's member (personal-lists D5: shown atop their Watch later). */
+  | { name: 'pendingRecommendations' }
   | { name: 'title'; id: string }
   | { name: 'members' }
   | { name: 'me' }

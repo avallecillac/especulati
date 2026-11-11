@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CinefiloDb } from '../src/index.ts';
+import { CinefiloDb, migrate, SCHEMA_VERSION } from '../src/index.ts';
 import { emptyDb } from './helpers.ts';
 
 const names = (raw: ReturnType<typeof emptyDb>, type: string): string[] =>
@@ -9,7 +9,7 @@ describe('migration 1', () => {
   it('migrates an empty database to schema v1', () => {
     const raw = emptyDb();
     const db = new CinefiloDb(raw);
-    db.migrate();
+    migrate(raw, { to: 1 });
     expect(db.schemaVersion).toBe(1);
     expect(names(raw, 'table')).toEqual(['change_log', 'field_clock', 'members', 'meta', 'posters', 'ratings', 'sync_inbox', 'titles']);
     expect(names(raw, 'index')).toContain('idx_titles_status');
@@ -22,7 +22,7 @@ describe('migration 1', () => {
     const db = new CinefiloDb(raw);
     db.migrate();
     db.migrate();
-    expect(db.schemaVersion).toBe(1);
+    expect(db.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('the partial indexes only cover live, unmerged rows', () => {

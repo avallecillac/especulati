@@ -32,7 +32,8 @@
 
   const mine = $derived(detail?.ratings.find((r) => r.mine) ?? null);
   const others = $derived(detail?.ratings.filter((r) => !r.mine) ?? []);
-  const backTab = (s: Status) => (s === 'dropped' ? 'watched' : s);
+  // A title only on someone's personal list has no Together status (null): it goes back to Watch later.
+  const backTab = (s: Status | null) => (s === 'dropped' ? 'watched' : (s ?? 'later'));
 
   async function run(cmd: Parameters<typeof write>[0]): Promise<boolean> {
     error = null;
@@ -47,8 +48,8 @@
     return false;
   }
 
-  const setStatus = (status: Status, watchedOn?: string) =>
-    run({ kind: 'SetStatus', titleId: id, status, ...(watchedOn ? { watchedOn } : {}) });
+  const setStatus = (status: Status | null, watchedOn?: string) =>
+    status === null ? Promise.resolve(false) : run({ kind: 'SetStatus', titleId: id, status, ...(watchedOn ? { watchedOn } : {}) });
 
   const choose = (status: Status) => setStatus(status, status === 'watched' || status === 'dropped' ? todayLocal() : undefined);
 

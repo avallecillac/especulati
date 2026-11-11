@@ -2,7 +2,7 @@
 // kind and year (or TMDB id) gives the same id on every device, so concurrent adds collapse into one row.
 
 import { uuidFromHash } from '@especulati/sync';
-import { manualTitleLabel, ratingLabel, tmdbTitleLabel, type Kind } from '@especulati/cinefilo-core';
+import { manualTitleLabel, memberStatusLabel, ratingLabel, recommendationLabel, tmdbTitleLabel, type Kind } from '@especulati/cinefilo-core';
 
 /** SHA-256 of the label, first 16 bytes, v4/variant bits, as a lowercase UUID (WebCrypto; `@especulati/sync`'s shared hash). */
 export { uuidFromHash };
@@ -11,3 +11,8 @@ export const titleIdFor = (kind: Kind, title: string, year: number | null, tmdbI
   uuidFromHash(tmdbId != null ? tmdbTitleLabel(kind, tmdbId) : manualTitleLabel(kind, title, year));
 
 export const ratingIdFor = (titleId: string, memberId: string): Promise<string> => uuidFromHash(ratingLabel(titleId, memberId));
+
+export const memberStatusIdFor = (titleId: string, memberId: string): Promise<string> => uuidFromHash(memberStatusLabel(titleId, memberId));
+
+export const recommendationIdFor = (titleId: string, fromMember: string, toMember: string): Promise<string> =>
+  uuidFromHash(recommendationLabel(titleId, fromMember, toMember));

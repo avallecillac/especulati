@@ -3,6 +3,8 @@ import { err, ok, UUID_PATTERN, type Brand, type ParseError, type Result } from 
 export type TitleId = Brand<string, 'TitleId'>;
 export type MemberId = Brand<string, 'MemberId'>;
 export type RatingId = Brand<string, 'RatingId'>;
+export type MemberStatusId = Brand<string, 'MemberStatusId'>;
+export type RecommendationId = Brand<string, 'RecommendationId'>;
 export type NonEmptyTitle = Brand<string, 'NonEmptyTitle'>;
 export type MemberName = Brand<string, 'MemberName'>;
 export type Review = Brand<string, 'Review'>;
@@ -15,10 +17,15 @@ export type Instant = Brand<string, 'Instant'>;
 export type Kind = 'movie' | 'series';
 export type Status = 'later' | 'watching' | 'watched' | 'dropped';
 export type Verdict = 'like' | 'meh' | 'dislike';
+/** A personal status: a Together status without `dropped`. NULL in the DB means "not on my list". */
+export type MemberStatus = 'later' | 'watching' | 'watched';
+export type Answer = 'accepted' | 'dismissed';
 
 export const KINDS: readonly Kind[] = ['movie', 'series'];
 export const STATUSES: readonly Status[] = ['later', 'watching', 'watched', 'dropped'];
 export const VERDICTS: readonly Verdict[] = ['like', 'meh', 'dislike'];
+export const MEMBER_STATUSES: readonly MemberStatus[] = ['later', 'watching', 'watched'];
+export const ANSWERS: readonly Answer[] = ['accepted', 'dismissed'];
 
 export const TITLE_MAX = 500;
 export const MEMBER_NAME_MAX = 50;
@@ -40,6 +47,8 @@ export const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID
 export const parseTitleId = (s: string) => parseUuid<TitleId>('titleId', s);
 export const parseMemberId = (s: string) => parseUuid<MemberId>('memberId', s);
 export const parseRatingId = (s: string) => parseUuid<RatingId>('ratingId', s);
+export const parseMemberStatusId = (s: string) => parseUuid<MemberStatusId>('memberStatusId', s);
+export const parseRecommendationId = (s: string) => parseUuid<RecommendationId>('recommendationId', s);
 
 function parseEnum<T extends string>(field: string, all: readonly T[], s: string): Result<T, ParseError> {
   return (all as readonly string[]).includes(s) ? ok(s as T) : fail(field, `must be one of ${all.join(', ')}`);
@@ -47,6 +56,8 @@ function parseEnum<T extends string>(field: string, all: readonly T[], s: string
 export const parseKind = (s: string) => parseEnum('kind', KINDS, s);
 export const parseStatus = (s: string) => parseEnum('status', STATUSES, s);
 export const parseVerdict = (s: string) => parseEnum('verdict', VERDICTS, s);
+export const parseMemberStatus = (s: string) => parseEnum('status', MEMBER_STATUSES, s);
+export const parseAnswer = (s: string) => parseEnum('answer', ANSWERS, s);
 
 /** "Trimmed, 1–500 characters" */
 export function parseTitle(input: string): Result<NonEmptyTitle, ParseError> {

@@ -1,13 +1,14 @@
 import { err, ok, type ParseError, type Result } from '@especulati/sync-core';
 import { EXPORT_FORMAT } from './frozen.ts';
-import type { MemberRow, RatingRow, TitleRow } from './rows.ts';
+import type { MemberRow, MemberStatusRow, RatingRow, RecommendationRow, TitleRow } from './rows.ts';
 import {
-  fail, parseInstant, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseRatingId, parseReview, parseStatus, parseTitle,
-  parseTitleId, parseVerdict, type Instant,
+  fail, parseAnswer, parseInstant, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseMemberStatus, parseMemberStatusId, parseRatingId,
+  parseRecommendationId, parseReview, parseStatus, parseTitle, parseTitleId, parseVerdict, type Instant,
 } from './types.ts';
 
 /**
- * The `cinefilo/v1` file (D10): titles (with `merged_into` and `deleted_at`), members and ratings.
+ * The `cinefilo/v1` file (D10): titles (with `merged_into` and `deleted_at`), members, ratings, and since personal lists
+ * the personal statuses and recommendations (optional on import, so older files still import).
  * Never `meta`, posters or the TMDB key: only the keys below are ever written.
  */
 export interface CinefiloExport {
@@ -16,6 +17,8 @@ export interface CinefiloExport {
   readonly titles: readonly TitleRow[];
   readonly members: readonly MemberRow[];
   readonly ratings: readonly RatingRow[];
+  readonly memberStatus: readonly MemberStatusRow[];
+  readonly recommendations: readonly RecommendationRow[];
 }
 
 const byId = <T extends { id: string }>(rows: readonly T[]): T[] => [...rows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -33,6 +36,14 @@ export function serializeExport(e: CinefiloExport): string {
     members: byId(e.members).map((m) => ({ id: m.id, name: m.name, createdAt: m.createdAt, deletedAt: m.deletedAt })),
     ratings: byId(e.ratings).map((r) => ({
       id: r.id, titleId: r.titleId, memberId: r.memberId, verdict: r.verdict, review: r.review, updatedAt: r.updatedAt, deletedAt: r.deletedAt,
+    })),
+    memberStatus: byId(e.memberStatus).map((s) => ({
+      id: s.id, titleId: s.titleId, memberId: s.memberId, status: s.status, watchedOn: s.watchedOn, currentSeason: s.currentSeason,
+      updatedAt: s.updatedAt, deletedAt: s.deletedAt,
+    })),
+    recommendations: byId(e.recommendations).map((r) => ({
+      id: r.id, titleId: r.titleId, fromMember: r.fromMember, toMember: r.toMember, createdAt: r.createdAt, withdrawnAt: r.withdrawnAt,
+      answered: r.answered, answeredAt: r.answeredAt, deletedAt: r.deletedAt,
     })),
   });
 }
@@ -80,7 +91,7 @@ const parseTitleRow = (o: unknown): Result<TitleRow, ParseError> => {
       genres: genres as readonly string[] | null,
       runtimeMin: take(intOrNull('runtimeMin', o['runtimeMin'])),
       seasonCount: take(intOrNull('seasonCount', o['seasonCount'])),
-      status: take(parseStatus(take(str('status', o['status'])))),
+      status: take(nullable('status', o['status'], parseStatus)),
       watchedOn: take(nullable('watchedOn', o['watchedOn'], parseLocalDate)),
       currentSeason: take(intOrNull('currentSeason', o['currentSeason'])),
       mergedInto: take(nullable('mergedInto', o['mergedInto'], parseTitleId)),
@@ -115,6 +126,35 @@ const parseRatingRow = (o: unknown): Result<RatingRow, ParseError> => {
   }));
 };
 
+const parseMemberStatusRow = (o: unknown): Result<MemberStatusRow, ParseError> => {
+  if (!isObj(o)) return fail('memberStatus', 'row must be an object');
+  return collect((take) => ({
+    id: take(parseMemberStatusId(take(str('id', o['id'])))),
+    titleId: take(parseTitleId(take(str('titleId', o['titleId'])))),
+    memberId: take(parseMemberId(take(str('memberId', o['memberId'])))),
+    status: take(nullable('status', o['status'], parseMemberStatus)),
+    watchedOn: take(nullable('watchedOn', o['watchedOn'], parseLocalDate)),
+    currentSeason: take(intOrNull('currentSeason', o['currentSeason'])),
+    updatedAt: take(parseInstant(take(str('updatedAt', o['updatedAt'])))),
+    deletedAt: take(nullable('deletedAt', o['deletedAt'], parseInstant)),
+  }));
+};
+
+const parseRecommendationRow = (o: unknown): Result<RecommendationRow, ParseError> => {
+  if (!isObj(o)) return fail('recommendations', 'row must be an object');
+  return collect((take) => ({
+    id: take(parseRecommendationId(take(str('id', o['id'])))),
+    titleId: take(parseTitleId(take(str('titleId', o['titleId'])))),
+    fromMember: take(parseMemberId(take(str('fromMember', o['fromMember'])))),
+    toMember: take(parseMemberId(take(str('toMember', o['toMember'])))),
+    createdAt: take(parseInstant(take(str('createdAt', o['createdAt'])))),
+    withdrawnAt: take(nullable('withdrawnAt', o['withdrawnAt'], parseInstant)),
+    answered: take(nullable('answered', o['answered'], parseAnswer)),
+    answeredAt: take(nullable('answeredAt', o['answeredAt'], parseInstant)),
+    deletedAt: take(nullable('deletedAt', o['deletedAt'], parseInstant)),
+  }));
+};
+
 function parseRows<T>(field: string, v: unknown, one: (o: unknown) => Result<T, ParseError>): Result<T[], ParseError> {
   if (!Array.isArray(v)) return fail(field, 'must be a list');
   const out: T[] = [];
@@ -142,5 +182,8 @@ export function parseExport(text: string): Result<CinefiloExport, ParseError> {
     titles: take(parseRows('titles', raw['titles'], parseTitleRow)),
     members: take(parseRows('members', raw['members'], parseMemberRow)),
     ratings: take(parseRows('ratings', raw['ratings'], parseRatingRow)),
+    // Absent in files written before personal lists.
+    memberStatus: raw['memberStatus'] === undefined ? [] : take(parseRows('memberStatus', raw['memberStatus'], parseMemberStatusRow)),
+    recommendations: raw['recommendations'] === undefined ? [] : take(parseRows('recommendations', raw['recommendations'], parseRecommendationRow)),
   }));
 }

@@ -6,7 +6,10 @@ import { exportData, exportText, importText, type ImportResult } from './io.ts';
 import { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
 import { migrate } from './migrations.ts';
 import { getPoster, putPoster } from './posters.ts';
-import { findByTmdb, list, members, needsDetails, titleDetail, type ListItem, type NeedsDetails, type ListTab, type MemberView, type TitleDetail } from './queries.ts';
+import {
+  findByTmdb, list, members, needsDetails, pendingRecommendations, titleDetail,
+  type ListItem, type ListScope, type NeedsDetails, type ListTab, type MemberView, type PendingRecommendation, type TitleDetail,
+} from './queries.ts';
 import { loadSnapshot } from './snapshot.ts';
 import type { DispatchEnv, DispatchOutcome } from './types.ts';
 import { cinefiloCanInsert } from './sync.ts';
@@ -18,7 +21,9 @@ export { ENVELOPE_AAD_PREFIX, QR_PREFIX, SYNC_SALT } from './frozen.ts';
 export { reconcileAll, type Hash } from './reconcile.ts';
 export { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
 export { exportData, exportText, importText, type ImportResult } from './io.ts';
-export type { ListItem, ListTab, NeedsDetails, MemberView, RatingView, TitleDetail } from './queries.ts';
+export type {
+  ListItem, ListScope, ListTab, NeedsDetails, MemberView, MemberStatusView, PendingRecommendation, RatingView, RecommendationState, RecommendationView, TitleDetail,
+} from './queries.ts';
 export { loadSnapshot, loadReconcileSnapshot } from './snapshot.ts';
 
 export type { DispatchEnv, DispatchOutcome } from './types.ts';
@@ -75,8 +80,14 @@ export class CinefiloDb {
     return members(this.raw);
   }
 
-  list(tab: ListTab, filter?: VerdictFilter): ListItem[] {
-    return list(this.raw, tab, filter);
+  /** `scope` defaults to Together; `me` and `partner` are the personal lists (the partner's is read-only for the UI). */
+  list(tab: ListTab, filter?: VerdictFilter, scope: ListScope = 'together'): ListItem[] {
+    return list(this.raw, tab, filter, scope);
+  }
+
+  /** Open recommendations to this device's member, newest first. */
+  pendingRecommendations(): PendingRecommendation[] {
+    return pendingRecommendations(this.raw);
   }
 
   title(id: string): TitleDetail | null {

@@ -1,4 +1,6 @@
-import type { Instant, Kind, LocalDate, MemberId, MemberName, NonEmptyTitle, RatingId, Review, Status, TitleId, Verdict } from './types.ts';
+import type {
+  Answer, Instant, Kind, LocalDate, MemberId, MemberName, MemberStatus, MemberStatusId, NonEmptyTitle, RatingId, RecommendationId, Review, Status, TitleId, Verdict,
+} from './types.ts';
 
 /** A `titles` row as core sees it. `genres` is the decoded JSON array (the DB stores it as text). */
 export interface TitleRow {
@@ -12,7 +14,8 @@ export interface TitleRow {
   readonly genres: readonly string[] | null;
   readonly runtimeMin: number | null;
   readonly seasonCount: number | null;
-  readonly status: Status;
+  /** NULL = in the catalog but not on Together (a title only on someone's personal list). */
+  readonly status: Status | null;
   readonly watchedOn: LocalDate | null;
   readonly currentSeason: number | null;
   readonly mergedInto: TitleId | null;
@@ -35,6 +38,31 @@ export interface RatingRow {
   readonly verdict: Verdict | null;
   readonly review: Review | null;
   readonly updatedAt: Instant;
+  readonly deletedAt: Instant | null;
+}
+
+/** A member's personal status for a title (D1). `status` null = not on my list (a row may still carry a season). */
+export interface MemberStatusRow {
+  readonly id: MemberStatusId;
+  readonly titleId: TitleId;
+  readonly memberId: MemberId;
+  readonly status: MemberStatus | null;
+  readonly watchedOn: LocalDate | null;
+  readonly currentSeason: number | null;
+  readonly updatedAt: Instant;
+  readonly deletedAt: Instant | null;
+}
+
+/** A recommendation (D1). `withdrawnAt` is written only by `fromMember`, `answered`/`answeredAt` only by `toMember`. */
+export interface RecommendationRow {
+  readonly id: RecommendationId;
+  readonly titleId: TitleId;
+  readonly fromMember: MemberId;
+  readonly toMember: MemberId;
+  readonly createdAt: Instant;
+  readonly withdrawnAt: Instant | null;
+  readonly answered: Answer | null;
+  readonly answeredAt: Instant | null;
   readonly deletedAt: Instant | null;
 }
 

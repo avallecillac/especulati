@@ -1,9 +1,10 @@
 import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import {
   genresFromDb,
-  type ClockedRating, type ClockedTitle, type Command, type FieldClocks, type Hlc, type Instant, type Kind, type LocalDate,
-  type MemberId, type MemberName, type MemberRow, type NonEmptyTitle, type RatingId, type RatingRow, type ReconcileSnapshot, type Review, type Snapshot,
-  type Status, type TitleId, type TitleRow, type Verdict,
+  type Answer, type ClockedMemberStatus, type ClockedRating, type ClockedRecommendation, type ClockedTitle, type Command, type FieldClocks, type Hlc, type Instant,
+  type Kind, type LocalDate, type MemberId, type MemberName, type MemberRow, type MemberStatus, type MemberStatusId, type MemberStatusRow, type NonEmptyTitle,
+  type RatingId, type RatingRow, type ReconcileSnapshot, type RecommendationId, type RecommendationRow, type Review, type Snapshot, type Status, type TitleId,
+  type TitleRow, type Verdict,
 } from '@especulati/cinefilo-core';
 
 // Rows were validated by decide() / parseRemoteOp before they were written and CHECK constraints guard the
@@ -32,7 +33,7 @@ export function rowToTitle(r: Record<string, SqlValue>): TitleRow {
     genres: genresFromDb(textOrNull(r['genres'], 'genres')),
     runtimeMin: intOrNull(r['runtime_min'], 'runtime_min'),
     seasonCount: intOrNull(r['season_count'], 'season_count'),
-    status: text(r['status'], 'status') as Status,
+    status: textOrNull(r['status'], 'status') as Status | null,
     watchedOn: textOrNull(r['watched_on'], 'watched_on') as LocalDate | null,
     currentSeason: intOrNull(r['current_season'], 'current_season'),
     mergedInto: textOrNull(r['merged_into'], 'merged_into') as TitleId | null,
@@ -63,6 +64,33 @@ export function rowToRating(r: Record<string, SqlValue>): RatingRow {
   };
 }
 
+export function rowToMemberStatus(r: Record<string, SqlValue>): MemberStatusRow {
+  return {
+    id: text(r['id'], 'id') as MemberStatusId,
+    titleId: text(r['title_id'], 'title_id') as TitleId,
+    memberId: text(r['member_id'], 'member_id') as MemberId,
+    status: textOrNull(r['status'], 'status') as MemberStatus | null,
+    watchedOn: textOrNull(r['watched_on'], 'watched_on') as LocalDate | null,
+    currentSeason: intOrNull(r['current_season'], 'current_season'),
+    updatedAt: text(r['updated_at'], 'updated_at') as Instant,
+    deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
+  };
+}
+
+export function rowToRecommendation(r: Record<string, SqlValue>): RecommendationRow {
+  return {
+    id: text(r['id'], 'id') as RecommendationId,
+    titleId: text(r['title_id'], 'title_id') as TitleId,
+    fromMember: text(r['from_member'], 'from_member') as MemberId,
+    toMember: text(r['to_member'], 'to_member') as MemberId,
+    createdAt: text(r['created_at'], 'created_at') as Instant,
+    withdrawnAt: textOrNull(r['withdrawn_at'], 'withdrawn_at') as Instant | null,
+    answered: textOrNull(r['answered'], 'answered') as Answer | null,
+    answeredAt: textOrNull(r['answered_at'], 'answered_at') as Instant | null,
+    deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
+  };
+}
+
 const one = <T>(db: Database, sql: string, id: string, map: (r: Record<string, SqlValue>) => T): T | null => {
   const r = db.selectObject(sql, [id]);
   return r ? map(r) : null;
@@ -70,6 +98,9 @@ const one = <T>(db: Database, sql: string, id: string, map: (r: Record<string, S
 export const titleRow = (db: Database, id: string): TitleRow | null => one(db, 'SELECT * FROM titles WHERE id = ?', id, rowToTitle);
 export const memberRow = (db: Database, id: string): MemberRow | null => one(db, 'SELECT * FROM members WHERE id = ?', id, rowToMember);
 export const ratingRow = (db: Database, id: string): RatingRow | null => one(db, 'SELECT * FROM ratings WHERE id = ?', id, rowToRating);
+
+export const memberStatusRow = (db: Database, id: string): MemberStatusRow | null => one(db, 'SELECT * FROM member_status WHERE id = ?', id, rowToMemberStatus);
+export const recommendationRow = (db: Database, id: string): RecommendationRow | null => one(db, 'SELECT * FROM recommendations WHERE id = ?', id, rowToRecommendation);
 
 function clocksOf(db: Database, tbl: string, rowId: string): FieldClocks {
   const out: Record<string, Hlc> = {};
@@ -90,13 +121,22 @@ export function loadReconcileSnapshot(db: Database, titleA: string, titleB: stri
     .selectObjects('SELECT * FROM ratings WHERE title_id IN (?, ?) ORDER BY id', [titleA, titleB])
     .map(rowToRating)
     .map((row) => ({ row, clocks: clocksOf(db, 'ratings', row.id) }));
-  return { first: clockedTitle(db, titleA), second: clockedTitle(db, titleB), ratings };
+  const memberStatuses: ClockedMemberStatus[] = db
+    .selectObjects('SELECT * FROM member_status WHERE title_id IN (?, ?) ORDER BY id', [titleA, titleB])
+    .map(rowToMemberStatus)
+    .map((row) => ({ row, clocks: clocksOf(db, 'member_status', row.id) }));
+  const recommendations: ClockedRecommendation[] = db
+    .selectObjects('SELECT * FROM recommendations WHERE title_id IN (?, ?) ORDER BY id', [titleA, titleB])
+    .map(rowToRecommendation)
+    .map((row) => ({ row, clocks: clocksOf(db, 'recommendations', row.id) }));
+  return { first: clockedTitle(db, titleA), second: clockedTitle(db, titleB), ratings, memberStatuses, recommendations };
 }
 
 /** What `decide()` needs for `cmd`, read inside the dispatch transaction. */
 export function loadSnapshot(db: Database, cmd: Command, deviceMemberId: string | null): Snapshot {
   switch (cmd.kind) {
     case 'AddTitle':
+      return { title: titleRow(db, cmd.titleId), memberStatus: cmd.memberStatusId ? memberStatusRow(db, cmd.memberStatusId) : null, deviceMemberId };
     case 'EditTitleDetails':
     case 'LinkToTmdb':
     case 'RemoveTitle':
@@ -107,6 +147,15 @@ export function loadSnapshot(db: Database, cmd: Command, deviceMemberId: string 
     case 'SetVerdict':
     case 'SetReview':
       return { title: titleRow(db, cmd.titleId), member: memberRow(db, cmd.memberId), rating: ratingRow(db, cmd.ratingId), deviceMemberId };
+    case 'SetMyStatus':
+    case 'SetMySeason':
+      return { title: titleRow(db, cmd.titleId), member: memberRow(db, cmd.memberId), memberStatus: memberStatusRow(db, cmd.memberStatusId), deviceMemberId };
+    case 'Recommend':
+      return { title: titleRow(db, cmd.titleId), member: memberRow(db, cmd.toMember), recommendation: recommendationRow(db, cmd.recommendationId), deviceMemberId };
+    case 'WithdrawRecommendation':
+      return { recommendation: recommendationRow(db, cmd.id), deviceMemberId };
+    case 'AnswerRecommendation':
+      return { title: titleRow(db, cmd.titleId), recommendation: recommendationRow(db, cmd.id), memberStatus: memberStatusRow(db, cmd.memberStatusId), deviceMemberId };
     case 'CreateMember':
     case 'RenameMember':
     case 'RemoveMember':
