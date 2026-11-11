@@ -16,7 +16,7 @@ const series = (p = {}) => title({ kind: 'series', ...p });
 describe('SetStatus', () => {
   it('Mark watched with a date: status and watched_on in ONE change', () => {
     const r = run(setStatus('watched', '2026-09-24'), { title: title() });
-    expect(r).toEqual({ ok: true, value: { changes: [{ tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: '2026-09-24' } }] } });
+    expect(r).toEqual({ ok: true, value: { changes: [{ tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: '2026-09-24', watch_order: 1 } }] } });
   });
   it('Backdate: any valid earlier day is kept as given', () => {
     expect(fieldsOf(setStatus('watched', '2026-09-24'), { title: title() })['watched_on']).toBe('2026-09-24');
@@ -46,11 +46,11 @@ describe('SetStatus', () => {
   });
   it('watched without a date is allowed and writes watched_on: null (import-keep-lists D1)', () => {
     expect(run(setStatus('watched'), { title: title() })).toEqual({
-      ok: true, value: { changes: [{ tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: null } }] },
+      ok: true, value: { changes: [{ tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: null, watch_order: 1 } }] },
     });
   });
   it('adding a date to an undated watched title keeps it watched', () => {
-    expect(fieldsOf(setStatus('watched', '2026-09-24'), { title: title({ status: 'watched', watchedOn: null }) })).toEqual({ status: 'watched', watched_on: '2026-09-24' });
+    expect(fieldsOf(setStatus('watched', '2026-09-24'), { title: title({ status: 'watched', watchedOn: null }) })).toEqual({ status: 'watched', watched_on: '2026-09-24', watch_order: 1 });
   });
   it('rejects unknown statuses', () => {
     expect(run(setStatus('done'), { title: title() }).ok).toBe(false);

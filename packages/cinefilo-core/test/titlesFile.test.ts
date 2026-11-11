@@ -18,9 +18,9 @@ describe('parseTitlesFile (D2)', () => {
       value: {
         format: TITLES_FORMAT,
         titles: [
-          good,
-          { kind: 'series', title: 'Dark', year: null, tmdbId: null, status: 'watching' },
-          { kind: 'movie', title: 'Nine', year: null, tmdbId: null, status: 'later' },
+          { ...good, watchOrder: null },
+          { kind: 'series', title: 'Dark', year: null, tmdbId: null, status: 'watching', watchOrder: null },
+          { kind: 'movie', title: 'Nine', year: null, tmdbId: null, status: 'later', watchOrder: null },
         ],
       },
     });

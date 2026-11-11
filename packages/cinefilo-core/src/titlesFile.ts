@@ -14,6 +14,8 @@ export interface TitleEntry {
   readonly year: number | null;
   readonly tmdbId: number | null;
   readonly status: ImportStatus;
+  /** Place in the shared watch history (D4): a positive whole number, unique in the file, only for watched. */
+  readonly watchOrder: number | null;
 }
 
 export interface TitlesFile {
@@ -23,7 +25,7 @@ export interface TitlesFile {
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
-const ENTRY_KEYS = new Set(['kind', 'title', 'year', 'tmdbId', 'status']);
+const ENTRY_KEYS = new Set(['kind', 'title', 'year', 'tmdbId', 'status', 'watchOrder']);
 
 function optInt(field: string, v: unknown, min: number, max: number): Result<number | null, ParseError> {
   if (v === undefined || v === null) return ok(null);
@@ -49,7 +51,10 @@ function parseEntry(i: number, o: unknown): Result<TitleEntry, ParseError> {
   if (!year.ok) return year;
   const tmdbId = optInt(at('tmdbId'), o['tmdbId'], 1, 2_000_000_000);
   if (!tmdbId.ok) return tmdbId;
-  return ok({ kind: kind.value, title: title.value, year: year.value, tmdbId: tmdbId.value, status: status.value });
+  const watchOrder = optInt(at('watchOrder'), o['watchOrder'], 1, 2_000_000_000);
+  if (!watchOrder.ok) return watchOrder;
+  if (watchOrder.value !== null && status.value !== 'watched') return fail(at('watchOrder'), 'only for watched titles');
+  return ok({ kind: kind.value, title: title.value, year: year.value, tmdbId: tmdbId.value, status: status.value, watchOrder: watchOrder.value });
 }
 
 /** The label that decides whether two entries are the same title (the same one the shell hashes into an id). */
@@ -70,6 +75,7 @@ export function parseTitlesFile(text: string): Result<TitlesFile, ParseError> {
   if (!Array.isArray(list)) return fail('titles', 'must be a list');
   const titles: TitleEntry[] = [];
   const seen = new Map<string, number>();
+  const orders = new Map<number, number>();
   for (let i = 0; i < list.length; i++) {
     const r = parseEntry(i, list[i]);
     if (!r.ok) return err(r.error);
@@ -77,6 +83,12 @@ export function parseTitlesFile(text: string): Result<TitlesFile, ParseError> {
     const first = seen.get(label);
     if (first !== undefined) return fail(`titles[${i}]`, `duplicate of titles[${first}]`);
     seen.set(label, i);
+    const wo = r.value.watchOrder;
+    if (wo !== null) {
+      const dup = orders.get(wo);
+      if (dup !== undefined) return fail(`titles[${i}].watchOrder`, `duplicate of titles[${dup}]`);
+      orders.set(wo, i);
+    }
     titles.push(r.value);
   }
   return ok({ format: TITLES_FORMAT, titles });

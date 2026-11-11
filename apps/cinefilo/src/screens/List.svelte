@@ -2,6 +2,7 @@
   import { VERDICT_FILTERS, type VerdictFilter } from '@especulati/cinefilo-core';
   import type { ListItem, ListScope, ListTab, PendingRecommendation } from '@especulati/cinefilo-db';
   import { list, pendingRecommendations } from '../lib/dbClient.ts';
+  import { display, setLayout, setWatchedOrder } from '../lib/layout.svelte.ts';
   import { listView } from '../lib/listView.svelte.ts';
   import { FILTER_LABEL, KIND_LABEL, VERDICT_LABEL } from '../lib/labels.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
@@ -71,6 +72,21 @@
     else showToast('Could not save. Try again.');
   }
 
+  // The numbered Together history comes newest first; "From #1" flips just that part (unnumbered titles stay after it).
+  const shown = $derived.by(() => {
+    if (items === null || scope !== 'together' || tab !== 'watched' || display.watchedOrder !== 'first') return items;
+    return [...items.filter((i) => i.watchOrder !== null).reverse(), ...items.filter((i) => i.watchOrder === null)];
+  });
+  const grid = $derived(display.layout === 'grid');
+
+  /** `aria-label` of the review mark: who wrote a review (either member, or both). */
+  function reviewLabel(i: ListItem): string | null {
+    if (i.reviewedByMe && i.reviewedByPartner) return 'Reviewed by both';
+    if (i.reviewedByMe) return `Reviewed by ${meName}`;
+    if (i.reviewedByPartner) return `Reviewed by ${partner}`;
+    return null;
+  }
+
   function detail(i: ListItem): string {
     const parts: string[] = [KIND_LABEL[i.kind]];
     if (i.year) parts.push(String(i.year));
@@ -80,6 +96,13 @@
     return parts.join(' · ');
   }
 </script>
+
+{#snippet reviewMark(label: string, both: boolean)}
+  <span class="badge reviewed" role="img" aria-label={label}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H11l-5 4v-4H4z" /></svg>
+    {#if both}<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16v11H11l-5 4v-4H4z" /></svg>{/if}
+  </span>
+{/snippet}
 
 <div class="seg choice list-switch" role="radiogroup" aria-label="List">
   {#each choices as c, i (c.id)}
@@ -94,8 +117,25 @@
     <h1>{HEADING[tab]}</h1>
     <p class="whose" data-testid="whose">{whose}</p>
   </div>
-  <button class="primary" type="button" onclick={onadd}>Add</button>
+  <div class="bar-actions">
+    <div class="seg choice layout-toggle" role="radiogroup" aria-label="Layout">
+      <button type="button" role="radio" aria-checked={!grid} aria-label="List" tabindex={grid ? -1 : 0} onclick={() => setLayout('list')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+      </button>
+      <button type="button" role="radio" aria-checked={grid} aria-label="Grid" tabindex={grid ? 0 : -1} onclick={() => setLayout('grid')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg>
+      </button>
+    </div>
+    <button class="primary" type="button" onclick={onadd}>Add</button>
+  </div>
 </header>
+
+{#if scope === 'together' && tab === 'watched'}
+  <div class="seg choice order-toggle" role="radiogroup" aria-label="Watched order">
+    <button type="button" role="radio" aria-checked={display.watchedOrder === 'newest'} tabindex={display.watchedOrder === 'newest' ? 0 : -1} onclick={() => setWatchedOrder('newest')}>Newest first</button>
+    <button type="button" role="radio" aria-checked={display.watchedOrder === 'first'} tabindex={display.watchedOrder === 'first' ? 0 : -1} onclick={() => setWatchedOrder('first')}>From #1</button>
+  </div>
+{/if}
 
 <div class="chips" role="group" aria-label="Filter by verdict">
   {#each VERDICT_FILTERS as f (f)}
@@ -126,27 +166,43 @@
 
 {#if items === null}
   <p class="muted">Loading</p>
-{:else if items.length === 0}
+{:else if items.length === 0 || shown === null}
   {#if recs.length === 0 || filter}
     <p class="empty">{filter ? 'Nothing matches this filter.' : scope === 'partner' ? `${partner} has nothing here yet.` : scope === 'me' ? 'Nothing here yet. Tap Add and choose Just me.' : 'Nothing here yet. Tap Add to put a movie or series on the list.'}</p>
   {/if}
+{:else if grid}
+  <ul class="grid" aria-label={HEADING[tab]}>
+    {#each shown as i (i.id)}
+      {@const rl = reviewLabel(i)}
+      <li>
+        <a class="tile" href={`#/title/${encodeURIComponent(i.id)}`} aria-label={i.title}>
+          <Poster titleId={i.id} path={i.posterUrl} />
+          {#if i.watchOrder !== null}<span class="badge num">#{i.watchOrder}</span>{/if}
+          {#if rl}{@render reviewMark(rl, i.reviewedByMe && i.reviewedByPartner)}{/if}
+        </a>
+      </li>
+    {/each}
+  </ul>
 {:else}
   <ul class="rows">
-    {#each items as i (i.id)}
+    {#each shown as i (i.id)}
+      {@const rl = reviewLabel(i)}
       <li>
         <a class="row" href={`#/title/${encodeURIComponent(i.id)}`}>
           <Poster titleId={i.id} path={i.posterUrl} />
           <span class="meta">
-            <span class="name">{i.title}</span>
+            <span class="name">{#if i.watchOrder !== null}<span class="num">#{i.watchOrder}</span>{' '}{/if}{i.title}</span>
             <span class="muted small">{detail(i)}</span>
             {#if i.kind === 'series' && i.status === 'watching' && i.currentSeason && i.seasonCount}
               <SeasonProgress current={i.currentSeason} total={i.seasonCount} />
             {/if}
-          </span>
-          <span class="verdicts">
-            {#if i.mine === 'like' && i.partner === 'like'}<span class="both" role="img" aria-label="You both loved it"></span>{/if}
-            <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><Verdict v={i.mine} label={`You: ${i.mine ? VERDICT_LABEL[i.mine] : 'not rated'}`} /></span>
-            <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><Verdict v={i.partner} label={`${partner}: ${i.partner ? VERDICT_LABEL[i.partner] : 'not rated'}`} /></span>
+            <!-- Under the title, not beside it, so long titles get the row's full width. -->
+            <span class="verdicts">
+              <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><Verdict v={i.mine} label={`You: ${i.mine ? VERDICT_LABEL[i.mine] : 'not rated'}`} /></span>
+              <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><Verdict v={i.partner} label={`${partner}: ${i.partner ? VERDICT_LABEL[i.partner] : 'not rated'}`} /></span>
+              {#if i.mine === 'like' && i.partner === 'like'}<span class="both" role="img" aria-label="You both loved it"></span>{/if}
+              {#if rl}{@render reviewMark(rl, i.reviewedByMe && i.reviewedByPartner)}{/if}
+            </span>
           </span>
         </a>
       </li>

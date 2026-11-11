@@ -36,6 +36,7 @@ export function rowToTitle(r: Record<string, SqlValue>): TitleRow {
     status: textOrNull(r['status'], 'status') as Status | null,
     watchedOn: textOrNull(r['watched_on'], 'watched_on') as LocalDate | null,
     currentSeason: intOrNull(r['current_season'], 'current_season'),
+    watchOrder: intOrNull(r['watch_order'], 'watch_order'),
     mergedInto: textOrNull(r['merged_into'], 'merged_into') as TitleId | null,
     addedBy: text(r['added_by'], 'added_by') as MemberId,
     createdAt: text(r['created_at'], 'created_at') as Instant,
@@ -132,16 +133,22 @@ export function loadReconcileSnapshot(db: Database, titleA: string, titleB: stri
   return { first: clockedTitle(db, titleA), second: clockedTitle(db, titleB), ratings, memberStatuses, recommendations };
 }
 
+/** The greatest history key among live Together-watched titles (null when there are none): what `decide()` numbers after. */
+export function maxWatchOrder(db: Database): number | null {
+  return intOrNull(db.selectValue("SELECT MAX(watch_order) FROM titles WHERE status = 'watched' AND deleted_at IS NULL AND merged_into IS NULL"), 'watch_order');
+}
+
 /** What `decide()` needs for `cmd`, read inside the dispatch transaction. */
 export function loadSnapshot(db: Database, cmd: Command, deviceMemberId: string | null): Snapshot {
   switch (cmd.kind) {
     case 'AddTitle':
-      return { title: titleRow(db, cmd.titleId), memberStatus: cmd.memberStatusId ? memberStatusRow(db, cmd.memberStatusId) : null, deviceMemberId };
+      return { title: titleRow(db, cmd.titleId), memberStatus: cmd.memberStatusId ? memberStatusRow(db, cmd.memberStatusId) : null, deviceMemberId, maxWatchOrder: maxWatchOrder(db) };
+    case 'SetStatus':
+      return { title: titleRow(db, cmd.titleId), maxWatchOrder: maxWatchOrder(db) };
     case 'EditTitleDetails':
     case 'LinkToTmdb':
     case 'RemoveTitle':
     case 'RestoreTitle':
-    case 'SetStatus':
     case 'SetCurrentSeason':
       return { title: titleRow(db, cmd.titleId) };
     case 'SetVerdict':

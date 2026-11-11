@@ -204,7 +204,7 @@ describe('AddTitle to: together on a catalog-only title', () => {
   const add = (): Command => ({ kind: 'AddTitle', titleId: titleId(1), mediaKind: 'movie', title: 'Stalker', addedBy: ME, status: 'watched', watchedOn: '2026-09-20' });
   it('puts a title that is only on someone\'s list onto Together instead of AlreadyExists', () => {
     expect(changes(add(), { title: title({ status: null }) })).toEqual([
-      { tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: '2026-09-20' } },
+      { tbl: 'titles', rowId: titleId(1), fields: { status: 'watched', watched_on: '2026-09-20', watch_order: 1 } },
     ]);
   });
   it('an explicit to: together behaves like today', () => {

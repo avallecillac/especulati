@@ -76,7 +76,7 @@ export const setMe = (memberId: string) => identity<{ memberId: string }>({ acti
 export const exportCatalog = () => call<string>({ kind: 'export' });
 export const importCatalog = (text: string) =>
   call<{ ok: true; value: { added: number; present: number } } | { ok: false; error: { field: string; reason: string } }>({ kind: 'import', text });
-export type TitlesImportPreview = { new: number; existing: number; invalid: number; reasons: { index: number; title: string; reason: string }[]; applied: boolean };
+export type TitlesImportPreview = { new: number; existing: number; ordersToSet: number; invalid: number; reasons: { index: number; title: string; reason: string }[]; applied: boolean };
 export const importTitlesList = (text: string, dryRun: boolean) =>
   call<{ ok: true; value: TitlesImportPreview } | { ok: false; error: { field: string; reason: string } }>({ kind: 'importTitles', text, dryRun });
 export const eraseAll = () => call<null>({ kind: 'erase' });

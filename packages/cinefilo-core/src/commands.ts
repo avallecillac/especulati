@@ -153,6 +153,7 @@ export interface Decision {
  * - `memberStatus`: the `member_status` row with the command's `memberStatusId`, in any state.
  * - `recommendation`: the `recommendations` row with the command's `recommendationId` / `id`, in any state.
  * - `deviceMemberId`: `meta.member_id` (null before "who am I").
+ * - `maxWatchOrder`: the greatest `watch_order` among live Together-watched titles (null when none); `AddTitle` and `SetStatus` only.
  */
 export interface Snapshot {
   readonly title?: TitleRow | null;
@@ -161,6 +162,7 @@ export interface Snapshot {
   readonly memberStatus?: MemberStatusRow | null;
   readonly recommendation?: RecommendationRow | null;
   readonly deviceMemberId?: string | null;
+  readonly maxWatchOrder?: number | null;
   /** `ReconcileTitles` only; see {@link ReconcileSnapshot}. */
   readonly reconcile?: ReconcileSnapshot;
 }

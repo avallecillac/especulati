@@ -30,16 +30,19 @@ export const SEEDS: readonly Seed[] = [
 ];
 
 /** Import the catalogue as a `cinefilo/v1` file around the member this device already is; Luz is the partner. */
-export async function importCatalogue(page: Page): Promise<void> {
+/** `numbered` gives the watched seeds their history place, first watched = #1 (cinefilo-feedback-1). */
+export async function importCatalogue(page: Page, opts: { numbered?: boolean } = {}): Promise<void> {
   await tab(page, 'Settings').click();
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export', exact: true }).click()]);
   const base = JSON.parse(await readFile(await download.path(), 'utf8')) as { members: { id: string }[] };
   const me = base.members[0]!.id;
   const luz = uuid(1, 'a0000000');
+  const watchedFirst = SEEDS.filter((s) => s.status === 'watched').sort((a, b) => (a.watchedOn! < b.watchedOn! ? -1 : 1)).map((s) => s.title);
   const titles = SEEDS.map((s, i) => ({
     id: uuid(i + 1, 'b0000000'), kind: s.kind, title: s.title, originalTitle: null, year: s.year, tmdbId: null, posterUrl: null, genres: null,
     runtimeMin: s.runtime ?? null, seasonCount: s.seasons ?? null, status: s.status, watchedOn: s.watchedOn ?? null,
     currentSeason: s.season ?? null, mergedInto: null, addedBy: me, createdAt: NOW, deletedAt: null,
+    ...(opts.numbered && s.status === 'watched' ? { watchOrder: watchedFirst.indexOf(s.title) + 1 } : {}),
   }));
   const ratings = SEEDS.flatMap((s, i) =>
     ([[me, s.mine, s.mineReview], [luz, s.partner, s.partnerReview]] as const)

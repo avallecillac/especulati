@@ -160,6 +160,46 @@
     <p class="muted">{KIND_LABEL[t.kind]}{t.year ? ` · ${t.year}` : ''}</p>
   </header>
 
+  <section aria-labelledby="ratings-h">
+    <h2 id="ratings-h">Ratings</h2>
+    <div class="columns">
+      {#if mine}
+        <div class="col" data-testid="rating-mine">
+          <h3>{mine.name} <span class="muted small">(you)</span></h3>
+          <div class="verdicts-big" role="group" aria-label="Your verdict">
+            {#each VERDICTS as v (v)}
+              <button type="button" class={`verdict ${v}`} aria-pressed={mine.verdict === v} onclick={() => verdict(v)}>
+                <VerdictMark {v} decorative />
+                {VERDICT_LABEL[v]}
+              </button>
+            {/each}
+          </div>
+          <label for="my-review">Your review</label>
+          <textarea
+            id="my-review"
+            rows="4"
+            value={draft ?? mine.review ?? ''}
+            oninput={(e) => (draft = e.currentTarget.value)}></textarea>
+          <p class="small muted" class:error={(draft ?? '').length > REVIEW_MAX}>{(draft ?? mine.review ?? '').length} / {REVIEW_MAX.toLocaleString('en-US')}</p>
+          {#if draft !== null}
+            <button type="button" class="primary" onclick={() => void saveReview()}>Save review</button>
+          {/if}
+        </div>
+      {/if}
+      {#each others as o (o.memberId)}
+        <div class="col" data-testid="rating-partner">
+          <h3>{o.name}</h3>
+          {#if o.verdict || o.review}
+            {#if o.verdict}<p class={`verdict-read ${o.verdict}`}><VerdictMark v={o.verdict} decorative /> {VERDICT_LABEL[o.verdict]}</p>{/if}
+            {#if o.review}<p class="review">{o.review}</p>{/if}
+          {:else}
+            <p class="muted">Not rated yet</p>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  </section>
+
   <section class="lists-block" aria-labelledby="lists-h">
     <h2 id="lists-h">Lists</h2>
 
@@ -277,46 +317,6 @@
         {/if}
       </div>
     {/if}
-  </section>
-
-  <section aria-labelledby="ratings-h">
-    <h2 id="ratings-h">Ratings</h2>
-    <div class="columns">
-      {#if mine}
-        <div class="col" data-testid="rating-mine">
-          <h3>{mine.name} <span class="muted small">(you)</span></h3>
-          <div class="verdicts-big" role="group" aria-label="Your verdict">
-            {#each VERDICTS as v (v)}
-              <button type="button" class={`verdict ${v}`} aria-pressed={mine.verdict === v} onclick={() => verdict(v)}>
-                <VerdictMark {v} decorative />
-                {VERDICT_LABEL[v]}
-              </button>
-            {/each}
-          </div>
-          <label for="my-review">Your review</label>
-          <textarea
-            id="my-review"
-            rows="4"
-            value={draft ?? mine.review ?? ''}
-            oninput={(e) => (draft = e.currentTarget.value)}></textarea>
-          <p class="small muted" class:error={(draft ?? '').length > REVIEW_MAX}>{(draft ?? mine.review ?? '').length} / {REVIEW_MAX.toLocaleString('en-US')}</p>
-          {#if draft !== null}
-            <button type="button" class="primary" onclick={() => void saveReview()}>Save review</button>
-          {/if}
-        </div>
-      {/if}
-      {#each others as o (o.memberId)}
-        <div class="col" data-testid="rating-partner">
-          <h3>{o.name}</h3>
-          {#if o.verdict || o.review}
-            {#if o.verdict}<p class={`verdict-read ${o.verdict}`}><VerdictMark v={o.verdict} decorative /> {VERDICT_LABEL[o.verdict]}</p>{/if}
-            {#if o.review}<p class="review">{o.review}</p>{/if}
-          {:else}
-            <p class="muted">Not rated yet</p>
-          {/if}
-        </div>
-      {/each}
-    </div>
   </section>
 
   {#if t.tmdbId === null}

@@ -18,6 +18,8 @@ export interface TitleRow {
   readonly status: Status | null;
   readonly watchedOn: LocalDate | null;
   readonly currentSeason: number | null;
+  /** Sort key of the shared watch history (cinefilo-feedback-1 D1): the visible number is computed from it at read time. */
+  readonly watchOrder: number | null;
   readonly mergedInto: TitleId | null;
   readonly addedBy: MemberId;
   readonly createdAt: Instant;

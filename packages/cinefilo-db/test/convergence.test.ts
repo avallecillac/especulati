@@ -99,6 +99,9 @@ async function localWrite(rng: () => number, p: Peer, member: string, personal =
       dispatch({ kind: 'LinkToTmdb', titleId: t.id, tmdbId: pick(rng, TMDB), details: { runtimeMin: int(rng, 80, 180) } });
       await p.reconcile();
     }
+  } else if (k < 0.37) {
+    // cinefilo-feedback-1 D2/D3: concurrent "mark watched on Together" (numbered max + 1 on each device) and leaving Watched.
+    dispatch({ kind: 'SetStatus', titleId: pick(rng, live).id, status: rng() < 0.75 ? 'watched' : 'later', ...(rng() < 0.7 ? { watchedOn: pick(rng, DATES) } : {}) });
   } else if (k < 0.45) {
     dispatch({ kind: 'SetStatus', titleId: pick(rng, live).id, status: pick(rng, STATUSES), watchedOn: pick(rng, DATES) });
   } else if (k < 0.52) {
@@ -142,7 +145,7 @@ function directDelivery(rng: () => number, from: Peer, to: Peer): void {
   applyRemoteOps(to.raw, cinefiloSchema, cinefiloCanInsert, ops, deviceOf(to), () => to.env.wallMs());
 }
 
-const stats = { ops: 0, titles: 0, merged: 0, removed: 0, ratings: 0, personal: 0, recs: 0, answered: 0, offTogether: 0 };
+const stats = { ops: 0, titles: 0, merged: 0, removed: 0, ratings: 0, personal: 0, recs: 0, answered: 0, offTogether: 0, numbered: 0 };
 
 async function oneRun(seed: number): Promise<void> {
   const rng = prng(seed);
@@ -187,6 +190,11 @@ async function oneRun(seed: number): Promise<void> {
     for (const p of peers.slice(1)) {
       if (dump(p.raw) !== first1) throw new Error(`peer ${p.n} differs from peer 1 (${steps} steps)`);
     }
+    // The computed history numbers are the same on every device, and distinct (D1).
+    const numbers = (p: Peer) => JSON.stringify(p.db.list('watched').map((i) => [i.id, i.watchOrder]));
+    for (const p of peers.slice(1)) if (numbers(p) !== numbers(peers[0]!)) throw new Error(`peer ${p.n} numbers the history differently`);
+    const shown = peers[0]!.db.list('watched').flatMap((i) => (i.watchOrder === null ? [] : [i.watchOrder]));
+    if (new Set(shown).size !== shown.length || shown.some((n, i) => n !== shown.length - i)) throw new Error('the history numbers are not 1..N newest first');
     for (const p of peers) {
       if (p.raw.selectValue('SELECT COUNT(*) FROM sync_inbox') !== 0) throw new Error(`peer ${p.n} has a stuck inbox`);
       // Reconcile is at rest: a further pass changes nothing.
@@ -201,6 +209,7 @@ async function oneRun(seed: number): Promise<void> {
     stats.personal += Number(raw.selectValue('SELECT COUNT(*) FROM member_status'));
     stats.recs += Number(raw.selectValue('SELECT COUNT(*) FROM recommendations'));
     stats.answered += Number(raw.selectValue('SELECT COUNT(*) FROM recommendations WHERE answered IS NOT NULL'));
+    stats.numbered += Number(raw.selectValue('SELECT COUNT(*) FROM titles WHERE watch_order IS NOT NULL'));
     stats.offTogether += Number(raw.selectValue('SELECT COUNT(*) FROM titles WHERE status IS NULL'));
   } finally {
     for (const p of peers) p.close();
@@ -226,6 +235,7 @@ describe('convergence (3.4)', () => {
     expect(stats.recs).toBeGreaterThan(0);
     expect(stats.answered).toBeGreaterThan(0);
     expect(stats.offTogether).toBeGreaterThan(0);
+    expect(stats.numbered).toBeGreaterThan(0);
     console.log(`cinefilo convergence: ${RUNS} runs in ${((performance.now() - t0) / 1000).toFixed(1)} s (${JSON.stringify(stats)} total ops/titles/merged/removed/ratings/personal/recs/answered/offTogether)`);
   });
 });
@@ -261,7 +271,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
         last = b.seq;
         const opened = await open(b, keys.encKey, keys.spaceId, cinefiloSyncApp.aadPrefix);
         if (!opened.ok) { skipped++; continue; }
-        const unreadable = opened.value.ops.some((w) => !OLD_TABLES.has(w.tbl) || (w.tbl === 'titles' && 'status' in w.fields && w.fields['status'] === null));
+        const unreadable = opened.value.ops.some((w) => !OLD_TABLES.has(w.tbl) || (w.tbl === 'titles' && (('status' in w.fields && w.fields['status'] === null) || 'watch_order' in w.fields)));
         if (unreadable) { skipped++; continue; }
         for (const w of opened.value.ops) {
           const r = parseRemoteOp(w, opened.value.device);
@@ -349,7 +359,10 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
       const lagging = new Set(
         a.raw
           .selectObjects("SELECT row_id, fields_json FROM change_log WHERE tbl = 'titles'")
-          .filter((r) => (JSON.parse(r['fields_json'] as string) as Record<string, unknown>)['status'] === null)
+          .filter((r) => {
+            const f = JSON.parse(r['fields_json'] as string) as Record<string, unknown>;
+            return f['status'] === null || 'watch_order' in f;
+          })
           .map((r) => r['row_id'] as string),
       );
       const tables = ['titles', 'members', 'ratings'] as const;

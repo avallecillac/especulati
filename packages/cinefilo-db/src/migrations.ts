@@ -52,7 +52,8 @@ const MIGRATION_1 = `
 `;
 
 /**
- * Schema v2 (personal-lists D1, D3, D4). `titles.status` becomes nullable (NULL = in the catalog, not on Together),
+ * Schema v2 (personal-lists D1, D3, D4; cinefilo-feedback-1 D1 adds `titles.watch_order`, the shared watch-history sort key,
+ * to the same rebuild because v2 has not shipped). `titles.status` becomes nullable (NULL = in the catalog, not on Together),
  * which SQLite can only do by rebuilding the table; then the two personal tables, and a one-time cursor reset so a
  * device that skipped tier-`p` batches on an older version re-reads the space once (ops it has are ignored by id).
  */
@@ -71,12 +72,15 @@ const MIGRATION_2 = `
     status         TEXT CHECK (status IS NULL OR status IN ('later','watching','watched','dropped')),
     watched_on     TEXT,
     current_season INTEGER,
+    watch_order    INTEGER,
     merged_into    TEXT,
     added_by       TEXT NOT NULL,
     created_at     TEXT NOT NULL,
     deleted_at     TEXT
   );
-  INSERT INTO titles_v2 SELECT id, kind, title, original_title, year, tmdb_id, poster_url, genres, runtime_min, season_count,
+  INSERT INTO titles_v2 (id, kind, title, original_title, year, tmdb_id, poster_url, genres, runtime_min, season_count,
+    status, watched_on, current_season, merged_into, added_by, created_at, deleted_at)
+    SELECT id, kind, title, original_title, year, tmdb_id, poster_url, genres, runtime_min, season_count,
     status, watched_on, current_season, merged_into, added_by, created_at, deleted_at FROM titles;
   DROP TABLE titles;
   ALTER TABLE titles_v2 RENAME TO titles;

@@ -31,7 +31,7 @@ export function serializeExport(e: CinefiloExport): string {
     titles: byId(e.titles).map((t) => ({
       id: t.id, kind: t.kind, title: t.title, originalTitle: t.originalTitle, year: t.year, tmdbId: t.tmdbId, posterUrl: t.posterUrl,
       genres: t.genres, runtimeMin: t.runtimeMin, seasonCount: t.seasonCount, status: t.status, watchedOn: t.watchedOn,
-      currentSeason: t.currentSeason, mergedInto: t.mergedInto, addedBy: t.addedBy, createdAt: t.createdAt, deletedAt: t.deletedAt,
+      currentSeason: t.currentSeason, watchOrder: t.watchOrder, mergedInto: t.mergedInto, addedBy: t.addedBy, createdAt: t.createdAt, deletedAt: t.deletedAt,
     })),
     members: byId(e.members).map((m) => ({ id: m.id, name: m.name, createdAt: m.createdAt, deletedAt: m.deletedAt })),
     ratings: byId(e.ratings).map((r) => ({
@@ -94,6 +94,7 @@ const parseTitleRow = (o: unknown): Result<TitleRow, ParseError> => {
       status: take(nullable('status', o['status'], parseStatus)),
       watchedOn: take(nullable('watchedOn', o['watchedOn'], parseLocalDate)),
       currentSeason: take(intOrNull('currentSeason', o['currentSeason'])),
+      watchOrder: take(intOrNull('watchOrder', o['watchOrder'] ?? null)),
       mergedInto: take(nullable('mergedInto', o['mergedInto'], parseTitleId)),
       addedBy: take(parseMemberId(take(str('addedBy', o['addedBy'])))),
       createdAt: take(parseInstant(take(str('createdAt', o['createdAt'])))),

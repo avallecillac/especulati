@@ -91,7 +91,7 @@ test('undated watched: Add date, then it is dated and still watched; undated sor
   await expect(page.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}$/);
   await expect(page.getByRole('button', { name: 'Watched', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('link', { name: 'Back' }).click();
-  await expect(page.locator('ul.rows .name')).toHaveText(['Dated', 'Old']);
+  await expect(page.locator('ul.rows .name')).toHaveText([/Dated/, /Old/]); // numbered in import order, newest first (Dated is #2)
 });
 
 test('a bad file says why and adds nothing', async ({ page }) => {

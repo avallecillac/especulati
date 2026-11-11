@@ -13,7 +13,7 @@ import { ANSWERS, isUuid, KINDS, MEMBER_STATUSES, REVIEW_MAX, STATUSES, VERDICTS
 export const WRITABLE_FIELDS: Readonly<Record<Table, ReadonlySet<string>>> = {
   titles: new Set([
     'kind', 'title', 'original_title', 'year', 'tmdb_id', 'poster_url', 'genres', 'runtime_min', 'season_count', 'status',
-    'watched_on', 'current_season', 'merged_into', 'added_by', 'created_at', 'deleted_at',
+    'watched_on', 'current_season', 'watch_order', 'merged_into', 'added_by', 'created_at', 'deleted_at',
   ]),
   members: new Set(['name', 'created_at', 'deleted_at']),
   ratings: new Set(['title_id', 'member_id', 'verdict', 'review', 'updated_at', 'deleted_at']),
@@ -39,6 +39,8 @@ export const INSERT_FIELDS: Readonly<Record<Table, readonly string[]>> = {
 export function tierOf(tbl: Table, fields: Readonly<Record<string, FieldValue>>): 'base' | 'p' {
   if (tbl === 'member_status' || tbl === 'recommendations') return 'p';
   if (tbl === 'titles' && Object.prototype.hasOwnProperty.call(fields, 'status') && fields['status'] === null) return 'p';
+  // cinefilo-feedback-1 D3: an older version's allow-list refuses `watch_order`, so any op that writes it is tier `p` too.
+  if (tbl === 'titles' && Object.prototype.hasOwnProperty.call(fields, 'watch_order')) return 'p';
   return 'base';
 }
 
@@ -73,6 +75,8 @@ function checkValues(tbl: Table, f: Readonly<Record<string, FieldValue>>): Parse
   if (tbl === 'titles') {
     if ('kind' in f && !inEnum(KINDS, f['kind'])) return { field: 'kind', reason: 'unknown kind' };
     if ('status' in f && f['status'] !== null && !inEnum(STATUSES, f['status'])) return { field: 'status', reason: 'unknown status' };
+    const wo = f['watch_order'];
+    if (wo !== undefined && wo !== null && !(typeof wo === 'number' && Number.isInteger(wo) && wo >= 1)) return { field: 'watch_order', reason: 'not a positive whole number' };
     const g = f['genres'];
     if (g !== undefined && g !== null && (typeof g !== 'string' || genresFromDb(g) === null)) return { field: 'genres', reason: 'not a JSON array of strings' };
   }

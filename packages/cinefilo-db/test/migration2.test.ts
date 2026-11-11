@@ -24,8 +24,9 @@ function v1Fixture() {
   return { raw, T1, T2 };
 }
 
+const TITLE_COLS = 'id, kind, title, original_title, year, tmdb_id, poster_url, genres, runtime_min, season_count, status, watched_on, current_season, merged_into, added_by, created_at, deleted_at';
 const dumpAll = (raw: ReturnType<typeof emptyDb>) =>
-  JSON.stringify(['titles', 'members', 'ratings', 'field_clock', 'change_log', 'posters'].map((t) => raw.selectArrays(`SELECT * FROM ${t} ORDER BY 1, 2`)));
+  JSON.stringify([`SELECT ${TITLE_COLS} FROM titles ORDER BY 1, 2`, ...['members', 'ratings', 'field_clock', 'change_log', 'posters'].map((t) => `SELECT * FROM ${t} ORDER BY 1, 2`)].map((q) => raw.selectArrays(q)));
 
 describe('migration 2', () => {
   it('upgrades a v1 database: every row kept as it was, new tables and indexes added', () => {
@@ -57,6 +58,20 @@ describe('migration 2', () => {
     expect(() => add("'paused'")).toThrow();
     expect(() => add('NULL')).not.toThrow();
     expect(() => raw.exec("UPDATE titles SET status = NULL WHERE kind = 'series'")).not.toThrow();
+  });
+
+  it('adds titles.watch_order (cinefilo-feedback-1 D1), NULL for every existing row', () => {
+    const { raw, T1 } = v1Fixture();
+    migrate(raw);
+    expect(raw.selectValues('SELECT name FROM pragma_table_info(\'titles\')').map(String)).toContain('watch_order');
+    expect(raw.selectValues('SELECT watch_order FROM titles')).toEqual([null, null]);
+    expect(() => raw.exec({ sql: 'UPDATE titles SET watch_order = 12 WHERE id = ?', bind: [T1] })).not.toThrow();
+    expect(raw.selectValue('SELECT watch_order FROM titles WHERE id = ?', [T1])).toBe(12);
+    // a fresh database has it too, and there is no third migration
+    const fresh = emptyDb();
+    migrate(fresh);
+    expect(fresh.selectValues('SELECT name FROM pragma_table_info(\'titles\')').map(String)).toContain('watch_order');
+    expect(SCHEMA_VERSION).toBe(2);
   });
 
   it('the new tables enforce their checks', () => {

@@ -50,7 +50,8 @@ export function importText(
       fields: {
         kind: t.kind, title: t.title, original_title: t.originalTitle, year: t.year, tmdb_id: t.tmdbId, poster_url: t.posterUrl,
         genres: genresToDb(t.genres), runtime_min: t.runtimeMin, season_count: t.seasonCount, status: t.status, watched_on: t.watchedOn,
-        current_season: t.currentSeason, merged_into: t.mergedInto, added_by: t.addedBy, created_at: t.createdAt, deleted_at: t.deletedAt,
+        current_season: t.currentSeason, ...(t.watchOrder !== null ? { watch_order: t.watchOrder } : {}), merged_into: t.mergedInto, added_by: t.addedBy,
+        created_at: t.createdAt, deleted_at: t.deletedAt,
       },
     });
   }

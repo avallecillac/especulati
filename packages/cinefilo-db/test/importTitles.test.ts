@@ -18,7 +18,7 @@ describe('importTitles (D3)', () => {
     addManual(t, 'Film 1', { year: 1901 });
     const before = t.raw.selectValue('SELECT COUNT(*) FROM change_log');
     const r = await t.db.importTitles(file([entry(1), entry(2), entry(3, { status: 'watched' })]), ids(t), { dryRun: true });
-    expect(r).toEqual({ ok: true, value: { new: 2, existing: 1, invalid: 0, reasons: [], applied: false } });
+    expect(r).toEqual({ ok: true, value: { new: 2, existing: 1, ordersToSet: 0, invalid: 0, reasons: [], applied: false } });
     expect(t.raw.selectValue('SELECT COUNT(*) FROM change_log')).toBe(before);
     expect(t.db.list('later')).toHaveLength(1);
   });
@@ -26,7 +26,7 @@ describe('importTitles (D3)', () => {
   it('imports every new title as the current member with its status, undated watched included', async () => {
     const t = ready();
     const r = await t.db.importTitles(file([entry(1), entry(2, { status: 'watched' }), { kind: 'series', title: 'Dark', status: 'watching' }]), ids(t));
-    expect(r).toEqual({ ok: true, value: { new: 3, existing: 0, invalid: 0, reasons: [], applied: true } });
+    expect(r).toEqual({ ok: true, value: { new: 3, existing: 0, ordersToSet: 0, invalid: 0, reasons: [], applied: true } });
     expect(t.db.list('later').map((i) => i.title)).toEqual(['Film 1']);
     const w = t.db.list('watched');
     expect(w.map((i) => [i.title, i.watchedOn])).toEqual([['Film 2', null]]);
@@ -40,7 +40,7 @@ describe('importTitles (D3)', () => {
     await t.db.importTitles(text, ids(t));
     const log = t.raw.selectValue('SELECT COUNT(*) FROM change_log');
     const r = await t.db.importTitles(text, ids(t));
-    expect(r).toEqual({ ok: true, value: { new: 0, existing: 2, invalid: 0, reasons: [], applied: true } });
+    expect(r).toEqual({ ok: true, value: { new: 0, existing: 2, ordersToSet: 0, invalid: 0, reasons: [], applied: true } });
     expect(t.raw.selectValue('SELECT COUNT(*) FROM change_log')).toBe(log);
   });
 
@@ -105,11 +105,11 @@ describe('importTitles (D3)', () => {
 });
 
 describe('undated watched titles and the details queue', () => {
-  it('lists undated watched titles after dated ones', async () => {
+  it('an undated watched title joins the history after the dated one (numbered newest first)', async () => {
     const t = ready();
     addManual(t, 'Dated', { status: 'watched', watchedOn: '2020-01-01' });
     await t.db.importTitles(file([{ kind: 'movie', title: 'Undated', status: 'watched' }]), ids(t));
-    expect(t.db.list('watched').map((i) => i.title)).toEqual(['Dated', 'Undated']);
+    expect(t.db.list('watched').map((i) => i.title)).toEqual(['Undated', 'Dated']);
   });
 
   it('needsDetails returns live TMDB-linked titles with neither poster nor genres', async () => {

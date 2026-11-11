@@ -168,7 +168,8 @@
     error = null;
     await refresh();
     const n = r.value.value.new;
-    showToast(`Imported ${n} ${n === 1 ? 'title' : 'titles'}.`);
+    const o = r.value.value.ordersToSet;
+    showToast(n === 0 && o > 0 ? `Set ${o} ${o === 1 ? 'order' : 'orders'}.` : `Imported ${n} ${n === 1 ? 'title' : 'titles'}.`);
   }
 </script>
 
@@ -289,6 +290,7 @@
     <ul class="preview" data-testid="import-preview">
       <li><strong data-testid="preview-new">{c.new}</strong> new</li>
       <li><strong data-testid="preview-existing">{c.existing}</strong> already in your list</li>
+      {#if c.ordersToSet > 0}<li><strong data-testid="preview-orders">{c.ordersToSet}</strong> {c.ordersToSet === 1 ? 'order' : 'orders'} to set</li>{/if}
       <li><strong data-testid="preview-invalid">{c.invalid}</strong> invalid</li>
     </ul>
     {#if c.reasons.length > 0}
@@ -297,12 +299,12 @@
         {#if c.reasons.length > 5}<li>and {c.reasons.length - 5} more</li>{/if}
       </ul>
       <p class="muted">Nothing can be imported until these are fixed.</p>
-    {:else if c.new === 0}
+    {:else if c.new === 0 && c.ordersToSet === 0}
       <p class="muted">Nothing new to import.</p>
     {/if}
     <div class="actions">
-      <button type="button" class="primary" disabled={busy || c.new === 0 || c.invalid > 0} onclick={() => void confirmList()}>
-        {c.new === 1 ? 'Import 1 title' : `Import ${c.new} titles`}
+      <button type="button" class="primary" disabled={busy || (c.new === 0 && c.ordersToSet === 0) || c.invalid > 0} onclick={() => void confirmList()}>
+        {c.new === 0 && c.ordersToSet > 0 ? `Set ${c.ordersToSet} ${c.ordersToSet === 1 ? 'order' : 'orders'}` : c.new === 1 ? 'Import 1 title' : `Import ${c.new} titles`}
       </button>
       <button type="button" onclick={() => (listPreview = null)}>Cancel</button>
     </div>

@@ -6,7 +6,7 @@ import {
 import { applyChanges, rollbackQuietly } from '@especulati/db-kit';
 import type { DeviceId } from '@especulati/sync-core';
 import { findByTmdb } from './queries.ts';
-import { loadSnapshot } from './snapshot.ts';
+import { loadSnapshot, maxWatchOrder, titleRow } from './snapshot.ts';
 import type { DispatchEnv } from './types.ts';
 
 /** SHA-256 → uuid of a label (the shell's `uuidFromHash`); async, so it runs before the transaction opens. */
@@ -17,6 +17,8 @@ export interface ImportTitlesResult {
   readonly new: number;
   /** Entries already in the list (same derived id, or the same TMDB id and kind): left as they are. */
   readonly existing: number;
+  /** Existing watched titles with no watch order that the file numbers (D4); new titles carrying one are not counted here. */
+  readonly ordersToSet: number;
   /** Entries `decide()` refused. */
   readonly invalid: number;
   readonly reasons: readonly { readonly index: number; readonly title: string; readonly reason: string }[];
@@ -44,14 +46,41 @@ export async function importTitles(
   const reasons: { index: number; title: string; reason: string }[] = [];
   let existing = 0;
   let added = 0;
+  let ordersToSet = 0;
+  // New watched entries without an order are numbered after every order in the file and in the list.
+  let runningMax = entries.reduce<number | null>((m, e) => (e.watchOrder !== null && (m === null || e.watchOrder > m) ? e.watchOrder : m), maxWatchOrder(db));
+  /** D4: an existing live Together title keeps its order; one without gets the file's (watched titles only). Never overwritten. */
+  const settle = (e: TitleEntry, id: string): boolean => {
+    const row = titleRow(db, id);
+    if (!row || row.deletedAt !== null || row.mergedInto !== null || row.status === null) return false;
+    existing++;
+    if (e.watchOrder !== null && row.watchOrder === null && row.status === 'watched') {
+      ordersToSet++;
+      changes.push({ tbl: 'titles', rowId: row.id, fields: { watch_order: e.watchOrder } });
+    }
+    return true;
+  };
   entries.forEach((e, i) => {
-    if (e.tmdbId !== null && findByTmdb(db, e.tmdbId, e.kind) !== null) { existing++; return; }
+    const tmdbMatch = e.tmdbId !== null ? findByTmdb(db, e.tmdbId, e.kind) : null;
+    if (tmdbMatch !== null && settle(e, tmdbMatch)) return;
+    if (settle(e, ids[i]!)) return;
     const cmd: Command = {
       kind: 'AddTitle', titleId: ids[i]!, mediaKind: e.kind, title: e.title, status: e.status, addedBy: memberId,
       ...(e.year !== null ? { year: e.year } : {}), ...(e.tmdbId !== null ? { tmdbId: e.tmdbId } : {}),
     };
-    const d = decide(loadSnapshot(db, cmd, memberId), cmd, stamp(env.now, i));
-    if (d.ok) { added++; changes.push(...d.value.changes); return; }
+    const snap = { ...loadSnapshot(db, cmd, memberId), maxWatchOrder: runningMax };
+    const d = decide(snap, cmd, stamp(env.now, i));
+    if (d.ok) {
+      added++;
+      const wantsOrder = e.watchOrder !== null && (snap.title?.watchOrder ?? null) === null;
+      for (const c of d.value.changes) {
+        const f = wantsOrder && c.tbl === 'titles' ? { ...c, fields: { ...c.fields, watch_order: e.watchOrder } } : c;
+        const given = f.tbl === 'titles' ? f.fields['watch_order'] : undefined;
+        if (typeof given === 'number' && (runningMax === null || given > runningMax)) runningMax = given;
+        changes.push(f);
+      }
+      return;
+    }
     if (d.error.kind === 'AlreadyExists') { existing++; return; }
     reasons.push({ index: i, title: e.title, reason: d.error.kind === 'InvalidInput' ? `${d.error.field}: ${d.error.reason}` : d.error.kind });
   });
@@ -67,5 +96,5 @@ export async function importTitles(
       throw e;
     }
   }
-  return ok({ new: added, existing, invalid: reasons.length, reasons, applied });
+  return ok({ new: added, existing, ordersToSet, invalid: reasons.length, reasons, applied });
 }

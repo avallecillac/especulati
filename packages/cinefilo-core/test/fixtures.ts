@@ -17,7 +17,7 @@ export const NOW = instant('2026-09-27T12:00:00.000Z');
 export function title(p: Partial<TitleRow> = {}): TitleRow {
   return {
     id: titleId(1), kind: 'movie', title: 'Stalker' as TitleRow['title'], originalTitle: null, year: 1979, tmdbId: null,
-    posterUrl: null, genres: null, runtimeMin: null, seasonCount: null, status: 'later', watchedOn: null, currentSeason: null,
+    posterUrl: null, genres: null, runtimeMin: null, seasonCount: null, status: 'later', watchedOn: null, currentSeason: null, watchOrder: null,
     mergedInto: null, addedBy: memberId(1), createdAt: instant('2026-09-01T10:00:00.000Z'), deletedAt: null, ...p,
   };
 }

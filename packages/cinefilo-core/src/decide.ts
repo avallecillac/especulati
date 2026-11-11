@@ -81,6 +81,15 @@ export function statusFields(kind: Kind, status: Status, watchedOn: string | und
   return ok({ status, watched_on: null });
 }
 
+/**
+ * D2: the history place that goes with a Together status. Watched with no place yet takes max + 1; any other status
+ * clears a place the title holds. Nothing is written when there is nothing to change.
+ */
+export function watchOrderFields(status: Status, current: number | null, max: number | null | undefined): Record<string, FieldValue> {
+  if (status === 'watched') return current === null ? { watch_order: (max ?? 0) + 1 } : {};
+  return current !== null ? { watch_order: null } : {};
+}
+
 /** The row a command may edit: present, not removed, not merged away. */
 const liveTitle = (s: TitleRow | null | undefined): TitleRow | null => (s && s.deletedAt === null && s.mergedInto === null ? s : null);
 
@@ -99,7 +108,7 @@ function addTitle(snap: Snapshot, cmd: Extract<Command, { kind: 'AddTitle' }>, n
     const s = need(parseStatus(cmd.status ?? 'later'));
     if (!s.ok) return s;
     const f = statusFields(existing.kind, s.value, cmd.watchedOn);
-    return f.ok ? decided([{ tbl: 'titles', rowId: existing.id, fields: f.value }]) : f;
+    return f.ok ? decided([{ tbl: 'titles', rowId: existing.id, fields: { ...f.value, ...watchOrderFields(s.value, existing.watchOrder, snap.maxWatchOrder) } }]) : f;
   }
   const title = need(parseTitle(cmd.title), titleRejection);
   if (!title.ok) return title;
@@ -109,7 +118,9 @@ function addTitle(snap: Snapshot, cmd: Extract<Command, { kind: 'AddTitle' }>, n
   if (!status.ok) return status;
   const st = statusFields(mk.value, status.value, cmd.watchedOn);
   if (!st.ok) return st;
-  const fields: Record<string, FieldValue> = { kind: mk.value, title: title.value, ...details.value, ...st.value, added_by: added.value, created_at: now };
+  const fields: Record<string, FieldValue> = {
+    kind: mk.value, title: title.value, ...details.value, ...st.value, ...watchOrderFields(status.value, existing?.watchOrder ?? null, snap.maxWatchOrder), added_by: added.value, created_at: now,
+  };
   if (cmd.tmdbId !== undefined && cmd.tmdbId !== null) {
     const t = need(parseTmdbId(cmd.tmdbId));
     if (!t.ok) return t;
@@ -222,7 +233,7 @@ function setStatus(snap: Snapshot, cmd: Extract<Command, { kind: 'SetStatus' }>)
   if (!status.ok) return status;
   const f = statusFields(t.kind, status.value, cmd.watchedOn);
   if (!f.ok) return f;
-  return decided([{ tbl: 'titles', rowId: id.value, fields: f.value }]);
+  return decided([{ tbl: 'titles', rowId: id.value, fields: { ...f.value, ...watchOrderFields(status.value, t.watchOrder, snap.maxWatchOrder) } }]);
 }
 
 function setCurrentSeason(snap: Snapshot, cmd: Extract<Command, { kind: 'SetCurrentSeason' }>): Decided {

@@ -2,7 +2,7 @@
 // string persisted on devices has changed: revert the change, do not update the expectation.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { APPEARANCE_KEY, COVERS_KEY } from './theme/frozen.ts';
+import { APPEARANCE_KEY, COVERS_KEY, LAYOUT_KEY, WATCHED_ORDER_KEY } from './theme/frozen.ts';
 import { CHANNEL, DB_FILE, LOCK, SAH_POOL_NAME } from './worker/frozen.ts';
 
 const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -20,6 +20,18 @@ describe('frozen worker identifiers', () => {
     expect(src).toContain('installOpfsSAHPoolVfs({ name: SAH_POOL_NAME })');
     expect(src).toContain('new pool.OpfsSAHPoolDb(DB_FILE)');
     expect(src).not.toMatch(/'cinefilo[-./]/);
+  });
+});
+
+describe('frozen device-local identifiers (cinefilo-feedback-1 D5)', () => {
+  it('watched order and layout keys, and their values', () => {
+    expect(WATCHED_ORDER_KEY).toBe('cinefilo.watchedOrder');
+    expect(LAYOUT_KEY).toBe('cinefilo.layout');
+    const src = read('./lib/layout.svelte.ts');
+    expect(src).toContain("'list'");
+    expect(src).toContain("'grid'");
+    expect(src).toContain("'newest'");
+    expect(src).toContain("'first'");
   });
 });
 

@@ -28,3 +28,11 @@ The keep-import tool's build step emits `watchOrder` for watched entries, in the
 ## Risks
 
 - **Titles watched in the app between the first import and this release** have no number and sort after the numbered history, by date; they get numbers only when re-marked. Acceptable; visible and easy to fix later with a "renumber" if needed.
+
+## Implementation notes (reviewed)
+
+- Titles watched with no order sort after the numbered history; "From #1" flips only the numbered part.
+- The layout toggle sits in the list header next to Add (the tabs are the bottom bar); the Together Watched list also has a "Newest first / From #1" radiogroup.
+- Ratings are two-up at every width so the partner's review shows without scrolling at 390 px.
+- Import: a new watched entry without an order is numbered after every order in the file and the list; an order is set on an existing title only when it is Together-watched. The confirm button reads "Set N orders" when only orders change.
+- List rows put the verdicts and review mark under the title, so long titles (Willis capitals) wrap by word instead of splitting.

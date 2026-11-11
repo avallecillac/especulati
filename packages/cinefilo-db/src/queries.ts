@@ -37,8 +37,13 @@ export interface ListItem {
   readonly watchedOn: LocalDate | null;
   readonly currentSeason: number | null;
   readonly seasonCount: number | null;
+  /** Together Watched only: the title's number in the shared history (#1 = first watched together); null when it has none. */
+  readonly watchOrder: number | null;
   /** This device's member's verdict (null = none). */
   readonly mine: Verdict | null;
+  /** Who has written a review of this title (cinefilo-feedback-1: the review mark in rows and tiles). */
+  readonly reviewedByMe: boolean;
+  readonly reviewedByPartner: boolean;
   /** The partner's verdict (null = none). */
   readonly partner: Verdict | null;
 }
@@ -94,6 +99,8 @@ export interface PendingRecommendation extends RecommendationView {
 }
 
 export interface TitleDetail {
+  /** The title's number in the shared watch history (D1), or null when it is not in it. */
+  readonly watchOrder: number | null;
   /** `title.status` is null for a title that is in the catalog but not on Together. */
   readonly title: TitleRow;
   /** One entry per live member: this device's member first, then the others by creation. */
@@ -105,6 +112,17 @@ export interface TitleDetail {
 }
 
 const LIVE = 'deleted_at IS NULL AND merged_into IS NULL';
+
+/**
+ * D1: the number of each Together-watched title that has a history key: its rank by key, then watched date, creation and
+ * id, so equal keys (two phones marking offline) still number the same on both. Leaving Watched renumbers without writes.
+ */
+export function watchRanks(db: Database): Map<string, number> {
+  const ids = db.selectValues(
+    `SELECT id FROM titles WHERE status = 'watched' AND watch_order IS NOT NULL AND ${LIVE} ORDER BY watch_order, watched_on, created_at, id`,
+  );
+  return new Map(ids.map((id, i) => [text(id, 'id'), i + 1]));
+}
 
 export function currentMemberId(db: Database): string | null {
   return readMeta(db, 'member_id');
@@ -163,16 +181,29 @@ export function list(db: Database, tab: ListTab, filter?: VerdictFilter, scope: 
     scopeParams = [who, ...statuses];
   }
   const verdicts = new Map<string, Verdict>();
+  const reviewed = new Set<string>();
   for (const r of db.selectObjects(
-    `SELECT r.title_id, r.member_id, r.verdict FROM ratings r JOIN titles t ON t.id = r.title_id
-      WHERE r.deleted_at IS NULL AND r.verdict IS NOT NULL AND t.deleted_at IS NULL AND t.merged_into IS NULL AND ${inScope}`,
+    `SELECT r.title_id, r.member_id, r.verdict, r.review FROM ratings r JOIN titles t ON t.id = r.title_id
+      WHERE r.deleted_at IS NULL AND (r.verdict IS NOT NULL OR r.review IS NOT NULL) AND t.deleted_at IS NULL AND t.merged_into IS NULL AND ${inScope}`,
     scopeParams,
   )) {
-    verdicts.set(`${text(r['title_id'], 'title_id')}|${text(r['member_id'], 'member_id')}`, text(r['verdict'], 'verdict') as Verdict);
+    const key = `${text(r['title_id'], 'title_id')}|${text(r['member_id'], 'member_id')}`;
+    const v = textOrNull(r['verdict'], 'verdict');
+    if (v !== null) verdicts.set(key, v as Verdict);
+    if (textOrNull(r['review'], 'review')?.trim()) reviewed.add(key);
+  }
+  const ranks = scope === 'together' && tab === 'watched' ? watchRanks(db) : new Map<string, number>();
+  if (ranks.size > 0) {
+    // Newest first: the numbered history by number, highest first; titles without a number (and dropped series) after it.
+    const numbered = rows.filter((r) => ranks.has(r.t.id)).sort((a, b) => ranks.get(b.t.id)! - ranks.get(a.t.id)!);
+    rows = [...numbered, ...rows.filter((r) => !ranks.has(r.t.id))];
   }
   const items: ListItem[] = rows.map(({ t, status, watchedOn, currentSeason }) => ({
     id: t.id, kind: t.kind, title: t.title, year: t.year, posterUrl: t.posterUrl, status, watchedOn, currentSeason, seasonCount: t.seasonCount,
+    watchOrder: ranks.get(t.id) ?? null,
     mine: me ? (verdicts.get(`${t.id}|${me}`) ?? null) : null,
+    reviewedByMe: me !== null && reviewed.has(`${t.id}|${me}`),
+    reviewedByPartner: partner !== null && reviewed.has(`${t.id}|${partner}`),
     partner: partner ? (verdicts.get(`${t.id}|${partner}`) ?? null) : null,
   }));
   return filter ? filterByVerdict(filter, items, (i) => [i.mine, i.partner]) : items;
@@ -242,7 +273,7 @@ export function titleDetail(db: Database, id: string): TitleDetail | null {
       id: r.id, fromMember: r.fromMember, fromName: names.get(r.fromMember) ?? '', toMember: r.toMember, toName: names.get(r.toMember) ?? '',
       fromMe: r.fromMember === me, toMe: r.toMember === me, state: recommendationState(r), createdAt: r.createdAt,
     }));
-  return { title, ratings, personal, recommendations };
+  return { title, watchOrder: title.status === 'watched' ? (watchRanks(db).get(id) ?? null) : null, ratings, personal, recommendations };
 }
 
 /** A title linked to TMDB that has neither poster nor genres yet (an imported one): the shell fills it in the background. */

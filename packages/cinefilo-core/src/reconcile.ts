@@ -72,6 +72,9 @@ export function reconcileTitles(snap: ReconcileSnapshot | null, cmd: Extract<Com
     const v = get(loser.row);
     if (v !== get(survivor.row)) titleFields[col] = v;
   }
+  // The history place follows the status: carried only onto a survivor that ends up watched without one.
+  const endStatus = takeStatus ? loser.row.status : survivor.row.status;
+  if (endStatus === 'watched' && survivor.row.watchOrder === null && loser.row.watchOrder !== null) titleFields['watch_order'] = loser.row.watchOrder;
   if (Object.keys(titleFields).length > 0) changes.push({ tbl: 'titles', rowId: survivor.row.id, fields: titleFields });
 
   const live = (r: ClockedRating) => r.row.deletedAt === null;

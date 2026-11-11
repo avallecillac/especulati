@@ -7,7 +7,7 @@ function actAs(t: TestDb, id: string): void {
 }
 
 describe('lists (3.3)', () => {
-  it('Watch later: newest added first; Watching; Watched (watched and dropped): most recently watched first', () => {
+  it('Watch later: newest added first; Watching; Watched (watched and dropped): the numbered history newest first, then the rest', () => {
     const t = openTestDb();
     seedMembers(t);
     const a = addManual(t, 'Alpha');
@@ -22,7 +22,7 @@ describe('lists (3.3)', () => {
 
     expect(t.db.list('later').map((i) => i.id)).toEqual([b, a]);
     expect(t.db.list('watching').map((i) => i.id)).toEqual([s]);
-    expect(t.db.list('watched').map((i) => i.id)).toEqual([d, x, c]);
+    expect(t.db.list('watched').map((i) => i.id)).toEqual([d, c, x]); // the numbered history newest first (d is #2, c is #1), then the dropped series
     expect(t.db.list('watched').find((i) => i.id === x)?.status).toBe('dropped');
   });
 
