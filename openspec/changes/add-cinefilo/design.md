@@ -245,3 +245,17 @@ To roll back, delete the Pages project. Lector is unaffected throughout.
 - **Rewatches.** A single `watched_on` in v1. A `watch_events` table later would keep v1's field as "last watched".
 - **Hiding the partner's verdict until you rate.** The default is visible. This could become a device-local display preference, with no data model impact.
 - **TMDB terms.** Attribution is required, and it is covered by the `cinefilo-catalog` spec. Confirm that non-commercial personal use with a personal key fits TMDB's current terms before deploying.
+
+## Implementation notes (group 2, reviewed)
+
+Decisions taken while implementing `cinefilo-core`; they refine, not change, the decisions above.
+
+- `AddTitle` on a removed title revives it (`deleted_at: null`), since its derived id already exists. On a live or merged title it returns `AlreadyExists{id}` (the survivor's id for a merged one).
+- `watchedOn` is required for `watched` and `dropped`, ignored otherwise.
+- `LinkToTmdb` fills empty details only, never renames, and rejects relinking to a different `tmdb_id`.
+- `RemoveTitle`, `RestoreTitle`, `RemoveMember` and an empty edit are idempotent (no changes, no error). A device can't remove the member it acts as.
+- Rating commands on a removed or merged title return `NotFound`; existing ratings survive and return on restore.
+- `ReconcileTitles` takes, from the shell, the TMDB-derived survivor id and the derived rating ids (core builds labels, the shell hashes). It uses per-field HLCs from the snapshot, ignores `now`, and sets `merged_into` on the loser only once.
+- `parseRemoteOp` also checks reference ids, NOT NULL fields, enums, the review limit and `genres` shape, so one bad op is skipped instead of tripping a CHECK and rolling back a batch.
+- Value ranges: year 1850–2200, runtime ≤ 10,000 min, seasons 1–1,000, member name ≤ 50, title ≤ 500 characters; lengths count code points.
+- Filter "partner hasn't rated" includes titles nobody rated; "only me" doesn't.

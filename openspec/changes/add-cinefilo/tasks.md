@@ -11,19 +11,19 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 2. Core domain (`cinefilo-core`, tests first, no mocks)
 
-- [ ] 2.1 Branded types and smart constructors: `TitleId`, `MemberId`, `RatingId`, `Kind`, `Status`, `Verdict`, `LocalDate`, `NonEmptyTitle`, `Review` (at most 1,000 characters, trimmed, empty → null) and `Season`. Verify with Vitest constructor tests, including the boundaries.
-- [ ] 2.2 `titleKey()` normalization (NFKD, strip marks, lowercase, collapse spaces and punctuation), plus the label builders for the title and rating ids. Verify with tests for "Amélie" = "amelie", "Solaris 1972" ≠ "Solaris 2002", and movie ≠ series.
-- [ ] 2.3 `decide()` for the catalog commands: `AddTitle` (including `AlreadyExists`), `EditTitleDetails`, `LinkToTmdb`, `RemoveTitle` and `RestoreTitle`. Verify with Vitest tests for each `cinefilo-catalog` scenario that core can observe.
-- [ ] 2.4 `decide()` for `SetStatus` and `SetCurrentSeason`:
+- [x] 2.1 Branded types and smart constructors: `TitleId`, `MemberId`, `RatingId`, `Kind`, `Status`, `Verdict`, `LocalDate`, `NonEmptyTitle`, `Review` (at most 1,000 characters, trimmed, empty → null) and `Season`. Verify with Vitest constructor tests, including the boundaries.
+- [x] 2.2 `titleKey()` normalization (NFKD, strip marks, lowercase, collapse spaces and punctuation), plus the label builders for the title and rating ids. Verify with tests for "Amélie" = "amelie", "Solaris 1972" ≠ "Solaris 2002", and movie ≠ series.
+- [x] 2.3 `decide()` for the catalog commands: `AddTitle` (including `AlreadyExists`), `EditTitleDetails`, `LinkToTmdb`, `RemoveTitle` and `RestoreTitle`. Verify with Vitest tests for each `cinefilo-catalog` scenario that core can observe.
+- [x] 2.4 `decide()` for `SetStatus` and `SetCurrentSeason`:
   - reject `watching` and `dropped` for movies;
   - check the season range;
   - set or clear `watched_on`, with status and date in one change.
 
   Verify with tests mirroring the `cinefilo-watchlist` scenarios.
-- [ ] 2.5 `decide()` for `SetVerdict` and `SetReview`, including the `NotYourRating` rejection, and for `CreateMember`, `RenameMember` and `RemoveMember`. Verify with tests mirroring the `cinefilo-ratings` and `cinefilo-sharing` member scenarios.
-- [ ] 2.6 A pure `ReconcileTitles` (design D4): pick the survivor, take each field by greater HLC, copy ratings per member by HLC, and set `merged_into`. Verify with tests showing determinism (same inputs → identical changes) and the "link would duplicate" scenario.
-- [ ] 2.7 Pure verdict filters (both liked, disagree, only me, partner hasn't rated, nobody), plus the remote-op allow-list (tables, writable fields, id formats). Verify with tests, including the rejection of unknown tables and fields.
-- [ ] 2.8 The `cinefilo/v1` export DTO, with parse and serialize. It rejects unknown versions, and the round trip is lossless. Verify with tests.
+- [x] 2.5 `decide()` for `SetVerdict` and `SetReview`, including the `NotYourRating` rejection, and for `CreateMember`, `RenameMember` and `RemoveMember`. Verify with tests mirroring the `cinefilo-ratings` and `cinefilo-sharing` member scenarios.
+- [x] 2.6 A pure `ReconcileTitles` (design D4): pick the survivor, take each field by greater HLC, copy ratings per member by HLC, and set `merged_into`. Verify with tests showing determinism (same inputs → identical changes) and the "link would duplicate" scenario.
+- [x] 2.7 Pure verdict filters (both liked, disagree, only me, partner hasn't rated, nobody), plus the remote-op allow-list (tables, writable fields, id formats). Verify with tests, including the rejection of unknown tables and fields.
+- [x] 2.8 The `cinefilo/v1` export DTO, with parse and serialize. It rejects unknown versions, and the round trip is lossless. Verify with tests.
 
 ## 3. Storage (`cinefilo-db`, in-memory SQLite)
 
