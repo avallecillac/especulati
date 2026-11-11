@@ -1,5 +1,6 @@
 <script lang="ts">
   import { eraseAll, exportCatalog, importCatalog, importTitlesList, type TitlesImportPreview, syncReset, syncShowCode, syncTurnOn, type CodeView } from '../lib/dbClient.ts';
+  import { TITLES_FORMAT } from '@especulati/cinefilo-core';
   import { qrSvg } from '../lib/qr.ts';
   import { app, refresh, runSync, showToast, write } from '../lib/state.svelte.ts';
   import { setMe } from '../lib/dbClient.ts';
@@ -117,7 +118,10 @@
     const file = e.currentTarget.files?.[0];
     e.currentTarget.value = '';
     if (!file) return;
-    const r = await importCatalog(await file.text());
+    const text = await file.text();
+    // A titles list picked through the backup button: open the list preview instead of failing.
+    if (isTitlesList(text)) return void (await previewList(text));
+    const r = await importCatalog(text);
     if (!r.ok) return void (error = GENERIC_FAILURE);
     if (!r.value.ok) return void (error = `That file can't be imported (${r.value.error.field}: ${r.value.error.reason}).`);
     error = null;
@@ -130,7 +134,19 @@
     const file = e.currentTarget.files?.[0];
     e.currentTarget.value = '';
     if (!file) return;
-    const text = await file.text();
+    await previewList(await file.text());
+  }
+
+  function isTitlesList(text: string): boolean {
+    try {
+      const raw: unknown = JSON.parse(text);
+      return typeof raw === 'object' && raw !== null && (raw as { format?: unknown }).format === TITLES_FORMAT;
+    } catch {
+      return false;
+    }
+  }
+
+  async function previewList(text: string) {
     const r = await importTitlesList(text, true);
     if (!r.ok) return void (error = GENERIC_FAILURE);
     if (!r.value.ok) return void (error = `That file can't be imported (${r.value.error.field}: ${r.value.error.reason}).`);

@@ -23,6 +23,14 @@ const syncNow = async (p: Page) => {
   await expect(p.getByRole('button', { name: 'Sync now' })).toBeEnabled();
 };
 
+test('a titles list picked through the backup Import button opens the list preview', async ({ page }) => {
+  await startList(page, 'Ana');
+  await tab(page, 'Settings').click();
+  await page.locator('#import-file').setInputFiles(list(KEEP));
+  await expect(preview(page).getByTestId('preview-new')).toHaveText('3');
+  await expect(page.getByText(/unsupported version/)).toHaveCount(0);
+});
+
 test('import: preview, cancel adds nothing, confirm adds, re-import adds 0, partner receives, undated watched', async ({ page: a, newDevice }) => {
   const code = await startList(a, 'Ana');
 
