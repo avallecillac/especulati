@@ -209,6 +209,19 @@ async function commit(d: CinefiloDb, req: Extract<Request, { kind: 'dispatch' }>
   return ok(r.value);
 }
 
+/** Leave: forget the sync code, then delete the database files. The next request creates a fresh database. */
+async function erase(d: CinefiloDb): Promise<void> {
+  syncEngine(d).leave();
+  engine = null;
+  d.raw.close();
+  db = null;
+  await pool?.wipeFiles();
+  pool?.pauseVfs();
+  releaseLock?.();
+  releaseLock = null;
+  channel.postMessage({ type: 'changed' });
+}
+
 function runQuery(d: CinefiloDb, q: Query): unknown {
   switch (q.name) {
     case 'list':
@@ -252,6 +265,10 @@ async function handle(req: Request): Promise<Response> {
         break;
       case 'export':
         reply = ok(d.exportText(new Date().toISOString() as Instant));
+        break;
+      case 'erase':
+        await erase(d);
+        reply = ok(null);
         break;
       case 'import': {
         const r = d.import(req.text, env());

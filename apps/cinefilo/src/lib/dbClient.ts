@@ -72,3 +72,4 @@ export const setMe = (memberId: string) => identity<{ memberId: string }>({ acti
 export const exportCatalog = () => call<string>({ kind: 'export' });
 export const importCatalog = (text: string) =>
   call<{ ok: true; value: { added: number; present: number } } | { ok: false; error: { field: string; reason: string } }>({ kind: 'import', text });
+export const eraseAll = () => call<null>({ kind: 'erase' });

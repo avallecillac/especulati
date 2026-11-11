@@ -34,6 +34,8 @@ export type Request = { id: number } & (
   | { kind: 'identity'; op: IdentityOp }
   | { kind: 'export' }
   | { kind: 'import'; text: string }
+  /** Leave: stop sync and wipe this device's database. The next request opens a fresh one. */
+  | { kind: 'erase' }
 );
 export type Control = { kind: 'visibility'; visible: boolean };
 export type ClientError = { kind: 'Busy' } | { kind: 'Storage'; message: string };

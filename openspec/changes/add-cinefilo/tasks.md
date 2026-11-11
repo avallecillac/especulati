@@ -41,10 +41,10 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 5. UI flows (Svelte, Playwright first)
 
-- [ ] 5.1 The theme token file, the guard test against literal colours, and the app shell with the Watch later, Watching, Watched and Settings tabs. Verify that `pnpm test` (guard) and the Playwright smoke test of tab navigation pass.
-- [ ] 5.2 Add by hand (title, kind, year, status) offline, with duplicate re-add opening the existing entry. Verify with a Playwright run in an offline context.
-- [ ] 5.3 The title screen: status control, watched date (Today, Yesterday, a picker), season stepper, side-by-side ratings with 1-tap verdicts, review editing with the limit, the partner's column read-only, and remove with Undo. Verify with Playwright flows for the watchlist and ratings scenarios.
-- [ ] 5.4 The filter chips on the lists. Verify with Playwright against a seeded database for each filter.
+- [x] 5.1 The theme token file, the guard test against literal colours, and the app shell with the Watch later, Watching, Watched and Settings tabs. Verify that `pnpm test` (guard) and the Playwright smoke test of tab navigation pass.
+- [x] 5.2 Add by hand (title, kind, year, status) offline, with duplicate re-add opening the existing entry. Verify with a Playwright run in an offline context.
+- [x] 5.3 The title screen: status control, watched date (Today, Yesterday, a picker), season stepper, side-by-side ratings with 1-tap verdicts, review editing with the limit, the partner's column read-only, and remove with Undo. Verify with Playwright flows for the watchlist and ratings scenarios.
+- [x] 5.4 The filter chips on the lists. Verify with Playwright against a seeded database for each filter.
 
 ## 6. TMDB
 
@@ -54,10 +54,10 @@ Prerequisite: `rename-to-lector` and `extract-shared-sync` are applied, and thei
 
 ## 7. Sharing and pairing
 
-- [ ] 7.1 First run: "Start a shared list" with the name creates the space and the member, and sets `member_id`. Showing the code gives text plus QR. Verify with Playwright.
+- [x] 7.1 First run: "Start a shared list" with the name creates the space and the member, and sets `member_id`. Showing the code gives text plus QR. Verify with Playwright.
 - [ ] 7.2 Join by scanning or pasting the code (an invalid code is rejected), then "who am I" (an existing member, or "I'm new"), then the initial download. Verify with a two-context Playwright test against the local relay: the partner sees the full catalog, and both rate one title offline and then converge.
-- [ ] 7.3 Rename a member, change "who am I" in Settings, the trust disclosure text, Leave (with confirmation and an export offer, erasing local data) and "start a new space" carrying the catalog over. Verify with Playwright: after a new space, the old-code device receives nothing new.
-- [ ] 7.4 Export and import from Settings. Verify with a Playwright download and re-import into a fresh context that gives an equal catalog.
+- [x] 7.3 Rename a member, change "who am I" in Settings, the trust disclosure text, Leave (with confirmation and an export offer, erasing local data) and "start a new space" carrying the catalog over. Verify with Playwright: after a new space, the old-code device receives nothing new.
+- [x] 7.4 Export and import from Settings. Verify with a Playwright download and re-import into a fresh context that gives an equal catalog.
 
 ## 8. Integration and deploy
 

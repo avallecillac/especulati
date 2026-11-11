@@ -1,0 +1,40 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const SRC = join(import.meta.dirname, '..');
+// No literal colours outside src/theme (same guard as lector's 006): screens use tokens only.
+const LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) walk(p, out);
+    else out.push(p);
+  }
+  return out;
+}
+
+describe('no literal colours outside src/theme', () => {
+  const files = walk(SRC).filter((f) => /\.(svelte|css)$/.test(f) && !f.startsWith(join(SRC, 'theme') + '/'));
+
+  it('scans something', () => {
+    expect(files.length).toBeGreaterThan(3);
+  });
+
+  it.each(files.map((f) => [relative(SRC, f), f] as const))('%s', (_rel, file) => {
+    const offenders = readFileSync(file, 'utf8')
+      .split('\n')
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => LITERAL.test(line))
+      .map(({ line, n }) => `${n}: ${line.trim()}`);
+    expect(offenders).toEqual([]);
+  });
+
+  it('the theme defines the tokens screens rely on', () => {
+    const css = readFileSync(join(SRC, 'theme', 'screening-room.css'), 'utf8');
+    for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'accent', 'on-accent', 'danger', 'like', 'meh', 'dislike', 'backdrop']) {
+      expect(css).toContain(`--${t}:`);
+    }
+  });
+});
