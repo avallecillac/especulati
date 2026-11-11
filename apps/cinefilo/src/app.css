@@ -103,3 +103,16 @@ code { word-break: break-all; }
 .tmdb-logo { display: block; width: 168px; height: auto; margin: 8px 0; }
 
 .covers-h { margin-top: 16px; }
+
+.list-switch { margin-bottom: 12px; }
+.bar h1 + .whose { margin: 2px 0 0; }
+.rec { background: var(--surface); border-radius: var(--radius); padding-bottom: 8px; }
+.rec .row { background: none; }
+.rec-from { color: var(--ink); }
+.rec-actions { display: flex; gap: 8px; padding: 0 10px; }
+.rec-actions button { flex: 1; min-height: 44px; }
+.rec + .rec { margin-top: 0; }
+.lists-block .who-row { background: var(--surface); border-radius: var(--radius); padding: 4px 12px 12px; margin-bottom: 12px; }
+.lists-block .who-row h3 { margin: 8px 0; }
+.lists-block .who-row .seg { gap: 6px; }
+.lists-block .who-row .seg button { flex: 1 1 auto; padding: 8px 8px; }

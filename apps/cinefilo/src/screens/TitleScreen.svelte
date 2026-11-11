@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { REVIEW_MAX, VERDICTS, type Status, type Verdict } from '@especulati/cinefilo-core';
+  import { REVIEW_MAX, VERDICTS, type MemberStatus, type Status, type Verdict } from '@especulati/cinefilo-core';
   import type { TitleDetail } from '@especulati/cinefilo-db';
   import { findByTmdb, title as loadTitle } from '../lib/dbClient.ts';
   import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
   import { todayLocal, yesterdayLocal } from '../lib/clock.ts';
-  import { KIND_LABEL, STATUS_LABEL, VERDICT_LABEL, statusesFor } from '../lib/labels.ts';
+  import { KIND_LABEL, STATUS_LABEL, VERDICT_LABEL, memberStatusesFor, statusesFor } from '../lib/labels.ts';
+  import { listView } from '../lib/listView.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
@@ -30,6 +31,11 @@
     return () => (stale = true);
   });
 
+  const myP = $derived(detail?.personal.find((p) => p.mine) ?? null);
+  const partnerP = $derived(detail?.personal.find((p) => !p.mine) ?? null);
+  /** The title was opened from the partner's list: nothing but "You" is editable here. */
+  const viewOnly = $derived(listView.scope === 'partner');
+  const myRec = $derived(detail?.recommendations.find((r) => r.fromMe) ?? null);
   const mine = $derived(detail?.ratings.find((r) => r.mine) ?? null);
   const others = $derived(detail?.ratings.filter((r) => !r.mine) ?? []);
   // A title only on someone's personal list has no Together status (null): it goes back to Watch later.
@@ -52,6 +58,11 @@
     status === null ? Promise.resolve(false) : run({ kind: 'SetStatus', titleId: id, status, ...(watchedOn ? { watchedOn } : {}) });
 
   const choose = (status: Status) => setStatus(status, status === 'watched' || status === 'dropped' ? todayLocal() : undefined);
+
+  const setMine = (status: MemberStatus | null, watchedOn?: string) =>
+    run({ kind: 'SetMyStatus', titleId: id, status, ...(watchedOn ? { watchedOn } : {}) });
+  const chooseMine = (status: MemberStatus | null) => setMine(status, status === 'watched' ? todayLocal() : undefined);
+  const stepMine = (to: number) => run({ kind: 'SetMySeason', titleId: id, season: to });
 
   const stepSeason = (to: number) => run({ kind: 'SetCurrentSeason', titleId: id, season: to });
 
@@ -149,46 +160,121 @@
     <p class="muted">{KIND_LABEL[t.kind]}{t.year ? ` · ${t.year}` : ''}</p>
   </header>
 
-  <section aria-labelledby="status-h">
-    <h2 id="status-h">Status</h2>
-    <div class="seg" role="group" aria-label="Status">
-      {#each statusesFor(t.kind) as s (s)}
-        <button type="button" aria-pressed={t.status === s} onclick={() => void choose(s)}>{STATUS_LABEL[s]}</button>
-      {/each}
+  <section class="lists-block" aria-labelledby="lists-h">
+    <h2 id="lists-h">Lists</h2>
+
+    <div class="who-row" data-testid="list-together">
+      <h3>Together</h3>
+      {#if viewOnly}
+        <p class="muted">{t.status ? STATUS_LABEL[t.status] : 'Not on Together'}{t.status === 'watching' && t.currentSeason ? ` \u00b7 Season ${t.currentSeason}` : ''}{t.watchedOn ? ` \u00b7 ${t.watchedOn}` : ''}</p>
+      {:else}
+        <div class="seg" role="group" aria-label="Status">
+          {#each statusesFor(t.kind) as s (s)}
+            <button type="button" aria-pressed={t.status === s} onclick={() => void choose(s)}>{STATUS_LABEL[s]}</button>
+          {/each}
+        </div>
+        {#if t.status === null}<p class="muted small">Not on Together yet.</p>{/if}
+
+        {#if t.status === 'watched' && t.watchedOn === null && !addingDate}
+          <div class="date-row">
+            <span class="muted" data-testid="date-unknown">Watched · date unknown</span>
+            <button type="button" onclick={() => (addingDate = true)}>Add date</button>
+          </div>
+        {:else if t.status === 'watched' || t.status === 'dropped'}
+          <div class="date-row">
+            <span class="muted">{t.status === 'dropped' ? 'Dropped on' : 'Watched on'}</span>
+            {#if t.watchedOn}<time datetime={t.watchedOn}>{t.watchedOn}</time>{/if}
+            <button type="button" aria-pressed={t.watchedOn === todayLocal()} onclick={() => void setStatus(t.status, todayLocal()).then(() => (addingDate = false))}>Today</button>
+            <button type="button" aria-pressed={t.watchedOn === yesterdayLocal()} onclick={() => void setStatus(t.status, yesterdayLocal()).then(() => (addingDate = false))}>Yesterday</button>
+            <input
+              type="date"
+              aria-label="Pick a date"
+              value={t.watchedOn ?? ''}
+              max={todayLocal()}
+              onchange={(e) => {
+                const v = e.currentTarget.value;
+                if (v) void setStatus(t.status, v).then(() => (addingDate = false));
+              }} />
+          </div>
+        {/if}
+
+        {#if t.kind === 'series' && t.status === 'watching'}
+          <div class="stepper" role="group" aria-label="Current season">
+            <button type="button" aria-label="Previous season" disabled={!t.currentSeason || t.currentSeason <= 1} onclick={() => void stepSeason((t.currentSeason ?? 1) - 1)}>−</button>
+            <output>{t.currentSeason ? `Season ${t.currentSeason}` : 'No season yet'}</output>
+            <button
+              type="button"
+              aria-label="Next season"
+              disabled={t.seasonCount !== null && (t.currentSeason ?? 0) >= t.seasonCount}
+              onclick={() => void stepSeason((t.currentSeason ?? 0) + 1)}>+</button>
+          </div>
+        {/if}
+      {/if}
     </div>
 
-    {#if t.status === 'watched' && t.watchedOn === null && !addingDate}
-      <div class="date-row">
-        <span class="muted" data-testid="date-unknown">Watched · date unknown</span>
-        <button type="button" onclick={() => (addingDate = true)}>Add date</button>
-      </div>
-    {:else if t.status === 'watched' || t.status === 'dropped'}
-      <div class="date-row">
-        <span class="muted">{t.status === 'dropped' ? 'Dropped on' : 'Watched on'}</span>
-        {#if t.watchedOn}<time datetime={t.watchedOn}>{t.watchedOn}</time>{/if}
-        <button type="button" aria-pressed={t.watchedOn === todayLocal()} onclick={() => void setStatus(t.status, todayLocal()).then(() => (addingDate = false))}>Today</button>
-        <button type="button" aria-pressed={t.watchedOn === yesterdayLocal()} onclick={() => void setStatus(t.status, yesterdayLocal()).then(() => (addingDate = false))}>Yesterday</button>
-        <input
-          type="date"
-          aria-label="Pick a date"
-          value={t.watchedOn ?? ''}
-          max={todayLocal()}
-          onchange={(e) => {
-            const v = e.currentTarget.value;
-            if (v) void setStatus(t.status, v).then(() => (addingDate = false));
-          }} />
+    {#if myP}
+      <div class="who-row" data-testid="list-you">
+        <h3>You</h3>
+        <div class="seg choice" role="radiogroup" aria-label="Your status">
+          <button type="button" role="radio" aria-checked={myP.status === null} tabindex={myP.status === null ? 0 : -1} onclick={() => void chooseMine(null)}>Not on my list</button>
+          {#each memberStatusesFor(t.kind) as s (s)}
+            <button type="button" role="radio" aria-checked={myP.status === s} tabindex={myP.status === s ? 0 : -1} onclick={() => void chooseMine(s)}>{STATUS_LABEL[s]}</button>
+          {/each}
+        </div>
+
+        {#if myP.status === 'watched'}
+          <div class="date-row" role="group" aria-label="Your watched date">
+            <span class="muted">{myP.watchedOn ? 'Watched on' : 'Watched · date unknown'}</span>
+            {#if myP.watchedOn}<time datetime={myP.watchedOn}>{myP.watchedOn}</time>{/if}
+            <button type="button" aria-pressed={myP.watchedOn === todayLocal()} onclick={() => void setMine('watched', todayLocal())}>Today</button>
+            <button type="button" aria-pressed={myP.watchedOn === yesterdayLocal()} onclick={() => void setMine('watched', yesterdayLocal())}>Yesterday</button>
+            <button type="button" aria-pressed={myP.watchedOn === null} onclick={() => void setMine('watched')}>Unknown</button>
+            <input
+              type="date"
+              aria-label="Pick your date"
+              value={myP.watchedOn ?? ''}
+              max={todayLocal()}
+              onchange={(e) => {
+                const v = e.currentTarget.value;
+                if (v) void setMine('watched', v);
+              }} />
+          </div>
+        {/if}
+
+        {#if t.kind === 'series' && myP.status === 'watching'}
+          <div class="stepper" role="group" aria-label="Your current season">
+            <button type="button" aria-label="Previous season (you)" disabled={!myP.currentSeason || myP.currentSeason <= 1} onclick={() => void stepMine((myP.currentSeason ?? 1) - 1)}>−</button>
+            <output>{myP.currentSeason ? `Season ${myP.currentSeason}` : 'No season yet'}</output>
+            <button
+              type="button"
+              aria-label="Next season (you)"
+              disabled={t.seasonCount !== null && (myP.currentSeason ?? 0) >= t.seasonCount}
+              onclick={() => void stepMine((myP.currentSeason ?? 0) + 1)}>+</button>
+          </div>
+        {/if}
       </div>
     {/if}
 
-    {#if t.kind === 'series' && t.status === 'watching'}
-      <div class="stepper" role="group" aria-label="Current season">
-        <button type="button" aria-label="Previous season" disabled={!t.currentSeason || t.currentSeason <= 1} onclick={() => void stepSeason((t.currentSeason ?? 1) - 1)}>−</button>
-        <output>{t.currentSeason ? `Season ${t.currentSeason}` : 'No season yet'}</output>
-        <button
-          type="button"
-          aria-label="Next season"
-          disabled={t.seasonCount !== null && (t.currentSeason ?? 0) >= t.seasonCount}
-          onclick={() => void stepSeason((t.currentSeason ?? 0) + 1)}>+</button>
+    {#if partnerP}
+      <div class="who-row" data-testid="list-partner">
+        <h3>{partnerP.name}</h3>
+        {#if partnerP.status === null}
+          <p class="muted">not on their list</p>
+        {:else}
+          <p class="muted">{STATUS_LABEL[partnerP.status]}{partnerP.status === 'watching' && partnerP.currentSeason ? ` \u00b7 Season ${partnerP.currentSeason}` : ''}{partnerP.status === 'watched' ? (partnerP.watchedOn ? ` \u00b7 ${partnerP.watchedOn}` : ' \u00b7 date unknown') : ''}</p>
+        {/if}
+        {#if partnerP.status === null}
+          {#if myRec?.state === 'open'}
+            <div class="date-row">
+              <span class="muted">Recommended</span>
+              <button type="button" onclick={() => void run({ kind: 'WithdrawRecommendation', id: myRec.id })}>Withdraw</button>
+            </div>
+          {:else if myRec?.state === 'dismissed'}
+            <p class="muted">Dismissed by {partnerP.name}</p>
+          {:else if myRec?.state !== 'accepted'}
+            <button type="button" onclick={() => void run({ kind: 'Recommend', titleId: id })}>Recommend to {partnerP.name}</button>
+          {/if}
+        {/if}
       </div>
     {/if}
   </section>
@@ -270,7 +356,9 @@
 
   <p role="alert" class="error">{error ?? ''}</p>
 
-  <section>
-    <button type="button" class="danger" onclick={() => void remove()}>Remove from list</button>
-  </section>
+  {#if !viewOnly}
+    <section>
+      <button type="button" class="danger" onclick={() => void remove()}>Remove from list</button>
+    </section>
+  {/if}
 {/if}

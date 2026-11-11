@@ -17,11 +17,11 @@ Checks = `pnpm typecheck`, eslint, depcruise, `pnpm test`, `pnpm test:convergenc
 
 ## 3. UI (Playwright first)
 
-- [ ] 3.1 List switch, headers, partner view-only treatment (`--other-accent` token in both themes, contrast-tested), default Together on open.
-- [ ] 3.2 Title screen "Lists" block, my status/season/date, recommend and withdraw.
-- [ ] 3.3 Pending recommendations on my Watch later with Accept / Dismiss; two-device test against the local relay.
-- [ ] 3.4 Add sheet "Add to: Together / Just me" with the default rule.
-- [ ] 3.5 Screenshots of each new screen in both themes to `e2e/cinefilo/__screens__/` for the main session's review.
+- [x] 3.1 List switch, headers, partner view-only treatment (`--other-accent` token in both themes, contrast-tested), default Together on open.
+- [x] 3.2 Title screen "Lists" block, my status/season/date, recommend and withdraw.
+- [x] 3.3 Pending recommendations on my Watch later with Accept / Dismiss; two-device test against the local relay.
+- [x] 3.4 Add sheet "Add to: Together / Just me" with the default rule.
+- [x] 3.5 Screenshots of each new screen in both themes to `e2e/cinefilo/__screens__/` for the main session's review.
 
 ## 4. Preview (no production)
 

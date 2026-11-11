@@ -57,3 +57,10 @@ img.poster.hero { width: calc(100% + 2 * var(--gutter)); height: 200px; margin: 
 :root[data-theme='beton'] .who { font-family: var(--font-label); font-size: 10px; }
 :root[data-theme='willis'] .who { font-family: var(--font-label); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
 :root[data-theme='beton'] .vmark { min-width: 0; }
+
+/* The list switch and whose list is on screen (personal-lists D5). The partner's list wears --other-accent:
+   Béton an outlined frame, Willis a smoke rule along the side; both also name the owner in text. */
+.whose { margin: 0 0 8px; font-family: var(--font-label); font-size: 0.9rem; color: var(--ink-soft); }
+.list-frame[data-scope='partner'] .whose { color: var(--other-accent); font-weight: 600; }
+:root[data-theme='beton'] .list-frame[data-scope='partner'] { outline: var(--rule-width) solid var(--other-accent); outline-offset: 6px; }
+:root[data-theme='willis'] .list-frame[data-scope='partner'] { border-left: 3px solid var(--other-accent); padding-left: 10px; }

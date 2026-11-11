@@ -6,7 +6,7 @@ export const SRC = join(import.meta.dirname, '..');
 /** The token contract (openspec add-cinefilo-themes, design D1). Each theme file sets exactly these. */
 export const COLOUR_TOKENS = [
   'bg', 'surface', 'surface-2', 'ink', 'ink-soft', 'rule', 'hairline', 'control-border', 'accent', 'on-accent', 'both-loved',
-  'danger', 'like', 'meh', 'dislike', 'bar', 'backdrop',
+  'danger', 'like', 'meh', 'dislike', 'bar', 'backdrop', 'other-accent',
 ];
 export const OTHER_TOKENS = [
   'font-title', 'font-text', 'font-label', 'radius', 'radius-sheet', 'radius-pill', 'rule-width', 'poster-filter',

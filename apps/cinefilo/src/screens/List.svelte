@@ -1,9 +1,10 @@
 <script lang="ts">
   import { VERDICT_FILTERS, type VerdictFilter } from '@especulati/cinefilo-core';
-  import type { ListItem, ListTab } from '@especulati/cinefilo-db';
-  import { list } from '../lib/dbClient.ts';
+  import type { ListItem, ListScope, ListTab, PendingRecommendation } from '@especulati/cinefilo-db';
+  import { list, pendingRecommendations } from '../lib/dbClient.ts';
+  import { listView } from '../lib/listView.svelte.ts';
   import { FILTER_LABEL, KIND_LABEL, VERDICT_LABEL } from '../lib/labels.ts';
-  import { app } from '../lib/state.svelte.ts';
+  import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
   import SeasonProgress from './SeasonProgress.svelte';
   import Verdict from './Verdict.svelte';
@@ -14,7 +15,11 @@
 
   let filter = $state<VerdictFilter | null>(null);
   let items = $state<ListItem[] | null>(null);
-  const partner = $derived(app.members.find((m) => !m.me)?.name ?? 'Partner');
+  let recs = $state<PendingRecommendation[]>([]);
+  const scope = $derived(listView.scope);
+  const partnerMember = $derived(app.members.find((m) => !m.me) ?? null);
+  const partner = $derived(partnerMember?.name ?? 'Partner');
+  const meName = $derived(app.members.find((m) => m.me)?.name ?? 'Me');
   const initial = (n: string) => (n.trim().charAt(0) || '?').toUpperCase();
   const myInitial = $derived(initial(app.members.find((m) => m.me)?.name ?? 'Me'));
   const partnerInitial = $derived(initial(partner));
@@ -23,12 +28,48 @@
   $effect(() => {
     void app.rev;
     const f = filter;
+    const sc = scope;
     let stale = false;
-    void list(tab, f ?? undefined).then((r) => {
+    void list(tab, f ?? undefined, sc).then((r) => {
       if (!stale && r.ok) items = r.value;
     });
+    // Recommendations to me wait at the top of my own Watch later.
+    if (sc === 'me' && tab === 'later') {
+      void pendingRecommendations().then((r) => {
+        if (!stale && r.ok) recs = r.value;
+      });
+    } else recs = [];
     return () => (stale = true);
   });
+
+  const choices = $derived<{ id: ListScope; label: string }[]>([
+    { id: 'together', label: 'Together' },
+    { id: 'me', label: meName },
+    ...(partnerMember ? [{ id: 'partner' as const, label: partner }] : []),
+  ]);
+  const whose = $derived(scope === 'me' ? 'Your list' : scope === 'partner' ? `${partner}'s list \u00b7 view only` : 'Together');
+
+  function pick(id: ListScope) {
+    if (listView.scope === id) return;
+    listView.scope = id;
+    items = null;
+  }
+
+  // Radio group: arrows move the choice and the focus together.
+  function onKey(e: KeyboardEvent, i: number) {
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (step === 0) return;
+    e.preventDefault();
+    const next = choices[(i + step + choices.length) % choices.length]!.id;
+    pick(next);
+    (e.currentTarget as HTMLElement).parentElement?.querySelector<HTMLElement>(`[data-choice="${next}"]`)?.focus();
+  }
+
+  async function answer(r: PendingRecommendation, a: 'accepted' | 'dismissed') {
+    const res = await write({ kind: 'AnswerRecommendation', id: r.id, titleId: r.titleId, answer: a });
+    if (res.ok) showToast(a === 'accepted' ? `Added ${r.title} to your Watch later.` : `Dismissed ${r.title}.`);
+    else showToast('Could not save. Try again.');
+  }
 
   function detail(i: ListItem): string {
     const parts: string[] = [KIND_LABEL[i.kind]];
@@ -40,8 +81,19 @@
   }
 </script>
 
+<div class="seg choice list-switch" role="radiogroup" aria-label="List">
+  {#each choices as c, i (c.id)}
+    {@const on = scope === c.id}
+    <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => pick(c.id)} onkeydown={(e) => onKey(e, i)}>{c.label}</button>
+  {/each}
+</div>
+
+<div class="list-frame" data-scope={scope}>
 <header class="bar">
-  <h1>{HEADING[tab]}</h1>
+  <div>
+    <h1>{HEADING[tab]}</h1>
+    <p class="whose" data-testid="whose">{whose}</p>
+  </div>
   <button class="primary" type="button" onclick={onadd}>Add</button>
 </header>
 
@@ -51,10 +103,33 @@
   {/each}
 </div>
 
+{#if recs.length > 0 && !filter}
+  <ul class="rows recs" aria-label="Recommended to you">
+    {#each recs as r (r.id)}
+      <li class="rec">
+        <a class="row" href={`#/title/${encodeURIComponent(r.titleId)}`}>
+          <Poster titleId={r.titleId} path={r.posterUrl} />
+          <span class="meta">
+            <span class="name">{r.title}</span>
+            <span class="muted small">{KIND_LABEL[r.kind]}{r.year ? ` \u00b7 ${r.year}` : ''}</span>
+            <span class="small rec-from">Recommended by {r.fromName}</span>
+          </span>
+        </a>
+        <div class="rec-actions">
+          <button type="button" class="primary" aria-label={`Accept ${r.title}`} onclick={() => void answer(r, 'accepted')}>Accept</button>
+          <button type="button" aria-label={`Dismiss ${r.title}`} onclick={() => void answer(r, 'dismissed')}>Dismiss</button>
+        </div>
+      </li>
+    {/each}
+  </ul>
+{/if}
+
 {#if items === null}
   <p class="muted">Loading</p>
 {:else if items.length === 0}
-  <p class="empty">{filter ? 'Nothing matches this filter.' : 'Nothing here yet. Tap Add to put a movie or series on the list.'}</p>
+  {#if recs.length === 0 || filter}
+    <p class="empty">{filter ? 'Nothing matches this filter.' : scope === 'partner' ? `${partner} has nothing here yet.` : scope === 'me' ? 'Nothing here yet. Tap Add and choose Just me.' : 'Nothing here yet. Tap Add to put a movie or series on the list.'}</p>
+  {/if}
 {:else}
   <ul class="rows">
     {#each items as i (i.id)}
@@ -78,3 +153,4 @@
     {/each}
   </ul>
 {/if}
+</div>

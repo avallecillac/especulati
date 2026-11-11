@@ -14,6 +14,8 @@
   --on-accent: #0d0b09;
   --both-loved: #d9762b;
   --danger: #e8806a;
+  /* The partner's list (personal-lists D5): smoke, a cool grey apart from the brass; 6.7:1 on --bg. */
+  --other-accent: #9b968e;
   /* Verdicts are monochrome plus brass in the design. */
   --like: #d4a253;
   --meh: #a39478;

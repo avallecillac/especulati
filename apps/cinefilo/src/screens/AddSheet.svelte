@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Kind, Status } from '@especulati/cinefilo-core';
   import { todayLocal } from '../lib/clock.ts';
-  import { KIND_LABEL, STATUS_LABEL, statusesFor } from '../lib/labels.ts';
+  import { KIND_LABEL, STATUS_LABEL, memberStatusesFor, statusesFor } from '../lib/labels.ts';
+  import { listView } from '../lib/listView.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { showToast, write } from '../lib/state.svelte.ts';
   import { failureText, thumbUrl, type TmdbResult } from '../catalog/tmdb.ts';
@@ -14,6 +15,8 @@
   let title = $state('');
   let kind = $state<Kind>('movie');
   let year = $state('');
+  /** Defaults to the list on screen (Together when the partner's list is shown). */
+  let to = $state<'together' | 'me'>(listView.scope === 'me' ? 'me' : 'together');
   let status = $state<Status>('later');
   let watchedOn = $state<string>(todayLocal());
   let error = $state<string | null>(null);
@@ -25,13 +28,19 @@
   let searchNote = $state<string | null>(null);
   let addingId = $state<number | null>(null);
 
-  const statuses = $derived(statusesFor(kind));
+  // A personal list has no Dropped.
+  const statuses = $derived(to === 'me' ? memberStatusesFor(kind) : statusesFor(kind));
   const needsDate = $derived(status === 'watched' || status === 'dropped');
 
   function setKind(k: Kind) {
     kind = k;
     results = null;
     if (!statusesFor(k).includes(status)) status = 'later';
+  }
+
+  function setTo(next: 'together' | 'me') {
+    to = next;
+    if (next === 'me' && status === 'dropped') status = 'later';
   }
 
   async function runSearch() {
@@ -67,6 +76,7 @@
       mediaKind: hit.mediaKind,
       title: name,
       tmdbId: hit.tmdbId,
+      to,
       status,
       ...(needsDate ? { watchedOn } : {}),
       ...(info?.originalTitle ?? hit.originalTitle ? { originalTitle: info?.originalTitle ?? hit.originalTitle } : {}),
@@ -101,6 +111,7 @@
       kind: 'AddTitle',
       mediaKind: kind,
       title,
+      to,
       ...(y !== null ? { year: y } : {}),
       status,
       ...(needsDate ? { watchedOn } : {}),
@@ -130,6 +141,15 @@
     <div class="seg">
       {#each ['movie', 'series'] as const as k (k)}
         <button type="button" aria-pressed={kind === k} onclick={() => setKind(k)}>{KIND_LABEL[k]}</button>
+      {/each}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend id="add-to-h">Add to</legend>
+    <div class="seg choice" role="radiogroup" aria-labelledby="add-to-h">
+      {#each [['together', 'Together'], ['me', 'Just me']] as const as [v, label] (v)}
+        <button type="button" role="radio" aria-checked={to === v} tabindex={to === v ? 0 : -1} data-choice={v} onclick={() => setTo(v)}>{label}</button>
       {/each}
     </div>
   </fieldset>

@@ -42,6 +42,10 @@ describe.each(THEMES)('contrast: $id', (theme) => {
     expect(ratio(c('control-border'), c('bg'))).toBeGreaterThanOrEqual(3);
   });
 
+  it('other-accent is >= 4.5 on bg (frame and header text of the partner\'s list)', () => {
+    expect(ratio(c('other-accent'), c('bg'))).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(['danger', 'like', 'meh', 'dislike'])('%s is >= 4.5 on bg', (t) => {
     expect(ratio(c(t), c('bg'))).toBeGreaterThanOrEqual(4.5);
   });

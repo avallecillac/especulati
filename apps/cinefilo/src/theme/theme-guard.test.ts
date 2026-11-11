@@ -34,7 +34,7 @@ describe('no literal colours outside src/theme', () => {
   it('the theme files define the tokens screens rely on', () => {
     for (const id of ['beton', 'willis']) {
       const css = readFileSync(join(SRC, 'theme', `${id}.css`), 'utf8');
-      for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'control-border', 'accent', 'on-accent', 'danger', 'like', 'meh', 'dislike', 'backdrop', 'font-title', 'font-label']) {
+      for (const t of ['bg', 'surface', 'ink', 'ink-soft', 'rule', 'control-border', 'accent', 'on-accent', 'danger', 'other-accent', 'like', 'meh', 'dislike', 'backdrop', 'font-title', 'font-label']) {
         expect(css).toContain(`--${t}:`);
       }
     }

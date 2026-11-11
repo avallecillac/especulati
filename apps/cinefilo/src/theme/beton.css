@@ -14,6 +14,8 @@
   --on-accent: #f2efe8;
   --both-loved: #9c3d24;
   --danger: #8a2c1c;
+  /* The partner's list (personal-lists D5): an outlined rust frame; 4.8:1 on --bg, a shade darker than --accent so it passes as text. */
+  --other-accent: #933a22;
   /* Verdicts are monochrome in the design: the marks differ in shape, not in hue. */
   --like: #161615;
   --meh: #161615;

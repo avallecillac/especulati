@@ -1,4 +1,4 @@
-import type { Kind, Status, Verdict, VerdictFilter } from '@especulati/cinefilo-core';
+import type { Kind, MemberStatus, Status, Verdict, VerdictFilter } from '@especulati/cinefilo-core';
 
 export const VERDICT_LABEL: Readonly<Record<Verdict, string>> = { like: 'Like', meh: 'Meh', dislike: "Didn't like" };
 
@@ -16,3 +16,6 @@ export const STATUS_LABEL: Readonly<Record<Status, string>> = { later: 'Watch la
 export const statusesFor = (kind: Kind): readonly Status[] => (kind === 'movie' ? ['later', 'watched'] : ['later', 'watching', 'watched', 'dropped']);
 
 export const KIND_LABEL: Readonly<Record<Kind, string>> = { movie: 'Movie', series: 'Series' };
+
+/** Personal statuses of a title of this kind: no dropped, and movies cannot be watching. */
+export const memberStatusesFor = (kind: Kind): readonly MemberStatus[] => (kind === 'movie' ? ['later', 'watched'] : ['later', 'watching', 'watched']);
