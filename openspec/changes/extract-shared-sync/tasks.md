@@ -37,22 +37,22 @@ each group is one bisectable commit.
 
 ## 3. `packages/db-kit`
 
-- [ ] 3.1 Scaffold the `@especulati/db-kit` package (with the `@sqlite.org/sqlite-wasm` pin),
+- [x] 3.1 Scaffold the `@especulati/db-kit` package (with the `@sqlite.org/sqlite-wasm` pin),
   a `db-kit` vitest project, and the `shared-no-apps-domain` rule covering `sync-core`,
   `db-kit` and `sync`. Verify with `pnpm lint`.
-- [ ] 3.2 Test first, against a toy two-table schema in in-memory SQLite: write
+- [x] 3.2 Test first, against a toy two-table schema in in-memory SQLite: write
   `upsertRow`/`applyChanges` (atomic, `field_clock` + `change_log` + `meta.hlc`) and
   `applyRemoteOps` (LWW per field, parking via `canInsert`, inbox drain, all-or-nothing on a
   bad op, `pushed = 1`). Then move the implementations from `lector-db/src/{apply,sync}.ts`
   into db-kit, parameterised by `(schema, canInsert)`. Verify that the db-kit tests pass.
-- [ ] 3.3 Move `unpushedOps` (single-tier batches via `schema.tierOf`), `completePush`,
+- [x] 3.3 Move `unpushedOps` (single-tier batches via `schema.tierOf`), `completePush`,
   `markPushed`, `pendingCount`, `inboxOpIds`, `resetPushState` and `syncMeta`/`setSyncMeta`
   into db-kit with their tests. Add `SqliteSyncStore implements SyncStore`. Verify that
   the db-kit tests pass.
-- [ ] 3.4 Add `SYNC_BOOKKEEPING_DDL` and `runMigrations(db, list)`. Add a test that a toy DB
+- [x] 3.4 Add `SYNC_BOOKKEEPING_DDL` and `runMigrations(db, list)`. Add a test that a toy DB
   bootstrapped with that DDL has the same bookkeeping columns, PKs and partial-index
   predicates as the 1.2 lector snapshot. Verify that it passes.
-- [ ] 3.5 Make `lector-db` delegate:
+- [x] 3.5 Make `lector-db` delegate:
   - `lectorCanInsert` keeps the `items`/`tags` parent checks;
   - `LectorDb` builds a `SqliteSyncStore(raw, lectorSchema, lectorCanInsert)` and exposes it
     as `db.syncStore`;

@@ -17,6 +17,15 @@ module.exports = {
       to: { pathNot: '^(packages/(lector-core|sync-core)/src|@especulati/sync-core$)' },
     },
     {
+      name: 'shared-no-apps-domain',
+      comment: 'The shared packages (sync-core, db-kit, sync) know no app: no lector-*/cinefilo-* package and nothing under apps/.',
+      severity: 'error',
+      // TEMPORARY: packages/sync still imports lector-core/lector-db until group 4 (4.2/5.1) rewires it.
+      // Delete the pathNot then, so the rule covers sync too (extract-shared-sync tasks 3.1/4.2).
+      from: { path: '^packages/(sync-core|db-kit|sync)/', pathNot: '^packages/sync/' },
+      to: { path: '^packages/(lector|cinefilo)-|^apps/|^@especulati/(lector|cinefilo)-' },
+    },
+    {
       name: 'db-no-ui',
       severity: 'error',
       from: { path: '^packages/lector-db' },

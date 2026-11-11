@@ -1,11 +1,12 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
-import { decide, err, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Highlight, type HighlightSnapshot, type ReconcileSnapshot, type Rejection, type Result, type StatsView, type TagSnapshot } from '@especulati/lector-core';
+import { SqliteSyncStore } from '@especulati/db-kit';
+import { decide, err, lectorSchema, ok, type BookSnapshot, type BooksSnapshot, type Command, type OpWire, type RemoteOp, type DeviceId, type Instant, type LocalDate, type Article, type ArticleStats, type Highlight, type HighlightSnapshot, type ReconcileSnapshot, type Rejection, type Result, type StatsView, type TagSnapshot, type Table } from '@especulati/lector-core';
 import { applyChanges, readMeta, rollbackQuietly, writeMeta } from './apply.ts';
 import { migrate } from './migrations.ts';
 import { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, loadReconcileSnapshot, loadTagSnapshot, mergeChainIds } from './snapshot.ts';
 import { coverStats, deleteCover, getCover, putCover } from './covers.ts';
 import { articleStatsView, statsView } from './stats.ts';
-import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
+import { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, lectorCanInsert, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps, type ApplyResult, type SyncMeta } from './sync.ts';
 import { SearchIndex, type SearchHit, type SearchOptions } from './search.ts';
 import { allTags, resolveTagId, tagSuggestions, tagsFor, type ItemTagView, type TagSummary } from './tags.ts';
 import { article, articles, findSavedByUrl, savedArticle, savedArticles, savedCount, highlightsView, bookView, findArticleByUrl, duplicatePairs, findByIsbn, homeView, missingCovers, pendingDetails, libraryView, stragglers, type ArticleCursor, type BookCard, type BookView, type DuplicatePairView, type HomeView, type LibraryView, type SavedArticle, type StragglerView } from './queries.ts';
@@ -13,7 +14,7 @@ import { article, articles, findSavedByUrl, savedArticle, savedArticles, savedCo
 export { applyChanges, readMeta, writeMeta } from './apply.ts';
 export { migrate, SCHEMA_VERSION } from './migrations.ts';
 export { loadBookSnapshot, loadBooksSnapshot, loadHighlightSnapshot, loadReconcileSnapshot, loadTagSnapshot, mergeChainIds } from './snapshot.ts';
-export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
+export { applyPulledPage, applyRemoteOps, completePush, inboxOpIds, lectorCanInsert, markPushed, pendingCount, resetPushState, setSyncMeta, syncMeta, unpushedOps } from './sync.ts';
 export type { ApplyResult, SyncMeta, SyncProblem, SyncStatus } from './sync.ts';
 export { TAG_ID_LABEL } from './frozen.ts';
 export { SearchIndex } from './search.ts';
@@ -36,7 +37,12 @@ export class LectorDb {
   #deviceId: DeviceId | null = null;
   readonly #search = new SearchIndex();
 
-  constructor(readonly raw: Database) {}
+  /** The engine's view of the sync bookkeeping (extract-shared-sync): db-kit over lector's schema. */
+  readonly syncStore: SqliteSyncStore<Table>;
+
+  constructor(readonly raw: Database) {
+    this.syncStore = new SqliteSyncStore(raw, lectorSchema, lectorCanInsert, () => this.#search.invalidate());
+  }
 
   migrate(): void {
     migrate(this.raw);

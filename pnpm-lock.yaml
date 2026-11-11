@@ -107,6 +107,15 @@ importers:
         specifier: 3.1.4
         version: 3.1.4(@types/emscripten@1.41.6)
 
+  packages/db-kit:
+    dependencies:
+      '@especulati/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
+      '@sqlite.org/sqlite-wasm':
+        specifier: 3.53.4-build1
+        version: 3.53.4-build1
+
   packages/lector-core:
     dependencies:
       '@especulati/sync-core':
@@ -115,9 +124,15 @@ importers:
 
   packages/lector-db:
     dependencies:
+      '@especulati/db-kit':
+        specifier: workspace:*
+        version: link:../db-kit
       '@especulati/lector-core':
         specifier: workspace:*
         version: link:../lector-core
+      '@especulati/sync-core':
+        specifier: workspace:*
+        version: link:../sync-core
       '@sqlite.org/sqlite-wasm':
         specifier: 3.53.4-build1
         version: 3.53.4-build1

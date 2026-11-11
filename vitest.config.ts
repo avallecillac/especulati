@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     projects: [
       { test: { name: 'sync-core', root: 'packages/sync-core', environment: 'node' } },
+      { test: { name: 'db-kit', root: 'packages/db-kit', environment: 'node' } },
       { test: { name: 'lector-core', root: 'packages/lector-core', environment: 'node' } },
       { test: { name: 'lector-db', root: 'packages/lector-db', environment: 'node' } },
       { test: { name: 'sync', root: 'packages/sync', environment: 'node', passWithNoTests: true } },

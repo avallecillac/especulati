@@ -6,7 +6,9 @@
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc --noEmit -p ." },
   "dependencies": {
+    "@especulati/db-kit": "workspace:*",
     "@especulati/lector-core": "workspace:*",
+    "@especulati/sync-core": "workspace:*",
     "@sqlite.org/sqlite-wasm": "3.53.4-build1"
   }
 }

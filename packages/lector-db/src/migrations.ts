@@ -1,4 +1,5 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
+import { runMigrations } from '@especulati/db-kit';
 
 /** Forward-only migrations keyed on PRAGMA user_version (contracts/db-schema.md). */
 const MIGRATIONS: readonly string[] = [
@@ -153,17 +154,5 @@ export const SCHEMA_VERSION = MIGRATIONS.length;
 
 /** `to` stops early (test hook for building an older-version fixture). */
 export function migrate(db: Database, opts: { to?: number } = {}): void {
-  db.exec('PRAGMA foreign_keys = ON');
-  const current = Number(db.selectValue('PRAGMA user_version') ?? 0);
-  for (let v = current; v < (opts.to ?? MIGRATIONS.length); v++) {
-    db.exec('BEGIN IMMEDIATE');
-    try {
-      db.exec(MIGRATIONS[v]!);
-      db.exec(`PRAGMA user_version = ${v + 1}`);
-      db.exec('COMMIT');
-    } catch (e) {
-      db.exec('ROLLBACK');
-      throw e;
-    }
-  }
+  runMigrations(db, MIGRATIONS, opts);
 }

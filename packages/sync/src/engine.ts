@@ -1,4 +1,4 @@
-import { err, ok, parseRemoteOp, type Instant, type RemoteOp, type Result } from '@especulati/lector-core';
+import { err, ok, parseRemoteOp, type RemoteOp, type Result } from '@especulati/lector-core';
 import type { LectorDb, SyncProblem, SyncStatus } from '@especulati/lector-db';
 import { formatSyncCode, newSyncSecret, parseSyncCode, qrPayload } from './code.ts';
 import { open, seal } from './envelope.ts';
@@ -232,7 +232,7 @@ export function createSyncEngine(deps: SyncDeps): SyncEngine {
     failures = 0;
     await deleteOldSpace();
     if (res.problem === 'newerVersion') setStatus({ problem: 'newerVersion' });
-    else setStatus({ lastOkAt: new Date(deps.now()).toISOString() as Instant, problem: null });
+    else setStatus({ lastOkAt: new Date(deps.now()).toISOString(), problem: null });
     return res;
   }
 
