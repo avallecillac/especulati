@@ -1,7 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#2f5d50"/>
-  <path d="M136 148c40-14 84-14 120 10v222c-36-24-80-24-120-10z" fill="#fbfaf7"/>
-  <path d="M376 148c-40-14-84-14-120 10v222c36-24 80-24 120-10z" fill="#dfe9e4"/>
-  <circle cx="376" cy="376" r="44" fill="#e9b949"/>
-  <path d="M356 376l14 14 26-28" stroke="#2f5d50" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Lector">
+  <!-- Mariposas, "in flight": one large butterfly resting low, two small ones rising. Original mark. -->
+  <defs>
+    <g id="b">
+      <polygon points="0,0 -34,-32 -27,6" fill="#e6b33a"/>
+      <polygon points="0,0 34,-32 27,6" fill="#e6b33a"/>
+      <polygon points="0,3 -19,24 -6,22" fill="#d49a26"/>
+      <polygon points="0,3 19,24 6,22" fill="#d49a26"/>
+      <line x1="0" y1="-8" x2="0" y2="22" stroke="#2e6a5c" stroke-width="2.5"/>
+    </g>
+  </defs>
+  <rect width="180" height="180" fill="#2e6a5c"/>
+  <use href="#b" transform="translate(74 108) rotate(-8)"/>
+  <use href="#b" transform="translate(126 60) rotate(-18) scale(0.36)"/>
+  <use href="#b" transform="translate(148 92) rotate(12) scale(0.26)"/>
 </svg>

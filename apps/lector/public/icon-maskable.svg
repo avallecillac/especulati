@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="Lector">
+  <!-- Maskable variant: the same mark scaled into the 80% safe zone, so a circular crop keeps all three butterflies. -->
+  <defs>
+    <g id="b">
+      <polygon points="0,0 -34,-32 -27,6" fill="#e6b33a"/>
+      <polygon points="0,0 34,-32 27,6" fill="#e6b33a"/>
+      <polygon points="0,3 -19,24 -6,22" fill="#d49a26"/>
+      <polygon points="0,3 19,24 6,22" fill="#d49a26"/>
+      <line x1="0" y1="-8" x2="0" y2="22" stroke="#2e6a5c" stroke-width="2.5"/>
+    </g>
+  </defs>
+  <rect width="180" height="180" fill="#2e6a5c"/>
+  <g transform="translate(90 90) scale(0.7) translate(-90 -90)">
+    <use href="#b" transform="translate(74 108) rotate(-8)"/>
+    <use href="#b" transform="translate(126 60) rotate(-18) scale(0.36)"/>
+    <use href="#b" transform="translate(148 92) rotate(12) scale(0.26)"/>
+  </g>
+</svg>
