@@ -157,8 +157,12 @@ directly or re-delegate it with the decision included.
 - The `rtk` hook rewrites `pnpm lint` so dependency-cruiser doesn't run; run
   `npx eslint .` and `npx depcruise packages apps/lector/src apps/relay/src apps/lector-extension/src --config .dependency-cruiser.cjs`
   directly.
-- `pnpm e2e` needs Playwright 1.56.1's pinned Chromium (build 1194). The Mac doesn't have
-  it; run e2e in CI or the cloud dev container.
+- **e2e runs locally, not in GitHub Actions.** CI runs typecheck, lint and unit tests only
+  (e2e took about 12 minutes there, and the extension tests can't load the extension on
+  the runner). The constitution's CI gate is met by running `pnpm e2e` locally before
+  every merge. It needs Playwright 1.56.1's pinned Chromium (build 1194):
+  `pnpm --filter e2e exec playwright install chromium` on the Mac (not in the cloud dev
+  container, which has it preinstalled).
 
 ## Pinned versions
 

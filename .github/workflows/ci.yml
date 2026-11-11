@@ -4,9 +4,16 @@ on:
   push:
   pull_request:
 
+# e2e (Playwright) runs locally before merging, not here: see CLAUDE.md.
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,7 +25,3 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
-      - run: pnpm --filter e2e exec playwright install --with-deps chromium
-      - run: pnpm e2e
-        env:
-          CI: 'true'
