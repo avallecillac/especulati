@@ -68,12 +68,12 @@ test('appearance controls are radios of at least 44 px', async ({ page }) => {
     const box = await covers(page, name).boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
+  await expect(covers(page, 'TMDB posters')).toHaveAttribute('aria-checked', 'true');
+  await covers(page, 'Generated').click();
   await expect(covers(page, 'Generated')).toHaveAttribute('aria-checked', 'true');
-  await covers(page, 'TMDB posters').click();
-  await expect(covers(page, 'TMDB posters')).toHaveAttribute('aria-checked', 'true');
-  expect(await page.evaluate(() => localStorage.getItem('cinefilo.covers'))).toBe('posters');
+  expect(await page.evaluate(() => localStorage.getItem('cinefilo.covers'))).toBe('generated');
   await page.reload();
-  await expect(covers(page, 'TMDB posters')).toHaveAttribute('aria-checked', 'true');
+  await expect(covers(page, 'Generated')).toHaveAttribute('aria-checked', 'true');
 });
 
 test('the choice is device-local: not in the export, and it writes no synced ops', async ({ page, relay }) => {

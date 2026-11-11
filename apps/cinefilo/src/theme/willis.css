@@ -27,5 +27,5 @@
   --radius-sheet: 16px;
   --radius-pill: 26px;
   --rule-width: 1px;
-  --poster-filter: sepia(0.6) brightness(0.55);
+  --poster-filter: none;
 }

@@ -4,5 +4,5 @@
 // frozen: storage identifier
 export const APPEARANCE_KEY = 'cinefilo.appearance';
 
-// frozen: storage identifier. 'generated' (default) or 'posters'.
+// frozen: storage identifier. 'posters' (default, key absent) or 'generated'.
 export const COVERS_KEY = 'cinefilo.covers';

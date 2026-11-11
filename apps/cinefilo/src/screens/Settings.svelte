@@ -21,7 +21,7 @@
   const status = $derived(app.sync);
 
   const appearanceChoices: { id: Appearance; name: string }[] = [{ id: 'automatic', name: 'Automatic' }, ...THEMES.map((t) => ({ id: t.id, name: t.name }))];
-  const coverChoices: { id: CoversMode; name: string }[] = [{ id: 'generated', name: 'Generated' }, { id: 'posters', name: 'TMDB posters' }];
+  const coverChoices: { id: CoversMode; name: string }[] = [{ id: 'posters', name: 'TMDB posters' }, { id: 'generated', name: 'Generated' }];
 
   // Radio groups: arrow keys move the choice and the focus together.
   function onRadioKey(e: KeyboardEvent, ids: string[], i: number, pick: (id: string) => void) {

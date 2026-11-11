@@ -53,7 +53,7 @@ test('the same title draws the same cover on a second device', async ({ page, ne
   expect(await svg(b.page)).toBe(await svg(page));
 });
 
-test('posters option: off shows the cover, on shows the filtered poster, a title without one falls back', async ({ page, context }) => {
+test('posters by default in their own colours; Generated on request; a title without one falls back', async ({ page, context }) => {
   await installTmdb(context);
   await startList(page, 'Ana');
   await saveKey(page);
@@ -69,15 +69,12 @@ test('posters option: off shows the cover, on shows the filtered poster, a title
 
   const sev = page.getByRole('link', { name: /Severance/ });
   const stalker = page.getByRole('link', { name: /Stalker/ });
-  await expect(sev.getByTestId('cover')).toBeVisible();
-  await expect(page.getByTestId('poster-img')).toHaveCount(0);
-
-  await tab(page, 'Settings').click();
-  await covers(page, 'TMDB posters').click();
-  await tab(page, 'Watch later').click();
   const img = sev.getByTestId('poster-img');
   await expect(img).toHaveAttribute('src', /^blob:/, { timeout: 10_000 });
-  expect(await img.evaluate((el) => getComputedStyle(el).filter)).not.toBe('none');
+  for (const theme of themes) {
+    await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t === 'Béton' ? 'beton' : 'willis'), theme);
+    expect(await img.evaluate((el) => getComputedStyle(el).filter)).toBe('none');
+  }
   await expect(stalker.getByTestId('cover')).toBeVisible();
   await expect(stalker.getByTestId('poster-img')).toHaveCount(0);
 
