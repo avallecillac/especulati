@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures/relay.ts';
 import { openApp } from './helpers.ts';
 
-/** Build the link the way the Save to Readerlog Shortcut does: JSON with `later: 1` → Base64 → URL-encode. */
+/** Build the link the way the Save to Lector Shortcut does: JSON with `later: 1` → Base64 → URL-encode. */
 function link(o: Record<string, unknown> = {}, at = new Date().toISOString()): string {
   const json = JSON.stringify({ v: 1, url: 'https://www.example.com/read/essay?utm_source=x', title: 'A Long Essay', author: 'Ann Author', words: 2380, at, later: 1, ...o });
   const b64 = Buffer.from(json, 'utf8').toString('base64').replace(/(.{76})/g, '$1\n');

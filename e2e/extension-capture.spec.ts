@@ -13,7 +13,7 @@ test('pairing: address plus the code from Show code reaches Paired', async ({ ex
 test('a wrong code does not pair', async ({ ext }) => {
   const options = await ext.context.newPage();
   await options.goto(`chrome-extension://${ext.id}/options.html`);
-  await options.getByLabel('Readerlog address').fill('http://localhost:4173');
+  await options.getByLabel('Lector address').fill('http://localhost:4173');
   await options.getByLabel('Sync code').fill('not a code');
   await options.getByRole('button', { name: 'Pair' }).click();
   await expect(options.getByText('That is not a sync code.')).toBeVisible();

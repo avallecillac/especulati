@@ -31,8 +31,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
       },
       manifest: {
-        name: 'Readerlog',
-        short_name: 'Readerlog',
+        name: 'Lector',
+        short_name: 'Lector',
         description: 'Log books and articles; see your reading days.',
         start_url: './#/',
         scope: './',

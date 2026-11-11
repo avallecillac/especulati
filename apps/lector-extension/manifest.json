@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
   "version": "0.7.0",
-  "name": "Readerlog",
+  "name": "Lector",
   "action": { "default_title": "Log as read" },
   "background": { "service_worker": "sw.js", "type": "module" },
   "permissions": ["activeTab", "scripting", "contextMenus", "storage", "alarms"],
   "optional_host_permissions": ["https://*/*"],
   "commands": {
     "log-as-read": { "suggested_key": { "default": "Alt+Shift+L" }, "description": "Log this page as read" },
-    "save-highlight": { "suggested_key": { "default": "Alt+Shift+H" }, "description": "Save the selected text to Readerlog" },
+    "save-highlight": { "suggested_key": { "default": "Alt+Shift+H" }, "description": "Save the selected text to Lector" },
     "save-for-later": { "suggested_key": { "default": "Alt+Shift+S" }, "description": "Save this page to read later" }
   },
   "options_page": "options.html"

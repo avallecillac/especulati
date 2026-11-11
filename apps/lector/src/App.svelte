@@ -59,7 +59,7 @@
   <TopBar />
 
   {#if busy}
-    <div class="update" role="alert">Readerlog is open in another window. Close it or switch to it.</div>
+    <div class="update" role="alert">Lector is open in another window. Close it or switch to it.</div>
   {/if}
 
   {#if pwa.needRefresh}

@@ -18,8 +18,8 @@ Each numbered group is one commit. "Checks" means that `pnpm typecheck && pnpm l
 
 ## 3. Change the visible name to Lector
 
-- [ ] 3.1 Update the PWA: the manifest `name` and `short_name`, the `index.html` title and `apple-mobile-web-app-title`, TopBar, Settings, App, `errors.ts` and `syncText.ts`. Update the e2e tests that match these strings. Verify: `grep -rn "Readerlog" apps/lector/src apps/lector/index.html apps/lector/vite.config.ts` returns nothing; checks pass.
-- [ ] 3.2 Update the extension: the `manifest.json` name and command descriptions, the context-menu titles, `options.html` and `options.ts` (the label "Lector address" and the placeholder `https://<your-lector-address>`), and the `sw.ts` toasts. Update the e2e labels to match. Verify: grep the same way under `apps/lector-extension`; checks pass.
+- [x] 3.1 Update the PWA: the manifest `name` and `short_name`, the `index.html` title and `apple-mobile-web-app-title`, TopBar, Settings, App, `errors.ts` and `syncText.ts`. Update the e2e tests that match these strings. Verify: `grep -rn "Readerlog" apps/lector/src apps/lector/index.html apps/lector/vite.config.ts` returns nothing; checks pass.
+- [x] 3.2 Update the extension: the `manifest.json` name and command descriptions, the context-menu titles, `options.html` and `options.ts` (the label "Lector address" and the placeholder `https://<your-lector-address>`), and the `sw.ts` toasts. Update the e2e labels to match. Verify: grep the same way under `apps/lector-extension`; checks pass.
 
 ## 4. Update the docs and replace spec-kit with openspec
 

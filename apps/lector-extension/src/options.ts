@@ -1,4 +1,4 @@
-// Options page: pair with a Readerlog site, see the status, unpair.
+// Options page: pair with a Lector site, see the status, unpair.
 import { createCapturePeer } from '@especulati/sync/capturePeer';
 import { chromeStore } from './store.ts';
 
@@ -53,13 +53,13 @@ async function grantOrigin(origin: string): Promise<boolean> {
 
 async function render(message = ''): Promise<void> {
   const s = await peer.status();
-  app.replaceChildren(el('h1', 'Readerlog'));
+  app.replaceChildren(el('h1', 'Lector'));
   const note = el('p', message);
   note.setAttribute('role', 'status');
 
   if (s.paired) {
     const origin = (await chromeStore.get<string>('appOrigin')) ?? '';
-    app.append(el('p', 'Paired'), el('p', `Readerlog address: ${origin}`));
+    app.append(el('p', 'Paired'), el('p', `Lector address: ${origin}`));
     app.append(el('p', `Waiting to be sent: ${s.waiting}`));
     app.append(el('p', `Last sent: ${s.lastSentAt === null ? 'never' : new Date(s.lastSentAt).toLocaleString()}`));
     if (s.problem !== null) app.append(el('p', `Problem: ${s.problem}`));
@@ -77,7 +77,7 @@ async function render(message = ''): Promise<void> {
   }
 
   const address = el('input');
-  address.placeholder = 'https://readerlog.pages.dev';
+  address.placeholder = 'https://<your-lector-address>';
   address.autocomplete = 'off';
   const code = el('input');
   code.autocomplete = 'off';
@@ -86,7 +86,7 @@ async function render(message = ''): Promise<void> {
   pair.type = 'button';
   pair.addEventListener('click', () => {
     const origin = originOf(address.value);
-    if (origin === null) return void render('Enter the address of your Readerlog site.');
+    if (origin === null) return void render('Enter the address of your Lector site.');
     const typed = code.value;
     void (async () => {
       if (!(await grantOrigin(origin))) return void render('Permission for that address was not granted.');
@@ -103,8 +103,8 @@ async function render(message = ''): Promise<void> {
     })();
   });
   app.append(
-    el('p', 'Not paired. Turn on sync in Readerlog (Settings > Sync), then enter the address of your Readerlog site and the sync code.'),
-    field('Readerlog address', address),
+    el('p', 'Not paired. Turn on sync in Lector (Settings > Sync), then enter the address of your Lector site and the sync code.'),
+    field('Lector address', address),
     field('Sync code', code),
     pair,
     note,

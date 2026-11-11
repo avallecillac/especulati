@@ -81,7 +81,7 @@ async function log(tabId: number, capture: CapturePayload, force: boolean): Prom
   if (r.ok && !r.value.duplicateOf) void flush();
   if (!r.ok) {
     if (r.error === 'notPaired') {
-      await showToast(tabId, { kind: 'error', message: 'Readerlog is not paired. Open the extension options.' });
+      await showToast(tabId, { kind: 'error', message: 'Lector is not paired. Open the extension options.' });
       void chrome.runtime.openOptionsPage();
     } else {
       await showToast(tabId, { kind: 'error', message: "Couldn't log this page" });
@@ -134,7 +134,7 @@ export async function saveTab(tab: Tab | undefined, linkUrl?: string): Promise<v
   if (!r.ok) {
     if (tabId === undefined) return;
     if (r.error === 'notPaired') {
-      await showToast(tabId, { kind: 'error', message: 'Readerlog is not paired. Open the extension options.' });
+      await showToast(tabId, { kind: 'error', message: 'Lector is not paired. Open the extension options.' });
       void chrome.runtime.openOptionsPage();
     } else {
       await showToast(tabId, { kind: 'error', message: "Couldn't save this page" });
@@ -155,7 +155,7 @@ export async function saveTab(tab: Tab | undefined, linkUrl?: string): Promise<v
 /** Why a stored op was refused, as a toast. Never includes the quote or note. */
 async function showPeerError(tabId: number, error: 'notPaired' | 'invalid' | 'tooLong'): Promise<void> {
   if (error === 'notPaired') {
-    await showToast(tabId, { kind: 'error', message: 'Readerlog is not paired. Open the extension options.' });
+    await showToast(tabId, { kind: 'error', message: 'Lector is not paired. Open the extension options.' });
     void chrome.runtime.openOptionsPage();
   } else if (error === 'tooLong') {
     await showToast(tabId, { kind: 'error', message: 'That passage is too long (5,000 characters max)' });
@@ -285,7 +285,7 @@ chrome.alarms.onAlarm.addListener((a) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: MENU_ID, title: 'Log as read', contexts: ['page', 'action'] }, () => void chrome.runtime.lastError);
   chrome.contextMenus.create({ id: SAVE_ID, title: 'Save for later', contexts: ['page', 'link'] }, () => void chrome.runtime.lastError);
-  chrome.contextMenus.create({ id: HIGHLIGHT_ID, title: 'Save highlight to Readerlog', contexts: ['selection'] }, () => void chrome.runtime.lastError);
+  chrome.contextMenus.create({ id: HIGHLIGHT_ID, title: 'Save highlight to Lector', contexts: ['selection'] }, () => void chrome.runtime.lastError);
   void chrome.alarms.create(ALARM, { periodInMinutes: 5 });
 });
 chrome.runtime.onStartup.addListener(() => {

@@ -41,7 +41,7 @@ export function errorMessage(e: ClientError): string {
     case 'Storage':
       return `Couldn't save — device storage failed (${e.message}). Nothing was changed.`;
     case 'Busy':
-      return 'Readerlog is open in another window. Close it or switch to it.';
+      return 'Lector is open in another window. Close it or switch to it.';
   }
 }
 

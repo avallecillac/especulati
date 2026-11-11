@@ -54,7 +54,7 @@
 
 <header class="bar" data-title={title} data-compact={compact ? '' : undefined} data-home={isHome ? '' : undefined}>
   {#if back}<a class="back" href={back.href} aria-label={`Back to ${back.label}`} onclick={onBack}>‹ {back.label}</a>{/if}
-  {#if isHome}<a class="brand" href="#/">Readerlog</a>{/if}
+  {#if isHome}<a class="brand" href="#/">Lector</a>{/if}
   {#if syncState.on}
     <button class="sync-btn" class:spinning={syncState.running} type="button" aria-label="Sync now" disabled={syncState.running} onclick={() => void runSync('manual')}>
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2M18 2v4h-4M6 22v-4h4" /></svg>

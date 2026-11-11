@@ -8,7 +8,7 @@ export const PROBLEM_TEXT: Record<SyncProblem, string> = {
   relay: "Can't reach the sync service — will retry",
   spaceGone: 'This sync space no longer exists. Rejoin with a new code.',
   unauthorized: 'This sync space no longer exists. Rejoin with a new code.',
-  newerVersion: 'Another device uses a newer Readerlog — update this one',
+  newerVersion: 'Another device uses a newer Lector — update this one',
   corrupt: "Some changes couldn't be read and were skipped",
 };
 

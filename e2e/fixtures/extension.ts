@@ -112,7 +112,7 @@ export const test = relayTest.extend<{ ext: Extension; pwa: Page }>({
       async pair(code) {
         const page = await context.newPage();
         await page.goto(`chrome-extension://${id}/options.html`);
-        await page.getByLabel('Readerlog address').fill(APP_ORIGIN);
+        await page.getByLabel('Lector address').fill(APP_ORIGIN);
         await page.getByLabel('Sync code').fill(code);
         await page.getByRole('button', { name: 'Pair' }).click();
         await expect(page.getByText('Paired', { exact: true })).toBeVisible();

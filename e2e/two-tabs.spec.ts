@@ -27,12 +27,12 @@ test('two tabs take turns on the DB; a write in one shows in the other when it i
   await expect(currentCard(a).getByRole('heading', { name: 'From tab B' })).toBeVisible();
 });
 
-test('a second visible window reports that Readerlog is open elsewhere, then recovers', async ({ context }) => {
+test('a second visible window reports that Lector is open elsewhere, then recovers', async ({ context }) => {
   const a = await context.newPage();
   await openApp(a);
   const b = await context.newPage();
   await b.goto('/#/');
-  await expect(b.getByRole('alert')).toHaveText(/Readerlog is open in another window/, { timeout: 10_000 });
+  await expect(b.getByRole('alert')).toHaveText(/Lector is open in another window/, { timeout: 10_000 });
 
   // The other window goes to the background; bringing this one forward reconnects it.
   await setVisible(a, false);
