@@ -50,6 +50,27 @@ describe('buildTitles', () => {
     expect(validateTitlesFile(file)).toEqual([]);
   });
 
+  it('numbers watched titles in list order, after prepended entries; later titles get no number', () => {
+    const first = { tmdbId: 497828, kind: 'movie', title: 'El triángulo de la tristeza', year: 2022, status: 'watched' };
+    const { file } = buildTitles(matches, { [id('Nine')]: 1, [id('Zodiac')]: 'm', [id('Fracture')]: 0 }, { prepend: [first], numberWatched: true });
+    expect(file.titles[0]).toEqual({ ...first, watchOrder: 1 });
+    const watched = file.titles.filter((t) => t.status === 'watched');
+    expect(watched.map((t) => t.watchOrder)).toEqual(watched.map((_, i) => i + 1));
+    expect(file.titles.filter((t) => t.status === 'later').every((t) => !('watchOrder' in t))).toBe(true);
+    expect(validateTitlesFile(file)).toEqual([]);
+  });
+
+  it('rejects a repeated or misplaced watchOrder', () => {
+    const bad = { format: 'cinefilo-titles/v1', titles: [
+      { kind: 'movie', title: 'A', status: 'watched', watchOrder: 1 },
+      { kind: 'movie', title: 'B', status: 'watched', watchOrder: 1 },
+      { kind: 'movie', title: 'C', status: 'later', watchOrder: 2 },
+    ] };
+    const errs = validateTitlesFile(bad);
+    expect(errs.some((e) => e.includes('used twice'))).toBe(true);
+    expect(errs.some((e) => e.includes('only for watched'))).toBe(true);
+  });
+
   it('a decision overrides a confident match', () => {
     const { summary } = buildTitles(matches, { [id('Inception')]: 0 });
     expect(summary.skipped).toBe(1);

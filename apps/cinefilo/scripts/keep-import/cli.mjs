@@ -48,7 +48,12 @@ const steps = {
   async build(o) {
     const matches = await readJson(path.join(o.out, 'matches.json'));
     const decisions = await readJson(path.join(o.out, 'decisions.json')).catch(() => ({}));
-    const { file, summary, pending } = buildTitles(matches, decisions);
+    // Optional extras.json: { "prepend": [title entries placed first], "numberWatched": true }.
+    const extras = await readJson(path.join(o.out, 'extras.json')).catch(() => ({}));
+    const { file, summary, pending } = buildTitles(matches, decisions, {
+      prepend: extras.prepend ?? [],
+      numberWatched: extras.numberWatched === true,
+    });
     console.log(`build: ${file.titles.length} titles (watched ${summary.watched}, later ${summary.later}), skipped ${summary.skipped}, manual ${summary.manual}, duplicates ${summary.duplicates}, pending ${summary.pending}`);
     if (pending.length && !o.allowPending) {
       console.error(`build: undecided ids: ${pending.join(', ')} (decide them or pass --allow-pending)`);

@@ -8,7 +8,8 @@ export function validateTitlesFile(file) {
   const errs = [];
   if (!file || typeof file !== 'object' || file.format !== TITLES_FORMAT) return [`format must be "${TITLES_FORMAT}"`];
   if (!Array.isArray(file.titles)) return ['titles must be an array'];
-  const allowed = new Set(['tmdbId', 'kind', 'title', 'year', 'status']);
+  const allowed = new Set(['tmdbId', 'kind', 'title', 'year', 'status', 'watchOrder']);
+  const orders = new Set();
   file.titles.forEach((t, i) => {
     const at = `titles[${i}]`;
     if (!t || typeof t !== 'object') return errs.push(`${at} must be an object`);
@@ -19,6 +20,12 @@ export function validateTitlesFile(file) {
     if (t.status === 'watching' && t.kind !== 'series') errs.push(`${at}.status watching is only for series`);
     if ('tmdbId' in t && !(Number.isInteger(t.tmdbId) && t.tmdbId > 0)) errs.push(`${at}.tmdbId must be a positive integer`);
     if ('year' in t && !(Number.isInteger(t.year) && t.year >= 1870 && t.year <= 2200)) errs.push(`${at}.year must be a year`);
+    if ('watchOrder' in t) {
+      if (!(Number.isInteger(t.watchOrder) && t.watchOrder > 0)) errs.push(`${at}.watchOrder must be a positive integer`);
+      if (t.status !== 'watched') errs.push(`${at}.watchOrder is only for watched titles`);
+      if (orders.has(t.watchOrder)) errs.push(`${at}.watchOrder ${t.watchOrder} is used twice`);
+      orders.add(t.watchOrder);
+    }
   });
   return errs;
 }
@@ -30,7 +37,7 @@ const statusOf = (list) => (list === 'later' ? 'later' : 'watched');
  * or an explicit `{ tmdbId, kind, title, year? }` (or a list of them) from a corrected search.
  * Confident matches need no decision (a decision still overrides). Returns `{ file, summary, pending }`.
  */
-export function buildTitles(matches, decisions = {}) {
+export function buildTitles(matches, decisions = {}, { prepend = [], numberWatched = false } = {}) {
   const titles = [];
   const seen = new Set();
   const summary = { watched: 0, later: 0, skipped: 0, manual: 0, pending: 0, duplicates: 0 };
@@ -42,6 +49,8 @@ export function buildTitles(matches, decisions = {}) {
     titles.push(entry);
     summary[statusOf(list)]++;
   };
+  // Extra entries missing from the list (e.g. the first film watched together) go first, in order.
+  for (const p of prepend) push({ ...p }, p.status === 'later' ? 'later' : 'watched');
   for (const m of matches) {
     const d = decisions[m.id];
     const status = statusOf(m.list);
@@ -62,6 +71,11 @@ export function buildTitles(matches, decisions = {}) {
       summary.pending++;
       pending.push(m.id);
     }
+  }
+  // The Keep list is in watch order, first to latest; parts of one line stay consecutive.
+  if (numberWatched) {
+    let n = 0;
+    for (const t of titles) if (t.status === 'watched') t.watchOrder = ++n;
   }
   const file = { format: TITLES_FORMAT, titles };
   const problems = validateTitlesFile(file);
