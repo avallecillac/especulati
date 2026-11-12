@@ -86,6 +86,7 @@ export function reconcileTitles(snap: ReconcileSnapshot | null, cmd: Extract<Com
     const fields: Record<string, FieldValue> = {};
     for (const [col, lv, sv] of [
       ['verdict', lr.row.verdict, sr?.row.verdict ?? null],
+      ['stars', lr.row.stars, sr?.row.stars ?? null],
       ['review', lr.row.review, sr?.row.review ?? null],
     ] as const) {
       if (loserWins(lr.clocks, sr?.clocks ?? empty, col) && (sr === undefined || lv !== sv)) fields[col] = lv;

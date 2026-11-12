@@ -3,7 +3,7 @@
 // status, season and rating edits, remove versus rate, and link plus reconcile; since personal lists also "Just me"
 // adds, personal statuses and seasons, and recommendations with withdrawals and answers; delivery in random order with
 // duplicates, partly through the relay and partly directly. Every database must end identical. A second suite adds a
-// peer on the previous version (it skips tier-`p` batches), then upgrades it (D4).
+// peer on the previous version (it skips tier-`p` and tier-`r` batches), then upgrades it (D4, cinefilo-stars D3).
 import { describe, expect, it } from 'vitest';
 import { applyRemoteOps } from '@especulati/db-kit';
 import { cinefiloSchema, manualTitleLabel, memberStatusLabel, parseRemoteOp, ratingLabel, recommendationLabel, tmdbTitleLabel, type Kind, type OpWire } from '@especulati/cinefilo-core';
@@ -108,7 +108,9 @@ async function localWrite(rng: () => number, p: Peer, member: string, personal =
     dispatch({ kind: 'SetCurrentSeason', titleId: pick(rng, live).id, season: int(rng, 1, 4) });
   } else if (k < 0.68) {
     const titleId = pick(rng, live).id;
-    dispatch({ kind: 'SetVerdict', titleId, memberId: member, ratingId: hashId(ratingLabel(titleId, member)), verdict: pick(rng, ['like', 'meh', 'dislike', null] as const) });
+    // A previous-version device (`personal` off) cannot write stars: its rating write is a review instead.
+    if (personal) dispatch({ kind: 'SetStars', titleId, memberId: member, ratingId: hashId(ratingLabel(titleId, member)), stars: pick(rng, [1, 2, 5, 9, 10, null] as const) });
+    else dispatch({ kind: 'SetReview', titleId, memberId: member, ratingId: hashId(ratingLabel(titleId, member)), review: `Review ${int(rng, 0, 99)}` });
   } else if (k < 0.78) {
     const titleId = pick(rng, live).id;
     dispatch({ kind: 'SetReview', titleId, memberId: member, ratingId: hashId(ratingLabel(titleId, member)), review: rng() < 0.2 ? '' : `Review ${int(rng, 0, 99)}` });
@@ -271,7 +273,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
         last = b.seq;
         const opened = await open(b, keys.encKey, keys.spaceId, cinefiloSyncApp.aadPrefix);
         if (!opened.ok) { skipped++; continue; }
-        const unreadable = opened.value.ops.some((w) => !OLD_TABLES.has(w.tbl) || (w.tbl === 'titles' && (('status' in w.fields && w.fields['status'] === null) || 'watch_order' in w.fields)));
+        const unreadable = opened.value.ops.some((w) => !OLD_TABLES.has(w.tbl) || (w.tbl === 'titles' && (('status' in w.fields && w.fields['status'] === null) || 'watch_order' in w.fields)) || (w.tbl === 'ratings' && 'stars' in w.fields));
         if (unreadable) { skipped++; continue; }
         for (const w of opened.value.ops) {
           const r = parseRemoteOp(w, opened.value.device);
@@ -313,7 +315,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
     if (calm < 2) throw new Error('did not go quiet in 16 rounds');
   }
 
-  const totals = { personalOps: 0, skippedBatches: 0, oldWrites: 0 };
+  const totals = { personalOps: 0, starsOps: 0, skippedBatches: 0, oldWrites: 0 };
 
   async function oneOldRun(seed: number): Promise<void> {
     const rng = prng(seed + 7_000_000);
@@ -365,15 +367,26 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
           })
           .map((r) => r['row_id'] as string),
       );
+      // Likewise a rating row touched by a tier-r op (it carries `stars`): the old peer never reads that batch, so the row's
+      // updated_at, or the whole row when the stars op inserted it, may lag until the upgrade.
+      const laggingRatings = new Set(
+        a.raw
+          .selectObjects("SELECT row_id, fields_json FROM change_log WHERE tbl = 'ratings'")
+          .filter((r) => 'stars' in (JSON.parse(r['fields_json'] as string) as Record<string, unknown>))
+          .map((r) => r['row_id'] as string),
+      );
       const tables = ['titles', 'members', 'ratings'] as const;
       for (const tbl of tables) {
-        const ids = v.raw.selectValues(`SELECT id FROM ${tbl} ORDER BY id`).map(String).filter((id) => !(tbl === 'titles' && lagging.has(id)));
+        const ids = v.raw.selectValues(`SELECT id FROM ${tbl} ORDER BY id`).map(String).filter((id) => !(tbl === 'titles' && lagging.has(id)) && !(tbl === 'ratings' && laggingRatings.has(id)));
         if (rowsOf(v, tbl, ids) !== rowsOf(a, tbl, ids)) throw new Error(`old peer disagrees with a full peer on ${tbl} while personal ops are in flight`);
       }
       if (v.raw.selectValue('SELECT COUNT(*) FROM member_status') !== 0 || v.raw.selectValue('SELECT COUNT(*) FROM recommendations') !== 0) throw new Error('old peer applied a personal row');
       if (v.raw.selectValue('SELECT COUNT(*) FROM titles WHERE status IS NULL') !== 0) throw new Error('old peer applied a title without a Together status');
       const personalOps = Number(a.raw.selectValue("SELECT COUNT(*) FROM change_log WHERE tbl IN ('member_status', 'recommendations') OR (tbl = 'titles' AND fields_json LIKE '%\"status\":null%')"));
       totals.personalOps += personalOps;
+      const starsOps = Number(a.raw.selectValue("SELECT COUNT(*) FROM change_log WHERE tbl = 'ratings' AND fields_json LIKE '%\"stars\"%'"));
+      totals.starsOps += starsOps;
+      if (v.raw.selectValue('SELECT COUNT(*) FROM ratings WHERE stars IS NOT NULL') !== 0) throw new Error('old peer applied a stars value');
       const skipped = v.db.syncStore.syncMeta().status?.undecryptable ?? 0;
       totals.skippedBatches += skipped;
       if (personalOps > 0 && skipped === 0) throw new Error('the old peer should have skipped the personal batches');
@@ -404,6 +417,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
     }
     console.log(`previous-version peer: ${OLD_RUNS} runs in ${((performance.now() - t0) / 1000).toFixed(1)} s (${JSON.stringify(totals)})`);
     expect(totals.personalOps).toBeGreaterThan(0);
+    expect(totals.starsOps).toBeGreaterThan(0);
     expect(totals.skippedBatches).toBeGreaterThan(0);
     expect(totals.oldWrites).toBeGreaterThan(0);
   });

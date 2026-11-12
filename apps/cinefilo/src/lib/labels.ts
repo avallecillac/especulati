@@ -1,14 +1,4 @@
-import type { Kind, MemberStatus, Status, Verdict, VerdictFilter } from '@especulati/cinefilo-core';
-
-export const VERDICT_LABEL: Readonly<Record<Verdict, string>> = { like: 'Like', meh: 'Meh', dislike: "Didn't like" };
-
-export const FILTER_LABEL: Readonly<Record<VerdictFilter, string>> = {
-  bothLiked: 'Both liked',
-  disagree: 'Disagree',
-  onlyMe: 'Only me',
-  partnerNotRated: "Partner hasn't rated",
-  nobody: 'Nobody rated',
-};
+import type { Kind, MemberStatus, Status } from '@especulati/cinefilo-core';
 
 export const STATUS_LABEL: Readonly<Record<Status, string>> = { later: 'Watch later', watching: 'Watching', watched: 'Watched', dropped: 'Dropped' };
 

@@ -26,7 +26,7 @@ export function member(p: Partial<MemberRow> = {}): MemberRow {
 }
 export function rating(p: Partial<RatingRow> = {}): RatingRow {
   return {
-    id: ratingId(1), titleId: titleId(1), memberId: memberId(1), verdict: null, review: null,
+    id: ratingId(1), titleId: titleId(1), memberId: memberId(1), verdict: null, stars: null, review: null,
     updatedAt: instant('2026-09-02T10:00:00.000Z'), deletedAt: null, ...p,
   };
 }

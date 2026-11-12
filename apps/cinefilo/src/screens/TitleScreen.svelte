@@ -1,17 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { REVIEW_MAX, VERDICTS, type MemberStatus, type Status, type Verdict } from '@especulati/cinefilo-core';
+  import { REVIEW_MAX, type MemberStatus, type Status } from '@especulati/cinefilo-core';
   import type { TitleDetail } from '@especulati/cinefilo-db';
   import { findByTmdb, title as loadTitle } from '../lib/dbClient.ts';
   import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
   import { todayLocal, yesterdayLocal } from '../lib/clock.ts';
-  import { KIND_LABEL, STATUS_LABEL, VERDICT_LABEL, memberStatusesFor, statusesFor } from '../lib/labels.ts';
+  import { KIND_LABEL, STATUS_LABEL, memberStatusesFor, statusesFor } from '../lib/labels.ts';
   import { listView } from '../lib/listView.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
-  import VerdictMark from './Verdict.svelte';
 
   let { id }: { id: string } = $props();
 
@@ -70,9 +69,9 @@
 
   const stepSeason = (to: number) => run({ kind: 'SetCurrentSeason', titleId: id, season: to });
 
-  function verdict(v: Verdict) {
-    const next = mine?.verdict === v ? null : v;
-    void run({ kind: 'SetVerdict', titleId: id, verdict: next });
+  // Placeholder until the star control (cinefilo-stars 2.1): five whole-star buttons that write half stars.
+  function setStars(n: number | null) {
+    void run({ kind: 'SetStars', titleId: id, stars: n });
   }
 
   async function saveReview() {
@@ -170,12 +169,9 @@
       {#if mine}
         <div class="col" data-testid="rating-mine">
           <h3>{mine.name} <span class="muted small">(you)</span></h3>
-          <div class="verdicts-big" role="group" aria-label="Your verdict">
-            {#each VERDICTS as v (v)}
-              <button type="button" class={`verdict ${v}`} aria-pressed={mine.verdict === v} onclick={() => verdict(v)}>
-                <VerdictMark {v} decorative />
-                {VERDICT_LABEL[v]}
-              </button>
+          <div class="stars-tmp" role="group" aria-label="Your rating">
+            {#each [2, 4, 6, 8, 10] as n (n)}
+              <button type="button" aria-pressed={mine.stars === n} onclick={() => setStars(mine.stars === n ? null : n)}>{n / 2}</button>
             {/each}
           </div>
           <label for="my-review">Your review</label>
@@ -193,8 +189,8 @@
       {#each others as o (o.memberId)}
         <div class="col" data-testid="rating-partner">
           <h3>{o.name}</h3>
-          {#if o.verdict || o.review}
-            {#if o.verdict}<p class={`verdict-read ${o.verdict}`}><VerdictMark v={o.verdict} decorative /> {VERDICT_LABEL[o.verdict]}</p>{/if}
+          {#if o.stars || o.review}
+            {#if o.stars}<p class="verdict-read" role="img" aria-label={`${o.name}: ${o.stars / 2} stars`}>★ {o.stars / 2}</p>{/if}
             {#if o.review}<p class="review">{o.review}</p>{/if}
           {:else}
             <p class="muted">Not rated yet</p>

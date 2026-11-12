@@ -9,6 +9,8 @@ export type NonEmptyTitle = Brand<string, 'NonEmptyTitle'>;
 export type MemberName = Brand<string, 'MemberName'>;
 export type Review = Brand<string, 'Review'>;
 export type Season = Brand<number, 'Season'>;
+/** A rating in half stars: a whole number 1..10 (1 = 0.5 stars, 10 = 5 stars). */
+export type Stars = Brand<number, 'Stars'>;
 /** Calendar day as experienced by the user, YYYY-MM-DD. Never derived from UTC. */
 export type LocalDate = Brand<string, 'LocalDate'>;
 /** UTC ISO-8601 with Z. */
@@ -31,6 +33,8 @@ export const TITLE_MAX = 500;
 export const MEMBER_NAME_MAX = 50;
 export const REVIEW_MAX = 1000;
 export const SEASON_MAX = 1000;
+export const STARS_MIN = 1;
+export const STARS_MAX = 10;
 
 const UUID_RE = new RegExp(`^${UUID_PATTERN}$`);
 const LOCAL_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -86,6 +90,11 @@ export function parseReview(input: string | null | undefined): Result<Review | n
 /** "Whole number, 1–1000" (the upper bound against a known season count needs the title) */
 export function parseSeason(n: number): Result<Season, ParseError> {
   return Number.isInteger(n) && n >= 1 && n <= SEASON_MAX ? ok(n as Season) : fail('season', `must be a whole number from 1 to ${SEASON_MAX}`);
+}
+
+/** "Whole number of half stars, 1–10" */
+export function parseStars(n: unknown): Result<Stars, ParseError> {
+  return typeof n === 'number' && Number.isInteger(n) && n >= STARS_MIN && n <= STARS_MAX ? ok(n as Stars) : fail('stars', `must be a whole number from ${STARS_MIN} to ${STARS_MAX}`);
 }
 
 const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;

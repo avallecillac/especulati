@@ -20,21 +20,21 @@ describe('reconcile (4.2)', () => {
     const manual = addManual(a, 'The Matrix', { year: 1999 });
     a.tick();
     expect(a.db.dispatch({ kind: 'LinkToTmdb', titleId: manual, tmdbId: 603, details: { runtimeMin: 136 } }, a.env).ok).toBe(true);
-    rate(a, manual, 'like', 'whoa');
+    rate(a, manual, 9, 'whoa');
     const tmdb = tmdbId('movie', 603);
     b.tick();
     expect(b.db.dispatch({ kind: 'AddTitle', titleId: tmdb, mediaKind: 'movie', title: 'The Matrix', tmdbId: 603, year: 1999, addedBy: BEN }, b.env).ok).toBe(true);
-    rate(b, tmdb, 'dislike', 'meh actually');
+    rate(b, tmdb, 2, 'meh actually');
 
     await untilQuiet([a, b]);
     for (const p of [a, b]) {
       const live = p.db.list('later');
       expect(live.map((i) => i.id)).toEqual([tmdb]); // the TMDB-derived id survives
       const d = p.db.title(tmdb)!;
-      expect(d.ratings.map((r) => [r.name, r.verdict, r.review])).toEqual(
+      expect(d.ratings.map((r) => [r.name, r.stars, r.review])).toEqual(
         p === a
-          ? [['Ana', 'like', 'whoa'], ['Ben', 'dislike', 'meh actually']]
-          : [['Ben', 'dislike', 'meh actually'], ['Ana', 'like', 'whoa']],
+          ? [['Ana', 9, 'whoa'], ['Ben', 2, 'meh actually']]
+          : [['Ben', 2, 'meh actually'], ['Ana', 9, 'whoa']],
       );
       expect(p.raw.selectValue('SELECT merged_into FROM titles WHERE id = ?', [manual])).toBe(tmdb);
       expect(p.db.title(manual)).toBeNull();

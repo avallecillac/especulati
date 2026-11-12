@@ -11,7 +11,7 @@ type Of<K extends Command['kind']> = Extract<Command, { kind: K }>;
  */
 export type UiCommand =
   | Omit<Of<'AddTitle'>, 'titleId' | 'addedBy' | 'memberStatusId'>
-  | Omit<Of<'SetVerdict'>, 'memberId' | 'ratingId'>
+  | Omit<Of<'SetStars'>, 'memberId' | 'ratingId'>
   | Omit<Of<'SetReview'>, 'memberId' | 'ratingId'>
   | Omit<Of<'SetMyStatus'>, 'memberId' | 'memberStatusId'>
   | Omit<Of<'SetMySeason'>, 'memberId' | 'memberStatusId'>
@@ -19,7 +19,7 @@ export type UiCommand =
   | Omit<Of<'AnswerRecommendation'>, 'memberId' | 'memberStatusId'>
   | Exclude<
       Command,
-      | Of<'AddTitle'> | Of<'SetVerdict'> | Of<'SetReview'> | Of<'SetMyStatus'> | Of<'SetMySeason'> | Of<'Recommend'> | Of<'AnswerRecommendation'> | Of<'ReconcileTitles'>
+      | Of<'AddTitle'> | Of<'SetStars'> | Of<'SetReview'> | Of<'SetMyStatus'> | Of<'SetMySeason'> | Of<'Recommend'> | Of<'AnswerRecommendation'> | Of<'ReconcileTitles'>
     >;
 
 type Resolved = { ok: true; cmd: Command } | { ok: false; error: Rejection };
@@ -46,7 +46,7 @@ export async function resolveCommand(me: string | null, cmd: UiCommand, partner:
       if (me === null || partner === null) return { ok: false, error: { kind: 'UnknownMember' } };
       return { ok: true, cmd: { ...cmd, fromMember: me, toMember: partner, recommendationId: await recommendationIdFor(cmd.titleId, me, partner) } };
     }
-    case 'SetVerdict':
+    case 'SetStars':
     case 'SetReview': {
       if (me === null) return { ok: false, error: { kind: 'UnknownMember' } };
       const ratingId = await ratingIdFor(cmd.titleId, me);

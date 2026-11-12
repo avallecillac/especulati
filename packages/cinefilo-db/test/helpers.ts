@@ -77,10 +77,11 @@ export function addManual(t: TestDb, title: string, extra: Partial<{ year: numbe
 
 export const ratingIdOf = (titleId: string, memberId: string): string => hashId(`cinefilo-rating-v1|${titleId}|${memberId}`);
 
-export function rate(t: TestDb, titleId: string, verdict: 'like' | 'meh' | 'dislike' | null, review?: string): void {
+/** `stars` are half stars, 1..10 (null clears). */
+export function rate(t: TestDb, titleId: string, stars: number | null, review?: string): void {
   const memberId = t.db.memberId!;
   t.tick();
-  const r1 = t.db.dispatch({ kind: 'SetVerdict', titleId, memberId, ratingId: ratingIdOf(titleId, memberId), verdict }, t.env);
+  const r1 = t.db.dispatch({ kind: 'SetStars', titleId, memberId, ratingId: ratingIdOf(titleId, memberId), stars }, t.env);
   if (!r1.ok) throw new Error(`rate: ${r1.error.kind}`);
   if (review !== undefined) {
     t.tick();

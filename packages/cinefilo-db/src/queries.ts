@@ -1,7 +1,6 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import {
-  filterByVerdict,
-  type Instant, type Kind, type LocalDate, type MemberRow, type MemberStatus, type Status, type TitleRow, type Verdict, type VerdictFilter,
+  type Instant, type Kind, type LocalDate, type MemberRow, type MemberStatus, type Stars, type Status, type TitleRow,
 } from '@especulati/cinefilo-core';
 import { readMeta } from '@especulati/db-kit';
 import { intOrNull, rowToMember, rowToMemberStatus, rowToRating, rowToRecommendation, rowToTitle, text, textOrNull } from './snapshot.ts';
@@ -39,13 +38,13 @@ export interface ListItem {
   readonly seasonCount: number | null;
   /** Together Watched only: the title's number in the shared history (#1 = first watched together); null when it has none. */
   readonly watchOrder: number | null;
-  /** This device's member's verdict (null = none). */
-  readonly mine: Verdict | null;
+  /** This device's member's rating in half stars, 1..10 (null = not rated). */
+  readonly mine: Stars | null;
   /** Who has written a review of this title (cinefilo-feedback-1: the review mark in rows and tiles). */
   readonly reviewedByMe: boolean;
   readonly reviewedByPartner: boolean;
-  /** The partner's verdict (null = none). */
-  readonly partner: Verdict | null;
+  /** The partner's rating in half stars (null = not rated). */
+  readonly partner: Stars | null;
 }
 
 export interface MemberView {
@@ -58,7 +57,8 @@ export interface MemberView {
 export interface RatingView {
   readonly memberId: string;
   readonly name: string;
-  readonly verdict: Verdict | null;
+  /** Half stars, 1..10 (null = not rated). */
+  readonly stars: Stars | null;
   readonly review: string | null;
   /** True for the device's member: the only column the UI lets the user edit. */
   readonly mine: boolean;
@@ -143,10 +143,10 @@ const partnerId = (db: Database): string | null => members(db).find((m) => !m.me
 const scopeMember = (db: Database, scope: Exclude<ListScope, 'together'>): string | null => (scope === 'me' ? currentMemberId(db) : partnerId(db));
 
 /**
- * Live titles of a tab with both verdicts; `filter` applies the verdict-agreement chips. `scope` picks the list:
+ * Live titles of a tab with both members' stars. `scope` picks the list:
  * Together (titles with a Together status; those with status NULL are excluded), or a member's personal list.
  */
-export function list(db: Database, tab: ListTab, filter?: VerdictFilter, scope: ListScope = 'together'): ListItem[] {
+export function list(db: Database, tab: ListTab, scope: ListScope = 'together'): ListItem[] {
   const me = currentMemberId(db);
   const partner = partnerId(db);
   let rows: { t: TitleRow; status: Status; watchedOn: LocalDate | null; currentSeason: number | null }[];
@@ -180,16 +180,16 @@ export function list(db: Database, tab: ListTab, filter?: VerdictFilter, scope: 
     inScope = `t.id IN (SELECT title_id FROM member_status WHERE member_id = ? AND deleted_at IS NULL AND status IN (${marks}))`;
     scopeParams = [who, ...statuses];
   }
-  const verdicts = new Map<string, Verdict>();
+  const starsBy = new Map<string, Stars>();
   const reviewed = new Set<string>();
   for (const r of db.selectObjects(
-    `SELECT r.title_id, r.member_id, r.verdict, r.review FROM ratings r JOIN titles t ON t.id = r.title_id
-      WHERE r.deleted_at IS NULL AND (r.verdict IS NOT NULL OR r.review IS NOT NULL) AND t.deleted_at IS NULL AND t.merged_into IS NULL AND ${inScope}`,
+    `SELECT r.title_id, r.member_id, r.stars, r.review FROM ratings r JOIN titles t ON t.id = r.title_id
+      WHERE r.deleted_at IS NULL AND (r.stars IS NOT NULL OR r.review IS NOT NULL) AND t.deleted_at IS NULL AND t.merged_into IS NULL AND ${inScope}`,
     scopeParams,
   )) {
     const key = `${text(r['title_id'], 'title_id')}|${text(r['member_id'], 'member_id')}`;
-    const v = textOrNull(r['verdict'], 'verdict');
-    if (v !== null) verdicts.set(key, v as Verdict);
+    const v = intOrNull(r['stars'], 'stars');
+    if (v !== null) starsBy.set(key, v as Stars);
     if (textOrNull(r['review'], 'review')?.trim()) reviewed.add(key);
   }
   const ranks = scope === 'together' && tab === 'watched' ? watchRanks(db) : new Map<string, number>();
@@ -201,12 +201,12 @@ export function list(db: Database, tab: ListTab, filter?: VerdictFilter, scope: 
   const items: ListItem[] = rows.map(({ t, status, watchedOn, currentSeason }) => ({
     id: t.id, kind: t.kind, title: t.title, year: t.year, posterUrl: t.posterUrl, status, watchedOn, currentSeason, seasonCount: t.seasonCount,
     watchOrder: ranks.get(t.id) ?? null,
-    mine: me ? (verdicts.get(`${t.id}|${me}`) ?? null) : null,
+    mine: me ? (starsBy.get(`${t.id}|${me}`) ?? null) : null,
     reviewedByMe: me !== null && reviewed.has(`${t.id}|${me}`),
     reviewedByPartner: partner !== null && reviewed.has(`${t.id}|${partner}`),
-    partner: partner ? (verdicts.get(`${t.id}|${partner}`) ?? null) : null,
+    partner: partner ? (starsBy.get(`${t.id}|${partner}`) ?? null) : null,
   }));
-  return filter ? filterByVerdict(filter, items, (i) => [i.mine, i.partner]) : items;
+  return items;
 }
 
 const recommendationState = (r: { answered: string | null; withdrawnAt: string | null }): RecommendationState =>
@@ -255,7 +255,7 @@ export function titleDetail(db: Database, id: string): TitleDetail | null {
   const live = members(db);
   const ratings = live.map((m) => {
     const x = byMember.get(m.id);
-    return { memberId: m.id, name: m.name, verdict: x?.verdict ?? null, review: x?.review ?? null, mine: m.me };
+    return { memberId: m.id, name: m.name, stars: x?.stars ?? null, review: x?.review ?? null, mine: m.me };
   });
   const statusByMember = new Map(
     db.selectObjects('SELECT * FROM member_status WHERE title_id = ? AND deleted_at IS NULL', [id]).map(rowToMemberStatus).map((x) => [x.memberId as string, x]),

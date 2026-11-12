@@ -6,7 +6,6 @@ export * from './rows.ts';
 export * from './commands.ts';
 export * from './decide.ts';
 export * from './reconcile.ts';
-export * from './filters.ts';
 export * from './remoteOps.ts';
 export * from './export.ts';
 export * from './titlesFile.ts';

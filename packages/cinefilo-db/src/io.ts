@@ -63,7 +63,7 @@ export function importText(
     if (!missing('ratings', r.id)) { present++; continue; }
     changes.push({
       tbl: 'ratings', rowId: r.id,
-      fields: { title_id: r.titleId, member_id: r.memberId, verdict: r.verdict, review: r.review, updated_at: r.updatedAt, deleted_at: r.deletedAt },
+      fields: { title_id: r.titleId, member_id: r.memberId, verdict: r.verdict, ...(r.stars !== null ? { stars: r.stars } : {}), review: r.review, updated_at: r.updatedAt, deleted_at: r.deletedAt },
     });
   }
   for (const s of f.memberStatus) {

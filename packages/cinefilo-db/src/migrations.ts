@@ -118,7 +118,18 @@ const MIGRATION_2 = `
   UPDATE meta SET value = json_set(value, '$.undecryptable', 0) WHERE key = 'sync_status' AND json_valid(value);
 `;
 
-export const MIGRATIONS: readonly string[] = [SYNC_BOOKKEEPING_DDL + MIGRATION_1, MIGRATION_2];
+/**
+ * Schema v3 (cinefilo-stars D1): `ratings.stars`, half stars as integers 1..10 (NULL = not rated). `verdict` stays, dormant.
+ * The same one-time cursor reset as v2, so a device that skipped tier-`r` batches on the previous version re-reads the space.
+ */
+const MIGRATION_3 = `
+  ALTER TABLE ratings ADD COLUMN stars INTEGER CHECK (stars IS NULL OR (stars BETWEEN 1 AND 10));
+
+  UPDATE meta SET value = '0' WHERE key = 'sync_cursor';
+  UPDATE meta SET value = json_set(value, '$.undecryptable', 0) WHERE key = 'sync_status' AND json_valid(value);
+`;
+
+export const MIGRATIONS: readonly string[] = [SYNC_BOOKKEEPING_DDL + MIGRATION_1, MIGRATION_2, MIGRATION_3];
 export const SCHEMA_VERSION = MIGRATIONS.length;
 
 /** `to` stops early (test hook for building an older-version fixture). */

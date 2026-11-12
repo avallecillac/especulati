@@ -34,7 +34,7 @@ describe('redaction (4.3)', () => {
     const secrets = [code, a.engine.showCode()!.qr, b64(secret), Buffer.from(secret).toString('hex'), Buffer.from(secret).toString('base64url'), keys.authToken, TMDB_KEY];
 
     const film = addManual(a, TITLE, { year: 2001 });
-    rate(a, film, 'like', 'review text');
+    rate(a, film, 9, 'review text');
 
     // Errors from every failure mode a user (or the network) can cause.
     const b = makePeer(2, relay, BEN);
@@ -55,7 +55,7 @@ describe('redaction (4.3)', () => {
     }
     relay.before = undefined;
     // A rejected command, a failed import and a failed page apply.
-    seen(a.db.dispatch({ kind: 'SetVerdict', titleId: film, memberId: BEN, ratingId: ANA, verdict: 'like' }, a.env));
+    seen(a.db.dispatch({ kind: 'SetStars', titleId: film, memberId: BEN, ratingId: ANA, stars: 9 }, a.env));
     seen(a.db.import(`{"format":"cinefilo/v1","x":"${TMDB_KEY}"}`, a.env));
     seen(a.db.import(TMDB_KEY, a.env));
     try {

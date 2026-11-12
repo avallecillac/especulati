@@ -29,11 +29,11 @@ describe('local decisions (3.2)', () => {
     const t = openTestDb(1, ANA);
     seedMembers(t, ANA);
     const id = addManual(t, 'Heat');
-    const r = t.db.dispatch({ kind: 'SetVerdict', titleId: id, memberId: uuid(0xb1), ratingId: uuid(77), verdict: 'like' }, t.env);
+    const r = t.db.dispatch({ kind: 'SetStars', titleId: id, memberId: uuid(0xb1), ratingId: uuid(77), stars: 8 }, t.env);
     expect(r).toEqual({ ok: false, error: { kind: 'NotYourRating' } });
     expect(t.raw.selectValue('SELECT COUNT(*) FROM ratings')).toBe(0);
-    rate(t, id, 'like');
-    expect(t.raw.selectValue('SELECT verdict FROM ratings')).toBe('like');
+    rate(t, id, 8);
+    expect(t.raw.selectValue('SELECT stars FROM ratings')).toBe(8);
   });
 });
 

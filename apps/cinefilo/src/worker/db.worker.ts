@@ -225,7 +225,7 @@ async function erase(d: CinefiloDb): Promise<void> {
 function runQuery(d: CinefiloDb, q: Query): unknown {
   switch (q.name) {
     case 'list':
-      return d.list(q.tab, q.filter, q.scope);
+      return d.list(q.tab, q.scope);
     case 'pendingRecommendations':
       return d.pendingRecommendations();
     case 'title':

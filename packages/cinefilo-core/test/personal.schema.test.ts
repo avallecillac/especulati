@@ -21,6 +21,10 @@ describe('personal lists in the sync schema (D1, D4)', () => {
     expect(tierOf('titles', { title: 'x' })).toBe('base');
     expect(tierOf('members', { name: 'x' })).toBe('base');
     expect(tierOf('ratings', { verdict: null })).toBe('base');
+    expect(tierOf('ratings', { review: 'x', updated_at: 'y' })).toBe('base');
+    expect(tierOf('ratings', { stars: 4 })).toBe('r');
+    expect(tierOf('ratings', { stars: null })).toBe('r');
+    expect(tierOf('ratings', { title_id: 'a', member_id: 'b', stars: 3, updated_at: 'y' })).toBe('r');
     expect(cinefiloSchema.tierOf('member_status', {})).toBe('p');
   });
   it('titles.status may be null on the wire, and only there', () => {

@@ -1,27 +1,22 @@
 <script lang="ts">
   import { onMount, tick, untrack } from 'svelte';
-  import type { VerdictFilter } from '@especulati/cinefilo-core';
   import type { ListItem, ListScope, ListTab, PendingRecommendation } from '@especulati/cinefilo-db';
   import { list, pendingRecommendations } from '../lib/dbClient.ts';
   import { display, setLayout, setWatchedOrder } from '../lib/layout.svelte.ts';
   import { listView } from '../lib/listView.svelte.ts';
-  import { FILTER_LABEL, KIND_LABEL, VERDICT_LABEL } from '../lib/labels.ts';
+  import { KIND_LABEL } from '../lib/labels.ts';
   import { matchesQuery } from '../lib/search.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
-  import FilterSheet from './FilterSheet.svelte';
   import Poster from './Poster.svelte';
   import SeasonProgress from './SeasonProgress.svelte';
-  import Verdict from './Verdict.svelte';
 
   let { tab, onadd }: { tab: ListTab; onadd: () => void } = $props();
 
   const HEADING: Record<ListTab, string> = { later: 'Watch later', watching: 'Watching', watched: 'Watched' };
 
-  let filtering = $state(false);
   let items = $state<ListItem[] | null>(null);
   let recs = $state<PendingRecommendation[]>([]);
   const scope = $derived(listView.scope);
-  const filter = $derived(listView.filter);
   const query = $derived(listView.query);
   const partnerMember = $derived(app.members.find((m) => !m.me) ?? null);
   const partner = $derived(partnerMember?.name ?? 'Partner');
@@ -30,13 +25,12 @@
   const myInitial = $derived(initial(app.members.find((m) => m.me)?.name ?? 'Me'));
   const partnerInitial = $derived(initial(partner));
 
-  // Reload whenever anything was written, or the filter changes. `rev` is read to subscribe.
+  // Reload whenever anything was written, or the scope changes. `rev` is read to subscribe.
   $effect(() => {
     void app.rev;
-    const f = filter;
     const sc = scope;
     let stale = false;
-    void list(tab, f ?? undefined, sc).then((r) => {
+    void list(tab, sc).then((r) => {
       if (!stale && r.ok) items = r.value;
     });
     // Recommendations to me wait at the top of my own Watch later.
@@ -127,11 +121,6 @@
   const visibleRecs = $derived(recs.filter((r) => matchesQuery(r.title, query)));
   const grid = $derived(display.layout === 'grid');
 
-  function setFilter(f: VerdictFilter | null) {
-    listView.filter = f;
-    filtering = false;
-  }
-
   /** `aria-label` of the review mark: who wrote a review (either member, or both). */
   function reviewLabel(i: ListItem): string | null {
     if (i.reviewedByMe && i.reviewedByPartner) return 'Reviewed by both';
@@ -207,24 +196,9 @@
       </button>
     </div>
   {/if}
-  <button type="button" class="filter-btn" class:active={filter !== null} aria-label="Filter" aria-haspopup="dialog" aria-expanded={filtering} onclick={() => (filtering = true)}>
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16l-6 7v6l-4 2v-8z" /></svg>
-    Filter
-    {#if filter !== null}<span class="dot" aria-hidden="true"></span>{/if}
-  </button>
 </div>
 
-{#if filter !== null}
-  <div class="active-filters">
-    <button type="button" class="chip active" aria-label={`Remove filter ${FILTER_LABEL[filter]}`} onclick={() => (listView.filter = null)}>{FILTER_LABEL[filter]} &times;</button>
-  </div>
-{/if}
-
-{#if filtering}
-  <FilterSheet {filter} onpick={setFilter} onclose={() => (filtering = false)} />
-{/if}
-
-{#if visibleRecs.length > 0 && !filter}
+{#if visibleRecs.length > 0}
   <ul class="rows recs" aria-label="Recommended to you">
     {#each visibleRecs as r (r.id)}
       <li class="rec">
@@ -250,8 +224,8 @@
 {:else if visible === null || visible.length === 0}
   {#if query !== '' && items.length > 0 && visibleRecs.length === 0}
     <p class="empty">No titles match &ldquo;{query}&rdquo;.</p>
-  {:else if recs.length === 0 || filter}
-    <p class="empty">{filter ? 'Nothing matches this filter.' : scope === 'partner' ? `${partner} has nothing here yet.` : scope === 'me' ? 'Nothing here yet. Tap Add and choose Just me.' : 'Nothing here yet. Tap Add to put a movie or series on the list.'}</p>
+  {:else if recs.length === 0}
+    <p class="empty">{scope === 'partner' ? `${partner} has nothing here yet.` : scope === 'me' ? 'Nothing here yet. Tap Add and choose Just me.' : 'Nothing here yet. Tap Add to put a movie or series on the list.'}</p>
   {/if}
 {:else if grid}
   <ul class="grid" aria-label={HEADING[tab]}>
@@ -281,9 +255,8 @@
             {/if}
             <!-- Under the title, not beside it, so long titles get the row's full width. -->
             <span class="verdicts">
-              <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><Verdict v={i.mine} label={`You: ${i.mine ? VERDICT_LABEL[i.mine] : 'not rated'}`} /></span>
-              <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><Verdict v={i.partner} label={`${partner}: ${i.partner ? VERDICT_LABEL[i.partner] : 'not rated'}`} /></span>
-              {#if i.mine === 'like' && i.partner === 'like'}<span class="both" role="img" aria-label="You both loved it"></span>{/if}
+              <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><span role="img" aria-label={`You: ${i.mine ? i.mine / 2 + ' stars' : 'not rated'}`}>★ {i.mine ? i.mine / 2 : '–'}</span></span>
+              <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><span role="img" aria-label={`${partner}: ${i.partner ? i.partner / 2 + ' stars' : 'not rated'}`}>★ {i.partner ? i.partner / 2 : '–'}</span></span>
               {#if rl}{@render reviewMark(rl, i.reviewedByMe && i.reviewedByPartner)}{/if}
             </span>
           </span>

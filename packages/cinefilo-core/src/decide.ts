@@ -4,7 +4,7 @@ import { reconcileTitles } from './reconcile.ts';
 import { genresToDb, type TitleRow } from './rows.ts';
 import {
   fail, parseAnswer, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseMemberStatus, parseMemberStatusId, parseRatingId, parseRecommendationId, parseReview, parseSeason,
-  parseStatus, parseTitle, parseTitleId, parseVerdict, REVIEW_MAX, type Instant, type Kind, type Status,
+  parseStatus, parseTitle, parseTitleId, parseStars, REVIEW_MAX, type Instant, type Kind, type Status,
 } from './types.ts';
 
 type Decided = Result<Decision, Rejection>;
@@ -267,16 +267,16 @@ function ratingChange(snap: Snapshot, t: { titleId: string; memberId: string; ra
   return decided([{ tbl: 'ratings', rowId: t.ratingId, fields: { ...fields, ...edit, updated_at: now } }]);
 }
 
-function setVerdict(snap: Snapshot, cmd: Extract<Command, { kind: 'SetVerdict' }>, now: Instant): Decided {
+function setStars(snap: Snapshot, cmd: Extract<Command, { kind: 'SetStars' }>, now: Instant): Decided {
   const t = ownRatingTarget(snap, cmd);
   if (!t.ok) return t;
-  let verdict: string | null = null;
-  if (cmd.verdict !== null) {
-    const v = need(parseVerdict(cmd.verdict));
+  let stars: number | null = null;
+  if (cmd.stars !== null) {
+    const v = need(parseStars(cmd.stars));
     if (!v.ok) return v;
-    verdict = v.value;
+    stars = v.value;
   }
-  return ratingChange(snap, t.value, { verdict }, now);
+  return ratingChange(snap, t.value, { stars }, now);
 }
 
 function setReview(snap: Snapshot, cmd: Extract<Command, { kind: 'SetReview' }>, now: Instant): Decided {
@@ -430,8 +430,8 @@ export function decide(snapshot: Snapshot, cmd: Command, now: Instant): Decided 
       return setStatus(snapshot, cmd);
     case 'SetCurrentSeason':
       return setCurrentSeason(snapshot, cmd);
-    case 'SetVerdict':
-      return setVerdict(snapshot, cmd, now);
+    case 'SetStars':
+      return setStars(snapshot, cmd, now);
     case 'SetReview':
       return setReview(snapshot, cmd, now);
     case 'SetMyStatus':

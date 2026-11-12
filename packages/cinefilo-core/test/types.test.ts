@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseInstant, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseRatingId, parseReview, parseSeason, parseStatus,
-  parseTitle, parseTitleId, parseVerdict,
+  parseStars, parseTitle, parseTitleId, parseVerdict,
 } from '../src/index.ts';
 
 const U = '0000000a-0000-4000-8000-00000000000b';
@@ -32,6 +32,13 @@ describe('enums', () => {
     for (const s of ['like', 'meh', 'dislike']) expect(parseVerdict(s).ok).toBe(true);
     expect(parseVerdict('love').ok).toBe(false);
     expect(parseVerdict('').ok).toBe(false);
+  });
+});
+
+describe('Stars', () => {
+  it('whole half-star counts 1..10', () => {
+    for (let n = 1; n <= 10; n++) expect(parseStars(n).ok, String(n)).toBe(true);
+    for (const v of [0, 11, 2.5, -1, NaN, Infinity, '4', null, undefined, true]) expect(parseStars(v).ok, String(v)).toBe(false);
   });
 });
 

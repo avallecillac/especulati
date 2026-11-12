@@ -12,13 +12,13 @@ describe('sync wiring (4.1)', () => {
     const b = makePeer(2, relay, BEN);
     seedMembers(a, ANA);
     const film = addManual(a, 'Solaris', { year: 1972 });
-    rate(a, film, 'like', 'slow and wonderful');
+    rate(a, film, 9, 'slow and wonderful');
     expect((await a.engine.turnOn()).ok).toBe(true);
     expect((await b.engine.join(a.engine.showCode()!.code)).ok).toBe(true);
-    rate(b, film, 'dislike');
+    rate(b, film, 2);
     await untilQuiet([a, b]);
     expect(dump(a.raw)).toBe(dump(b.raw));
-    expect(b.db.title(film)!.ratings.map((r) => r.verdict).sort()).toEqual(['dislike', 'like']);
+    expect(b.db.title(film)!.ratings.map((r) => r.stars).sort()).toEqual([2, 9]);
 
     const keys = await deriveKeys((() => { const k = parseSyncCode(a.engine.showCode()!.code); if (!k.ok) throw new Error('code'); return k.value; })(), cinefiloSyncApp.salt);
     const batches = await relay.store.listBatches(keys.spaceId, 0, 1000);

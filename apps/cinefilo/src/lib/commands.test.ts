@@ -15,7 +15,7 @@ describe('resolveCommand', () => {
   });
 
   it('fills the rating id and the device member, never a member the UI names', async () => {
-    const r = await resolveCommand(ME, { kind: 'SetVerdict', titleId: FILM, verdict: 'like', ...({ memberId: 'someone else' } as object) });
+    const r = await resolveCommand(ME, { kind: 'SetStars', titleId: FILM, stars: 7, ...({ memberId: 'someone else' } as object) });
     expect(r).toMatchObject({ ok: true, cmd: { memberId: ME, ratingId: await ratingIdFor(FILM, ME) } });
   });
 

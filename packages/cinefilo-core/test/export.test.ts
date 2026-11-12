@@ -15,7 +15,7 @@ const sample = (): CinefiloExport => ({
   ],
   members: [member({ id: memberId(2), name: 'Lucía' as never }), member({ deletedAt: '2026-09-26T00:00:00.000Z' as never })],
   ratings: [
-    rating({ id: ratingId(1), verdict: 'like', review: 'Slow but great' as never }),
+    rating({ id: ratingId(1), verdict: 'like', stars: 9 as never, review: 'Slow but great' as never }),
     rating({ id: ratingId(2), memberId: memberId(2), verdict: null, review: null, deletedAt: '2026-09-26T00:00:00.000Z' as never }),
   ],
   memberStatus: [
@@ -40,6 +40,14 @@ describe('cinefilo/v1 export', () => {
     if (!r.ok) return;
     const norm = (x: CinefiloExport) => ({ ...x, titles: [...x.titles].sort((a, b) => (a.id < b.id ? -1 : 1)), members: [...x.members].sort((a, b) => (a.id < b.id ? -1 : 1)), ratings: [...x.ratings].sort((a, b) => (a.id < b.id ? -1 : 1)), memberStatus: [...x.memberStatus].sort((a, b) => (a.id < b.id ? -1 : 1)), recommendations: [...x.recommendations].sort((a, b) => (a.id < b.id ? -1 : 1)) });
     expect(r.value).toEqual(norm(sample()));
+  });
+  it('stars round-trip, and a file without the key reads as null', () => {
+    const r = parseExport(serializeExport(sample()));
+    expect(r.ok && r.value.ratings.find((x) => x.id === ratingId(1))?.stars).toBe(9);
+    const o = JSON.parse(serializeExport(sample()));
+    for (const x of o.ratings) delete x.stars;
+    const old = parseExport(JSON.stringify(o));
+    expect(old.ok && old.value.ratings.every((x) => x.stars === null)).toBe(true);
   });
   it('serialization is deterministic whatever the row order', () => {
     const s = sample();
@@ -87,6 +95,7 @@ describe('cinefilo/v1 export', () => {
     expect(mutate((x) => { x.titles[0].year = 'a'; })).toBe(false);
     expect(mutate((x) => { x.members[0].name = ''; })).toBe(false);
     expect(mutate((x) => { x.ratings[0].verdict = 'love'; })).toBe(false);
+    for (const v of [0, 11, 2.5, '4']) expect(mutate((x) => { x.ratings[0].stars = v; }), String(v)).toBe(false);
     expect(mutate((x) => { x.ratings[0].review = 'a'.repeat(1001); })).toBe(false);
     expect(mutate((x) => { delete x.ratings; })).toBe(false);
     expect(mutate((x) => { x.titles = {}; })).toBe(false);

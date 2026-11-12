@@ -1,5 +1,5 @@
 import type {
-  Answer, Instant, Kind, LocalDate, MemberId, MemberName, MemberStatus, MemberStatusId, NonEmptyTitle, RatingId, RecommendationId, Review, Status, TitleId, Verdict,
+  Answer, Instant, Kind, LocalDate, MemberId, MemberName, MemberStatus, MemberStatusId, NonEmptyTitle, RatingId, RecommendationId, Review, Stars, Status, TitleId, Verdict,
 } from './types.ts';
 
 /** A `titles` row as core sees it. `genres` is the decoded JSON array (the DB stores it as text). */
@@ -37,7 +37,10 @@ export interface RatingRow {
   readonly id: RatingId;
   readonly titleId: TitleId;
   readonly memberId: MemberId;
+  /** Dormant since cinefilo-stars: old devices may still write it, nothing displays or writes it locally. */
   readonly verdict: Verdict | null;
+  /** Half stars, 1..10. */
+  readonly stars: Stars | null;
   readonly review: Review | null;
   readonly updatedAt: Instant;
   readonly deletedAt: Instant | null;

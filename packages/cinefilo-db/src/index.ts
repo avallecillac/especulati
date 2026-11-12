@@ -1,6 +1,6 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import { SqliteSyncStore, applyChanges, readMeta, rollbackQuietly, writeMeta } from '@especulati/db-kit';
-import { cinefiloSchema, decide, err, ok, type Command, type Instant, type Rejection, type Result, type Table, type VerdictFilter, type Kind } from '@especulati/cinefilo-core';
+import { cinefiloSchema, decide, err, ok, type Command, type Instant, type Rejection, type Result, type Table, type Kind } from '@especulati/cinefilo-core';
 import type { DeviceId } from '@especulati/sync-core';
 import { exportData, exportText, importText, type ImportResult } from './io.ts';
 import { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
@@ -81,8 +81,8 @@ export class CinefiloDb {
   }
 
   /** `scope` defaults to Together; `me` and `partner` are the personal lists (the partner's is read-only for the UI). */
-  list(tab: ListTab, filter?: VerdictFilter, scope: ListScope = 'together'): ListItem[] {
-    return list(this.raw, tab, filter, scope);
+  list(tab: ListTab, scope: ListScope = 'together'): ListItem[] {
+    return list(this.raw, tab, scope);
   }
 
   /** Open recommendations to this device's member, newest first. */

@@ -29,6 +29,26 @@ describe('ReconcileTitles survivor', () => {
   });
 });
 
+describe('ReconcileTitles ratings carry stars', () => {
+  const ratings = (ls: number, ss: number) => [
+    R({ id: ratingId(1), titleId: A, memberId: memberId(1), stars: 8 as never, updatedAt: '2026-09-05T00:00:00.000Z' as never }, { stars: hlc(ls) }),
+    R({ id: ratingId(2), titleId: B, memberId: memberId(1), stars: 4 as never }, { stars: hlc(ss) }),
+  ];
+  it('copies a newer loser value onto the survivor rating', () => {
+    const c = changes(cmd(), { first: T({ id: A }), second: T({ id: B }), ratings: ratings(500, 100) });
+    expect(c[0]).toEqual({ tbl: 'ratings', rowId: ratingId(2), fields: { stars: 8, updated_at: '2026-09-05T00:00:00.000Z' } });
+  });
+  it('keeps the survivor value when it is newer', () => {
+    const c = changes(cmd(), { first: T({ id: A }), second: T({ id: B }), ratings: ratings(100, 500) });
+    expect(c.some((x) => x.tbl === 'ratings')).toBe(false);
+  });
+  it('creates the survivor row carrying stars when there is none', () => {
+    const rs = [R({ id: ratingId(1), titleId: A, memberId: memberId(2), stars: 3 as never }, { stars: hlc(7) })];
+    const c = changes(cmd({ ratingIds: [{ titleId: B, memberId: memberId(2), ratingId: ratingId(9) }] }), { first: T({ id: A }), second: T({ id: B }), ratings: rs });
+    expect(c[0]).toMatchObject({ tbl: 'ratings', rowId: ratingId(9), fields: { title_id: B, member_id: memberId(2), stars: 3 } });
+  });
+});
+
 describe('ReconcileTitles fields by greater HLC', () => {
   const survivorIsB = (loser: ClockedTitle, survivor: ClockedTitle) => changes(cmd(), { first: loser, second: survivor, ratings: [] });
   it('Link would duplicate: keeps the status that was changed most recently', () => {

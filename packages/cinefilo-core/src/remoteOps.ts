@@ -3,7 +3,7 @@ import {
 } from '@especulati/sync-core';
 import type { Table } from './commands.ts';
 import { genresFromDb } from './rows.ts';
-import { ANSWERS, isUuid, KINDS, MEMBER_STATUSES, REVIEW_MAX, STATUSES, VERDICTS } from './types.ts';
+import { ANSWERS, isUuid, KINDS, MEMBER_STATUSES, REVIEW_MAX, STARS_MAX, STARS_MIN, STATUSES, VERDICTS } from './types.ts';
 
 /**
  * Columns a Change (local or remote) may set, per table. Guards against building SQL from untrusted
@@ -16,7 +16,7 @@ export const WRITABLE_FIELDS: Readonly<Record<Table, ReadonlySet<string>>> = {
     'watched_on', 'current_season', 'watch_order', 'merged_into', 'added_by', 'created_at', 'deleted_at',
   ]),
   members: new Set(['name', 'created_at', 'deleted_at']),
-  ratings: new Set(['title_id', 'member_id', 'verdict', 'review', 'updated_at', 'deleted_at']),
+  ratings: new Set(['title_id', 'member_id', 'verdict', 'stars', 'review', 'updated_at', 'deleted_at']),
   member_status: new Set(['title_id', 'member_id', 'status', 'watched_on', 'current_season', 'updated_at', 'deleted_at']),
   recommendations: new Set(['title_id', 'from_member', 'to_member', 'created_at', 'withdrawn_at', 'answered', 'answered_at', 'deleted_at']),
 };
@@ -34,13 +34,15 @@ export const INSERT_FIELDS: Readonly<Record<Table, readonly string[]>> = {
  * Batch tier (personal-lists D4): a pushed batch never mixes tiers, so a device on an older version skips only the
  * batches it cannot read. `p` is the personal-lists tier: `member_status`, `recommendations`, and any `titles` op that
  * writes `status: null` (a title that is not on Together; the old schema refuses NULL). The key must be present with
- * a null value, so an insert without a Together status names `status` explicitly. Everything else is `base`.
+ * a null value, so an insert without a Together status names `status` explicitly. `r` is the cinefilo-stars tier: a
+ * `ratings` op that carries the `stars` key (an older allow-list refuses it). Everything else is `base`.
  */
-export function tierOf(tbl: Table, fields: Readonly<Record<string, FieldValue>>): 'base' | 'p' {
+export function tierOf(tbl: Table, fields: Readonly<Record<string, FieldValue>>): 'base' | 'p' | 'r' {
   if (tbl === 'member_status' || tbl === 'recommendations') return 'p';
   if (tbl === 'titles' && Object.prototype.hasOwnProperty.call(fields, 'status') && fields['status'] === null) return 'p';
   // cinefilo-feedback-1 D3: an older version's allow-list refuses `watch_order`, so any op that writes it is tier `p` too.
   if (tbl === 'titles' && Object.prototype.hasOwnProperty.call(fields, 'watch_order')) return 'p';
+  if (tbl === 'ratings' && Object.prototype.hasOwnProperty.call(fields, 'stars')) return 'r';
   return 'base';
 }
 
@@ -83,6 +85,8 @@ function checkValues(tbl: Table, f: Readonly<Record<string, FieldValue>>): Parse
   if (tbl === 'ratings') {
     const v = f['verdict'];
     if (v !== undefined && v !== null && !inEnum(VERDICTS, v)) return { field: 'verdict', reason: 'unknown verdict' };
+    const st = f['stars'];
+    if (st !== undefined && st !== null && !(typeof st === 'number' && Number.isInteger(st) && st >= STARS_MIN && st <= STARS_MAX)) return { field: 'stars', reason: 'unknown stars' };
     const r = f['review'];
     if (r !== undefined && r !== null && (typeof r !== 'string' || [...r].length > REVIEW_MAX)) return { field: 'review', reason: 'not a review of at most 1,000 characters' };
   }

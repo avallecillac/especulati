@@ -9,9 +9,9 @@ function seeded() {
   seedMembers(t, ANA);
   const a = addManual(t, 'Amélie', { year: 2001, status: 'watched', watchedOn: '2026-01-02' });
   const b = addManual(t, 'Gone Film');
-  rate(t, a, 'like', 'lovely');
+  rate(t, a, 9, 'lovely');
   t.db.setMeta('member_id', BEN);
-  rate(t, a, 'dislike');
+  rate(t, a, 2);
   t.db.setMeta('member_id', ANA);
   t.tick();
   t.db.dispatch({ kind: 'RemoveTitle', titleId: b }, t.env);
@@ -30,6 +30,26 @@ describe('export / import (3.5)', () => {
     expect(r).toEqual({ ok: true, value: { added: 2 + 2 + 2, present: 0 } });
     expect(logical(dst)).toBe(text);
     expect(dst.db.list('watched')).toHaveLength(1);
+  });
+
+  it('stars survive export → import, and the file carries them as half stars', () => {
+    const src = seeded();
+    const file = JSON.parse(logical(src)) as { ratings: { memberId: string; stars: number | null }[] };
+    expect(file.ratings.map((r) => r.stars).sort()).toEqual([2, 9]);
+    const dst = openTestDb(2);
+    expect(dst.db.import(logical(src), dst.env).ok).toBe(true);
+    expect(dst.raw.selectValues('SELECT stars FROM ratings ORDER BY stars').map(Number)).toEqual([2, 9]);
+  });
+
+  it('a file written before stars (no stars key) imports as not rated, in a base-tier op', () => {
+    const src = seeded();
+    const file = JSON.parse(logical(src)) as { ratings: Record<string, unknown>[] };
+    for (const r of file.ratings) delete r['stars'];
+    const dst = openTestDb(2);
+    expect(dst.db.import(JSON.stringify(file), dst.env).ok).toBe(true);
+    expect(dst.raw.selectValues('SELECT stars FROM ratings').every((v) => v === null)).toBe(true);
+    const tiers = dst.raw.selectValues("SELECT fields_json FROM change_log WHERE tbl = 'ratings'").map((j) => 'stars' in (JSON.parse(j as string) as object));
+    expect(tiers).toEqual([false, false]);
   });
 
   it('importing twice is a no-op', () => {

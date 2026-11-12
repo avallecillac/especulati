@@ -11,6 +11,14 @@ describe('remote-op allow-list', () => {
     expect(parseRemoteOp(op({ tbl: 'members', row: memberId(1), fields: { name: 'Ana' } }), DEV).ok).toBe(true);
     expect(parseRemoteOp(op({ tbl: 'ratings', fields: { verdict: 'like', review: 'ok', updated_at: '2026-01-01T00:00:00.000Z' } }), DEV).ok).toBe(true);
   });
+  it('stars: integers 1..10 or null; anything else is refused', () => {
+    for (const v of [1, 5, 10, null]) expect(parseRemoteOp(op({ tbl: 'ratings', fields: { stars: v } }), DEV).ok, String(v)).toBe(true);
+    for (const v of [0, 11, 2.5, '4', -3, true]) expect(parseRemoteOp(op({ tbl: 'ratings', fields: { stars: v as never } }), DEV).ok, String(v)).toBe(false);
+    expect(WRITABLE_FIELDS.ratings.has('stars')).toBe(true);
+    expect(WRITABLE_FIELDS.ratings.has('verdict')).toBe(true);
+    const r = parseRemoteOp(op({ tbl: 'ratings', fields: { stars: 11 } }), DEV);
+    expect(!r.ok && r.error).toEqual({ field: 'stars', reason: 'unknown stars' });
+  });
   it('rejects unknown tables, including prototype keys', () => {
     for (const tbl of ['items', 'meta', 'posters', 'field_clock', '__proto__', 'toString']) expect(parseRemoteOp(op({ tbl }), DEV).ok, tbl).toBe(false);
   });

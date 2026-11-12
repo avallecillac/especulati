@@ -26,15 +26,19 @@ function v1Fixture() {
 
 const TITLE_COLS = 'id, kind, title, original_title, year, tmdb_id, poster_url, genres, runtime_min, season_count, status, watched_on, current_season, merged_into, added_by, created_at, deleted_at';
 const dumpAll = (raw: ReturnType<typeof emptyDb>) =>
-  JSON.stringify([`SELECT ${TITLE_COLS} FROM titles ORDER BY 1, 2`, ...['members', 'ratings', 'field_clock', 'change_log', 'posters'].map((t) => `SELECT * FROM ${t} ORDER BY 1, 2`)].map((q) => raw.selectArrays(q)));
+  JSON.stringify([
+    `SELECT ${TITLE_COLS} FROM titles ORDER BY 1, 2`,
+    'SELECT id, title_id, member_id, verdict, review, updated_at, deleted_at FROM ratings ORDER BY 1, 2',
+    ...['members', 'field_clock', 'change_log', 'posters'].map((t) => `SELECT * FROM ${t} ORDER BY 1, 2`),
+  ].map((q) => raw.selectArrays(q)));
 
 describe('migration 2', () => {
   it('upgrades a v1 database: every row kept as it was, new tables and indexes added', () => {
     const { raw } = v1Fixture();
     const before = dumpAll(raw);
     migrate(raw);
-    expect(SCHEMA_VERSION).toBe(2);
-    expect(raw.selectValue('PRAGMA user_version')).toBe(2);
+    expect(SCHEMA_VERSION).toBe(3);
+    expect(raw.selectValue('PRAGMA user_version')).toBe(3);
     expect(dumpAll(raw)).toEqual(before);
     expect(names(raw, 'table')).toEqual(['change_log', 'field_clock', 'member_status', 'members', 'meta', 'posters', 'ratings', 'recommendations', 'sync_inbox', 'titles']);
     for (const i of ['idx_titles_status', 'idx_titles_tmdb', 'idx_member_status_list', 'idx_member_status_title', 'idx_recs_to']) expect(names(raw, 'index')).toContain(i);
@@ -67,11 +71,10 @@ describe('migration 2', () => {
     expect(raw.selectValues('SELECT watch_order FROM titles')).toEqual([null, null]);
     expect(() => raw.exec({ sql: 'UPDATE titles SET watch_order = 12 WHERE id = ?', bind: [T1] })).not.toThrow();
     expect(raw.selectValue('SELECT watch_order FROM titles WHERE id = ?', [T1])).toBe(12);
-    // a fresh database has it too, and there is no third migration
+    // a fresh database has it too
     const fresh = emptyDb();
     migrate(fresh);
     expect(fresh.selectValues('SELECT name FROM pragma_table_info(\'titles\')').map(String)).toContain('watch_order');
-    expect(SCHEMA_VERSION).toBe(2);
   });
 
   it('the new tables enforce their checks', () => {

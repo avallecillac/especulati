@@ -1,7 +1,7 @@
 import type { Change as SyncChange, FieldValue } from '@especulati/sync-core';
 import type { MemberRow, MemberStatusRow, RatingRow, RecommendationRow, TitleRow } from './rows.ts';
 import type { Hlc } from '@especulati/sync-core';
-import type { Answer, Kind, MemberStatus, Status, Verdict } from './types.ts';
+import type { Answer, Kind, MemberStatus, Status } from './types.ts';
 
 export type { FieldValue };
 export type Table = 'titles' | 'members' | 'ratings' | 'member_status' | 'recommendations';
@@ -48,9 +48,9 @@ export type Command =
   | { readonly kind: 'SetCurrentSeason'; readonly titleId: string; readonly season: number }
   /**
    * Ratings: `memberId` is the member whose rating is written; it must be the device's member
-   * (`Snapshot.deviceMemberId`). `ratingId` is derived in the shell from (title, member). `verdict` null clears.
+   * (`Snapshot.deviceMemberId`). `ratingId` is derived in the shell from (title, member). `stars` (whole half stars, 1..10) null clears.
    */
-  | { readonly kind: 'SetVerdict'; readonly titleId: string; readonly memberId: string; readonly ratingId: string; readonly verdict: Verdict | null }
+  | { readonly kind: 'SetStars'; readonly titleId: string; readonly memberId: string; readonly ratingId: string; readonly stars: number | null }
   /** `review` is raw input: trimmed, empty means none, at most 1,000 characters. */
   | { readonly kind: 'SetReview'; readonly titleId: string; readonly memberId: string; readonly ratingId: string; readonly review: string }
   /**

@@ -4,8 +4,8 @@ Checks = `pnpm typecheck`, eslint, depcruise (the `lint` script's paths), `pnpm 
 
 ## 1. Core and db
 
-- [ ] 1.1 Tests first (core, no mocks): `parseStars`; `SetStars` (insert carries the key, edit, clear, rejects 0/11/2.5/"4", someone else's rating → `NotYourRating`); allow-list accepts `stars` 1–10/null and refuses others; `tierOf` returns `r` for ratings ops with `stars`, unchanged otherwise; export round-trips `stars` and reads files without it; reconcile carries `stars` (D1–D4). Then implement; remove `SetVerdict` and `filters.ts` with their tests.
-- [ ] 1.2 Tests first (db, in-memory SQLite): migration 3 (column, CHECK, cursor reset; v2 → v3 test), `ListItem.mine/partner` and `RatingView.stars` from `stars`, an old verdict alone reads as not rated, `list()` without a filter, io import/export of `stars`; convergence with an old-version peer that skips tier `r` (1,000 runs, `pnpm test:convergence`). Then implement (D1, D5).
+- [x] 1.1 Tests first (core, no mocks): `parseStars`; `SetStars` (insert carries the key, edit, clear, rejects 0/11/2.5/"4", someone else's rating → `NotYourRating`); allow-list accepts `stars` 1–10/null and refuses others; `tierOf` returns `r` for ratings ops with `stars`, unchanged otherwise; export round-trips `stars` and reads files without it; reconcile carries `stars` (D1–D4). Then implement; remove `SetVerdict` and `filters.ts` with their tests.
+- [x] 1.2 Tests first (db, in-memory SQLite): migration 3 (column, CHECK, cursor reset; v2 → v3 test), `ListItem.mine/partner` and `RatingView.stars` from `stars`, an old verdict alone reads as not rated, `list()` without a filter, io import/export of `stars`; convergence with an old-version peer that skips tier `r` (1,000 runs, `pnpm test:convergence`). Then implement (D1, D5).
 
 ## 2. UI
 

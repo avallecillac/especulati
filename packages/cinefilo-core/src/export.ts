@@ -3,7 +3,7 @@ import { EXPORT_FORMAT } from './frozen.ts';
 import type { MemberRow, MemberStatusRow, RatingRow, RecommendationRow, TitleRow } from './rows.ts';
 import {
   fail, parseAnswer, parseInstant, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseMemberStatus, parseMemberStatusId, parseRatingId,
-  parseRecommendationId, parseReview, parseStatus, parseTitle, parseTitleId, parseVerdict, type Instant,
+  parseRecommendationId, parseReview, parseStatus, parseTitle, parseStars, parseTitleId, parseVerdict, type Instant,
 } from './types.ts';
 
 /**
@@ -35,7 +35,7 @@ export function serializeExport(e: CinefiloExport): string {
     })),
     members: byId(e.members).map((m) => ({ id: m.id, name: m.name, createdAt: m.createdAt, deletedAt: m.deletedAt })),
     ratings: byId(e.ratings).map((r) => ({
-      id: r.id, titleId: r.titleId, memberId: r.memberId, verdict: r.verdict, review: r.review, updatedAt: r.updatedAt, deletedAt: r.deletedAt,
+      id: r.id, titleId: r.titleId, memberId: r.memberId, verdict: r.verdict, stars: r.stars, review: r.review, updatedAt: r.updatedAt, deletedAt: r.deletedAt,
     })),
     memberStatus: byId(e.memberStatus).map((s) => ({
       id: s.id, titleId: s.titleId, memberId: s.memberId, status: s.status, watchedOn: s.watchedOn, currentSeason: s.currentSeason,
@@ -121,6 +121,8 @@ const parseRatingRow = (o: unknown): Result<RatingRow, ParseError> => {
     titleId: take(parseTitleId(take(str('titleId', o['titleId'])))),
     memberId: take(parseMemberId(take(str('memberId', o['memberId'])))),
     verdict: take(nullable('verdict', o['verdict'], parseVerdict)),
+    // Files written before cinefilo-stars have no `stars` key: read as not rated.
+    stars: o['stars'] === undefined || o['stars'] === null ? null : take(parseStars(o['stars'])),
     review: take(nullable('review', o['review'], (s) => parseReview(s))),
     updatedAt: take(parseInstant(take(str('updatedAt', o['updatedAt'])))),
     deletedAt: take(nullable('deletedAt', o['deletedAt'], parseInstant)),

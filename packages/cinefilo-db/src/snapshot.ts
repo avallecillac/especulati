@@ -4,7 +4,7 @@ import {
   type Answer, type ClockedMemberStatus, type ClockedRating, type ClockedRecommendation, type ClockedTitle, type Command, type FieldClocks, type Hlc, type Instant,
   type Kind, type LocalDate, type MemberId, type MemberName, type MemberRow, type MemberStatus, type MemberStatusId, type MemberStatusRow, type NonEmptyTitle,
   type RatingId, type RatingRow, type ReconcileSnapshot, type RecommendationId, type RecommendationRow, type Review, type Snapshot, type Status, type TitleId,
-  type TitleRow, type Verdict,
+  type Stars, type TitleRow, type Verdict,
 } from '@especulati/cinefilo-core';
 
 // Rows were validated by decide() / parseRemoteOp before they were written and CHECK constraints guard the
@@ -59,6 +59,7 @@ export function rowToRating(r: Record<string, SqlValue>): RatingRow {
     titleId: text(r['title_id'], 'title_id') as TitleId,
     memberId: text(r['member_id'], 'member_id') as MemberId,
     verdict: textOrNull(r['verdict'], 'verdict') as Verdict | null,
+    stars: intOrNull(r['stars'], 'stars') as Stars | null,
     review: textOrNull(r['review'], 'review') as Review | null,
     updatedAt: text(r['updated_at'], 'updated_at') as Instant,
     deletedAt: textOrNull(r['deleted_at'], 'deleted_at') as Instant | null,
@@ -151,7 +152,7 @@ export function loadSnapshot(db: Database, cmd: Command, deviceMemberId: string 
     case 'RestoreTitle':
     case 'SetCurrentSeason':
       return { title: titleRow(db, cmd.titleId) };
-    case 'SetVerdict':
+    case 'SetStars':
     case 'SetReview':
       return { title: titleRow(db, cmd.titleId), member: memberRow(db, cmd.memberId), rating: ratingRow(db, cmd.ratingId), deviceMemberId };
     case 'SetMyStatus':

@@ -29,9 +29,7 @@ describe('Together lists exclude titles that are not on Together (status NULL)',
     const mine = addJustMe(t, 'Ran', { year: 1985 });
     for (const tab of ['later', 'watching', 'watched'] as const) {
       expect(t.db.list(tab).map((i) => i.id)).toEqual(tab === 'later' ? [together] : []);
-      for (const f of ['bothLiked', 'disagree', 'onlyMe', 'partnerNotRated', 'nobody'] as const) {
-        expect(t.db.list(tab, f).map((i) => i.id)).not.toContain(mine);
-      }
+      expect(t.db.list(tab).map((i) => i.id)).not.toContain(mine);
     }
     expect(t.raw.selectValue('SELECT status FROM titles WHERE id = ?', [mine])).toBeNull();
     expect(t.db.title(mine)?.title.status).toBeNull();
@@ -50,7 +48,7 @@ describe('Together lists exclude titles that are not on Together (status NULL)',
     const id = addJustMe(t, 'Ran', { year: 1985 });
     expect(addManual(t, 'Ran', { year: 1985, status: 'watched', watchedOn: '2026-09-01' })).toBe(id);
     expect(t.db.list('watched').map((i) => i.id)).toEqual([id]);
-    expect(t.db.list('later', undefined, 'me').map((i) => i.id)).toEqual([id]); // still on my own list too
+    expect(t.db.list('later', 'me').map((i) => i.id)).toEqual([id]); // still on my own list too
   });
 });
 
@@ -63,7 +61,7 @@ describe('personal lists (read models)', () => {
     expect(t.db.dispatch({ kind: 'SetMyStatus', titleId: id, memberId: ANA, memberStatusId: mstatusIdOf(id, ANA), status: 'watching' }, t.env).ok).toBe(true);
     t.tick();
     expect(t.db.dispatch({ kind: 'SetMySeason', titleId: id, memberId: ANA, memberStatusId: mstatusIdOf(id, ANA), season: 2 }, t.env).ok).toBe(true);
-    expect(t.db.list('watching', undefined, 'me')).toMatchObject([{ id, status: 'watching', currentSeason: 2 }]);
+    expect(t.db.list('watching', 'me')).toMatchObject([{ id, status: 'watching', currentSeason: 2 }]);
     expect(t.db.list('later')).toMatchObject([{ id, status: 'later', currentSeason: 1 }]);
     expect(t.db.list('watching')).toEqual([]);
   });
@@ -71,7 +69,7 @@ describe('personal lists (read models)', () => {
     const t = two();
     const id = addManual(t, 'Heat');
     setMine(t, id, 'watched', '2026-09-20');
-    expect(t.db.list('watched', undefined, 'me')).toMatchObject([{ id, status: 'watched', watchedOn: '2026-09-20' }]);
+    expect(t.db.list('watched', 'me')).toMatchObject([{ id, status: 'watched', watchedOn: '2026-09-20' }]);
     expect(t.db.list('later').map((i) => i.id)).toEqual([id]);
     expect(t.db.list('watched')).toEqual([]);
   });
@@ -81,34 +79,34 @@ describe('personal lists (read models)', () => {
     setMine(t, id, 'later');
     as(t, BEN);
     setMine(t, id, 'watched');
-    expect(t.db.list('watched', undefined, 'me').map((i) => i.id)).toEqual([id]);
-    expect(t.db.list('watched', undefined, 'partner')).toEqual([]);
-    expect(t.db.list('later', undefined, 'partner').map((i) => i.id)).toEqual([id]);
+    expect(t.db.list('watched', 'me').map((i) => i.id)).toEqual([id]);
+    expect(t.db.list('watched', 'partner')).toEqual([]);
+    expect(t.db.list('later', 'partner').map((i) => i.id)).toEqual([id]);
     as(t, ANA);
-    expect(t.db.list('watched', undefined, 'partner').map((i) => i.id)).toEqual([id]);
+    expect(t.db.list('watched', 'partner').map((i) => i.id)).toEqual([id]);
   });
-  it('a personal list orders by recency, carries verdicts, and honours the verdict chips', () => {
+  it('a personal list orders by recency and carries stars', () => {
     const t = two();
     const a = addJustMe(t, 'Alpha');
     const b = addJustMe(t, 'Beta');
-    expect(t.db.list('later', undefined, 'me').map((i) => i.id)).toEqual([b, a]);
-    rate(t, a, 'like');
-    expect(t.db.list('later', 'onlyMe', 'me').map((i) => i.id)).toEqual([a]);
-    expect(t.db.list('later', 'nobody', 'me').map((i) => i.id)).toEqual([b]);
+    expect(t.db.list('later', 'me').map((i) => i.id)).toEqual([b, a]);
+    rate(t, a, 9);
+    expect(t.db.list('later', 'me').find((i) => i.id === a)?.mine).toBe(9);
+    expect(t.db.list('later', 'me').find((i) => i.id === b)?.mine).toBeNull();
   });
   it('a removed title leaves every list; taking it off my list clears it', () => {
     const t = two();
     const id = addJustMe(t, 'Ran');
     setMine(t, id, null);
-    expect(t.db.list('later', undefined, 'me')).toEqual([]);
+    expect(t.db.list('later', 'me')).toEqual([]);
     setMine(t, id, 'later');
     t.db.dispatch({ kind: 'RemoveTitle', titleId: id }, t.env);
-    expect(t.db.list('later', undefined, 'me')).toEqual([]);
+    expect(t.db.list('later', 'me')).toEqual([]);
   });
   it('no list without a member or a partner', () => {
     const t = openTestDb(1, null);
-    expect(t.db.list('later', undefined, 'me')).toEqual([]);
-    expect(t.db.list('later', undefined, 'partner')).toEqual([]);
+    expect(t.db.list('later', 'me')).toEqual([]);
+    expect(t.db.list('later', 'partner')).toEqual([]);
   });
   it('title detail shows all three statuses, the partner as not on their list', () => {
     const t = two();
@@ -150,9 +148,9 @@ describe('recommendations', () => {
     expect(t.db.pendingRecommendations()).toEqual([]);
     expect(answer(t, recIdOf(id, ANA, BEN), id, BEN, 'accepted').ok).toBe(true);
     expect(t.db.pendingRecommendations()).toEqual([]);
-    expect(t.db.list('later', undefined, 'me').map((i) => i.id)).toEqual([id]);
+    expect(t.db.list('later', 'me').map((i) => i.id)).toEqual([id]);
     as(t, ANA);
-    expect(t.db.list('later', undefined, 'partner').map((i) => i.id)).toEqual([id]);
+    expect(t.db.list('later', 'partner').map((i) => i.id)).toEqual([id]);
     expect(t.db.title(id)!.recommendations).toMatchObject([{ state: 'accepted', fromMe: true }]);
   });
   it('Dismiss: gone for the partner, and the recommender sees it was dismissed', () => {
@@ -161,7 +159,7 @@ describe('recommendations', () => {
     recommend(t, id, ANA, BEN);
     expect(answer(t, recIdOf(id, ANA, BEN), id, BEN, 'dismissed').ok).toBe(true);
     expect(t.db.pendingRecommendations()).toEqual([]);
-    expect(t.db.list('later', undefined, 'me')).toEqual([]);
+    expect(t.db.list('later', 'me')).toEqual([]);
     as(t, ANA);
     expect(t.db.title(id)!.recommendations).toMatchObject([{ state: 'dismissed', fromMe: true, toName: 'Ben' }]);
   });
