@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { REVIEW_MAX, VERDICTS, type MemberStatus, type Status, type Verdict } from '@especulati/cinefilo-core';
   import type { TitleDetail } from '@especulati/cinefilo-db';
   import { findByTmdb, title as loadTitle } from '../lib/dbClient.ts';
@@ -13,6 +14,9 @@
   import VerdictMark from './Verdict.svelte';
 
   let { id }: { id: string } = $props();
+
+  // A title always opens at its top, whatever the list behind it was scrolled to (cinefilo-compact-lists D5).
+  onMount(() => window.scrollTo(0, 0));
 
   let detail = $state<TitleDetail | null | undefined>(undefined);
   /** The review being typed; null while untouched, so a sync can still refresh what is shown. */
@@ -177,11 +181,11 @@
           <label for="my-review">Your review</label>
           <textarea
             id="my-review"
-            rows="4"
+            rows="2"
             value={draft ?? mine.review ?? ''}
             oninput={(e) => (draft = e.currentTarget.value)}></textarea>
-          <p class="small muted" class:error={(draft ?? '').length > REVIEW_MAX}>{(draft ?? mine.review ?? '').length} / {REVIEW_MAX.toLocaleString('en-US')}</p>
           {#if draft !== null}
+            <p class="small muted" class:error={draft.length > REVIEW_MAX}>{draft.length} / {REVIEW_MAX.toLocaleString('en-US')}</p>
             <button type="button" class="primary" onclick={() => void saveReview()}>Save review</button>
           {/if}
         </div>

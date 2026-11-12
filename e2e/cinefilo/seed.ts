@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import { expect, tab } from './fixtures.ts';
@@ -52,6 +53,36 @@ export async function importCatalogue(page: Page, opts: { numbered?: boolean } =
       })),
   );
   const file = { format: 'cinefilo/v1', exportedAt: NOW, titles, members: [{ id: luz, name: 'Luz', createdAt: '2030-01-01T00:00:00.000Z', deletedAt: null }], ratings };
+  await page.locator('#import-file').setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await expect(page.getByText(`Imported ${titles.length + 1 + ratings.length} items.`)).toBeVisible();
+}
+
+export type PlainSeed = { name: string; mine: string | null; partner: string | null };
+
+const SEED_NOW = '2025-01-01T00:00:00.000Z';
+
+/** Build a `cinefilo/v1` file around the member this device already is, and import it through Settings. */
+export async function importSeed(page: Page, seeds: PlainSeed[]): Promise<void> {
+  await tab(page, 'Settings').click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export' }).click()]);
+  const base = JSON.parse(await (await import('node:fs/promises')).readFile((await download.path()), 'utf8')) as { members: { id: string }[] };
+  const me = base.members[0]!.id;
+  const luz = randomUUID();
+  const titles = seeds.map((s) => ({
+    id: randomUUID(), kind: 'movie', title: s.name, originalTitle: null, year: 2000, tmdbId: null, posterUrl: null, genres: null,
+    runtimeMin: null, seasonCount: null, status: 'watched', watchedOn: '2025-01-02', currentSeason: null, mergedInto: null,
+    addedBy: me, createdAt: SEED_NOW, deletedAt: null,
+  }));
+  const ratings = seeds.flatMap((s, i) =>
+    ([[me, s.mine], [luz, s.partner]] as const)
+      .filter(([, v]) => v !== null)
+      .map(([m, v]) => ({ id: randomUUID(), titleId: titles[i]!.id, memberId: m, verdict: v, review: null, updatedAt: SEED_NOW, deletedAt: null })),
+  );
+  const file = {
+    format: 'cinefilo/v1', exportedAt: SEED_NOW, titles,
+    members: [{ id: luz, name: 'Luz', createdAt: '2030-01-01T00:00:00.000Z', deletedAt: null }],
+    ratings,
+  };
   await page.locator('#import-file').setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await expect(page.getByText(`Imported ${titles.length + 1 + ratings.length} items.`)).toBeVisible();
 }

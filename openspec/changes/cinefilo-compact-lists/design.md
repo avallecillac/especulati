@@ -46,3 +46,9 @@ The `radiogroup "Watched order"` stays, with the same radio names "Newest first"
 ## Risks
 - Restoring before posters load: posters are fixed size (52×72 rows, 2:3 tiles), so the layout height is known before images arrive.
 - Smaller targets: everything stays ≥ 32 px, above WCAG 2.5.8 (24 px).
+
+## Implementation notes (reviewed)
+- At 390 px the two rating columns are ~150 px wide, so the three verdicts wrap to two rows of 36 px (the stars change replaces them anyway).
+- The theme h1 sizes in `type.css` are overridden for the list heading only (1.5 rem), so the layout toggle and Add stay on the heading row.
+- The whole header, switch included, sits inside `.list-frame`, so the partner-list frame wraps the switch too.
+- `importSeed` moved to `e2e/cinefilo/seed.ts` (shared by `filters.spec.ts` and `compact-lists.spec.ts`).

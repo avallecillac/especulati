@@ -23,6 +23,16 @@ test('Watched shows each title\'s number, newest first, and "From #1" is remembe
   await expect(page.getByRole('link', { name: /The Brutalist/ })).toBeVisible();
   expect((await names(page)).map((n) => n.replace(/\s+/g, ' ').trim())).toEqual(['#3 The Brutalist', '#2 The Godfather', '#1 Back to the Future']);
   await expect(order(page).getByRole('radio', { name: 'Newest first' })).toHaveAttribute('aria-checked', 'true');
+  // cinefilo-compact-lists D4: two small arrow icons, named by aria-label and title.
+  for (const name of ['Newest first', 'From #1']) {
+    const radio = order(page).getByRole('radio', { name });
+    await expect(radio.locator('svg')).toHaveCount(1);
+    await expect(radio).toHaveAttribute('title', name);
+    await expect(radio).toHaveText('');
+    const box = (await radio.boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(40);
+    expect(box.height).toBeGreaterThanOrEqual(32);
+  }
 
   await order(page).getByRole('radio', { name: 'From #1' }).click();
   expect((await names(page)).map((n) => n.slice(0, 2))).toEqual(['#1', '#2', '#3']);

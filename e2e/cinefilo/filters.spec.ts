@@ -1,36 +1,7 @@
-import { randomUUID } from 'node:crypto';
-import type { Page } from '@playwright/test';
 import { expect, startList, tab, test } from './fixtures.ts';
+import { importSeed } from './seed.ts';
 
-type Seed = { name: string; mine: string | null; partner: string | null };
-
-const NOW = '2025-01-01T00:00:00.000Z';
-
-/** Build a `cinefilo/v1` file around the member this device already is, and import it through Settings. */
-export async function importSeed(page: Page, seeds: Seed[]): Promise<void> {
-  await tab(page, 'Settings').click();
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export' }).click()]);
-  const base = JSON.parse(await (await import('node:fs/promises')).readFile((await download.path()), 'utf8')) as { members: { id: string }[] };
-  const me = base.members[0]!.id;
-  const luz = randomUUID();
-  const titles = seeds.map((s) => ({
-    id: randomUUID(), kind: 'movie', title: s.name, originalTitle: null, year: 2000, tmdbId: null, posterUrl: null, genres: null,
-    runtimeMin: null, seasonCount: null, status: 'watched', watchedOn: '2025-01-02', currentSeason: null, mergedInto: null,
-    addedBy: me, createdAt: NOW, deletedAt: null,
-  }));
-  const ratings = seeds.flatMap((s, i) =>
-    ([[me, s.mine], [luz, s.partner]] as const)
-      .filter(([, v]) => v !== null)
-      .map(([m, v]) => ({ id: randomUUID(), titleId: titles[i]!.id, memberId: m, verdict: v, review: null, updatedAt: NOW, deletedAt: null })),
-  );
-  const file = {
-    format: 'cinefilo/v1', exportedAt: NOW, titles,
-    members: [{ id: luz, name: 'Luz', createdAt: '2030-01-01T00:00:00.000Z', deletedAt: null }],
-    ratings,
-  };
-  await page.locator('#import-file').setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
-  await expect(page.getByText(`Imported ${titles.length + 1 + ratings.length} items.`)).toBeVisible();
-}
+test.use({ viewport: { width: 390, height: 844 } });
 
 test('each verdict filter lists the right titles, offline', async ({ page, context }) => {
   await startList(page, 'Ana');
@@ -53,11 +24,35 @@ test('each verdict filter lists the right titles, offline', async ({ page, conte
     ["Partner hasn't rated", ['OnlyMine', 'Neither']],
     ['Nobody rated', ['Neither']],
   ];
-  for (const [chip, names] of cases) {
-    await page.getByRole('button', { name: chip }).click();
+  const filterButton = page.getByRole('button', { name: 'Filter', exact: true });
+  for (const [label, names] of cases) {
+    await filterButton.click();
+    const sheet = page.getByRole('dialog', { name: 'Filter' });
+    await expect(sheet.getByRole('radiogroup', { name: 'Verdict' }).getByRole('radio')).toHaveCount(6); // All + five filters
+    await sheet.getByRole('radio', { name: label, exact: true }).click();
+    await expect(sheet).toBeHidden();
+    await expect(filterButton).toBeFocused();
     await expect(rows).toHaveCount(names.length);
     for (const n of names) await expect(page.getByRole('link', { name: new RegExp(n) })).toBeVisible();
-    await page.getByRole('button', { name: chip }).click(); // off again
+    // One removable chip names the filter; removing it brings everything back.
+    await page.getByRole('button', { name: `Remove filter ${label}` }).click();
+    await expect(rows).toHaveCount(5);
+    await expect(page.getByRole('button', { name: /^Remove filter/ })).toHaveCount(0);
   }
+  await expect(rows).toHaveCount(5);
+
+  // Escape and the backdrop close the sheet without changing the filter; "All" clears it.
+  await filterButton.click();
+  await expect(filterButton).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Filter' })).toBeHidden();
+  await filterButton.click();
+  await page.getByRole('dialog', { name: 'Filter' }).getByRole('radio', { name: 'Disagree' }).click();
+  await filterButton.click();
+  await page.mouse.click(195, 40); // the backdrop, above the sheet
+  await expect(page.getByRole('dialog', { name: 'Filter' })).toBeHidden();
+  await expect(rows).toHaveCount(1);
+  await filterButton.click();
+  await page.getByRole('dialog', { name: 'Filter' }).getByRole('radio', { name: 'All' }).click();
   await expect(rows).toHaveCount(5);
 });

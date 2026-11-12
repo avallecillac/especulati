@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { VERDICT_FILTERS, type VerdictFilter } from '@especulati/cinefilo-core';
+  import { onMount, tick, untrack } from 'svelte';
+  import type { VerdictFilter } from '@especulati/cinefilo-core';
   import type { ListItem, ListScope, ListTab, PendingRecommendation } from '@especulati/cinefilo-db';
   import { list, pendingRecommendations } from '../lib/dbClient.ts';
   import { display, setLayout, setWatchedOrder } from '../lib/layout.svelte.ts';
   import { listView } from '../lib/listView.svelte.ts';
   import { FILTER_LABEL, KIND_LABEL, VERDICT_LABEL } from '../lib/labels.ts';
+  import { matchesQuery } from '../lib/search.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
+  import FilterSheet from './FilterSheet.svelte';
   import Poster from './Poster.svelte';
   import SeasonProgress from './SeasonProgress.svelte';
   import Verdict from './Verdict.svelte';
@@ -14,10 +17,12 @@
 
   const HEADING: Record<ListTab, string> = { later: 'Watch later', watching: 'Watching', watched: 'Watched' };
 
-  let filter = $state<VerdictFilter | null>(null);
+  let filtering = $state(false);
   let items = $state<ListItem[] | null>(null);
   let recs = $state<PendingRecommendation[]>([]);
   const scope = $derived(listView.scope);
+  const filter = $derived(listView.filter);
+  const query = $derived(listView.query);
   const partnerMember = $derived(app.members.find((m) => !m.me) ?? null);
   const partner = $derived(partnerMember?.name ?? 'Partner');
   const meName = $derived(app.members.find((m) => m.me)?.name ?? 'Me');
@@ -41,6 +46,46 @@
       });
     } else recs = [];
     return () => (stale = true);
+  });
+
+  // Keep the place (cinefilo-compact-lists D5): remember where each list is scrolled, and put it back after the first load.
+  // Nothing is saved until the list has loaded and been restored, so the page shrinking on the way in cannot overwrite it.
+  const placeKey = () => `${tab}:${listView.scope}`;
+  let tracking = false;
+  let restored = false;
+  let lastY = 0;
+  let frame = 0;
+  const flush = () => {
+    frame = 0;
+    if (tracking) listView.scroll[placeKey()] = lastY;
+  };
+
+  onMount(() => {
+    const onScroll = () => {
+      lastY = window.scrollY;
+      if (tracking && frame === 0) frame = requestAnimationFrame(flush);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame !== 0) cancelAnimationFrame(frame);
+      flush();
+    };
+  });
+
+  $effect(() => {
+    if (items === null || restored) return;
+    restored = true;
+    const saved = untrack(() => listView.scroll[placeKey()]);
+    if (!saved) {
+      tracking = true;
+      return;
+    }
+    void tick().then(() => requestAnimationFrame(() => {
+      window.scrollTo(0, saved);
+      lastY = window.scrollY;
+      tracking = true;
+    }));
   });
 
   const choices = $derived<{ id: ListScope; label: string }[]>([
@@ -77,7 +122,15 @@
     if (items === null || scope !== 'together' || tab !== 'watched' || display.watchedOrder !== 'first') return items;
     return [...items.filter((i) => i.watchOrder !== null).reverse(), ...items.filter((i) => i.watchOrder === null)];
   });
+  /** What is on screen: the ordered list narrowed by the search (D2). */
+  const visible = $derived(shown === null ? null : shown.filter((i) => matchesQuery(i.title, query)));
+  const visibleRecs = $derived(recs.filter((r) => matchesQuery(r.title, query)));
   const grid = $derived(display.layout === 'grid');
+
+  function setFilter(f: VerdictFilter | null) {
+    listView.filter = f;
+    filtering = false;
+  }
 
   /** `aria-label` of the review mark: who wrote a review (either member, or both). */
   function reviewLabel(i: ListItem): string | null {
@@ -104,18 +157,12 @@
   </span>
 {/snippet}
 
-<div class="seg choice list-switch" role="radiogroup" aria-label="List">
-  {#each choices as c, i (c.id)}
-    {@const on = scope === c.id}
-    <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => pick(c.id)} onkeydown={(e) => onKey(e, i)}>{c.label}</button>
-  {/each}
-</div>
-
 <div class="list-frame" data-scope={scope}>
 <header class="bar">
   <div>
     <h1>{HEADING[tab]}</h1>
-    <p class="whose" data-testid="whose">{whose}</p>
+    <!-- Always in the DOM so screen readers hear whose list it is; shown only for the partner's. -->
+    <p class="whose" class:visually-hidden={scope !== 'partner'} data-testid="whose">{whose}</p>
   </div>
   <div class="bar-actions">
     <div class="seg choice layout-toggle" role="radiogroup" aria-label="Layout">
@@ -126,26 +173,60 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /></svg>
       </button>
     </div>
-    <button class="primary" type="button" onclick={onadd}>Add</button>
+    <button class="primary add-btn" type="button" onclick={onadd}>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" /></svg>
+      Add
+    </button>
   </div>
 </header>
 
-{#if scope === 'together' && tab === 'watched'}
-  <div class="seg choice order-toggle" role="radiogroup" aria-label="Watched order">
-    <button type="button" role="radio" aria-checked={display.watchedOrder === 'newest'} tabindex={display.watchedOrder === 'newest' ? 0 : -1} onclick={() => setWatchedOrder('newest')}>Newest first</button>
-    <button type="button" role="radio" aria-checked={display.watchedOrder === 'first'} tabindex={display.watchedOrder === 'first' ? 0 : -1} onclick={() => setWatchedOrder('first')}>From #1</button>
-  </div>
-{/if}
-
-<div class="chips" role="group" aria-label="Filter by verdict">
-  {#each VERDICT_FILTERS as f (f)}
-    <button type="button" class="chip" aria-pressed={filter === f} onclick={() => (filter = filter === f ? null : f)}>{FILTER_LABEL[f]}</button>
+<div class="seg choice list-switch" role="radiogroup" aria-label="List">
+  {#each choices as c, i (c.id)}
+    {@const on = scope === c.id}
+    <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => pick(c.id)} onkeydown={(e) => onKey(e, i)}>{c.label}</button>
   {/each}
 </div>
 
-{#if recs.length > 0 && !filter}
+<div class="tools">
+  <div class="search">
+    <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="6" /><path d="M15 15l5 5" /></svg>
+    <input type="search" aria-label="Search titles" placeholder="Search titles" autocomplete="off" bind:value={listView.query} />
+    {#if query !== ''}
+      <button type="button" class="clear" aria-label="Clear search" onclick={() => (listView.query = '')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    {/if}
+  </div>
+  {#if scope === 'together' && tab === 'watched'}
+    <div class="seg choice order-toggle" role="radiogroup" aria-label="Watched order">
+      <button type="button" role="radio" aria-checked={display.watchedOrder === 'newest'} aria-label="Newest first" title="Newest first" tabindex={display.watchedOrder === 'newest' ? 0 : -1} onclick={() => setWatchedOrder('newest')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+      </button>
+      <button type="button" role="radio" aria-checked={display.watchedOrder === 'first'} aria-label="From #1" title="From #1" tabindex={display.watchedOrder === 'first' ? 0 : -1} onclick={() => setWatchedOrder('first')}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+      </button>
+    </div>
+  {/if}
+  <button type="button" class="filter-btn" class:active={filter !== null} aria-label="Filter" aria-haspopup="dialog" aria-expanded={filtering} onclick={() => (filtering = true)}>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16l-6 7v6l-4 2v-8z" /></svg>
+    Filter
+    {#if filter !== null}<span class="dot" aria-hidden="true"></span>{/if}
+  </button>
+</div>
+
+{#if filter !== null}
+  <div class="active-filters">
+    <button type="button" class="chip active" aria-label={`Remove filter ${FILTER_LABEL[filter]}`} onclick={() => (listView.filter = null)}>{FILTER_LABEL[filter]} &times;</button>
+  </div>
+{/if}
+
+{#if filtering}
+  <FilterSheet {filter} onpick={setFilter} onclose={() => (filtering = false)} />
+{/if}
+
+{#if visibleRecs.length > 0 && !filter}
   <ul class="rows recs" aria-label="Recommended to you">
-    {#each recs as r (r.id)}
+    {#each visibleRecs as r (r.id)}
       <li class="rec">
         <a class="row" href={`#/title/${encodeURIComponent(r.titleId)}`}>
           <Poster titleId={r.titleId} path={r.posterUrl} />
@@ -166,13 +247,15 @@
 
 {#if items === null}
   <p class="muted">Loading</p>
-{:else if items.length === 0 || shown === null}
-  {#if recs.length === 0 || filter}
+{:else if visible === null || visible.length === 0}
+  {#if query !== '' && items.length > 0 && visibleRecs.length === 0}
+    <p class="empty">No titles match &ldquo;{query}&rdquo;.</p>
+  {:else if recs.length === 0 || filter}
     <p class="empty">{filter ? 'Nothing matches this filter.' : scope === 'partner' ? `${partner} has nothing here yet.` : scope === 'me' ? 'Nothing here yet. Tap Add and choose Just me.' : 'Nothing here yet. Tap Add to put a movie or series on the list.'}</p>
   {/if}
 {:else if grid}
   <ul class="grid" aria-label={HEADING[tab]}>
-    {#each shown as i (i.id)}
+    {#each visible as i (i.id)}
       {@const rl = reviewLabel(i)}
       <li>
         <a class="tile" href={`#/title/${encodeURIComponent(i.id)}`} aria-label={i.title}>
@@ -185,7 +268,7 @@
   </ul>
 {:else}
   <ul class="rows">
-    {#each shown as i (i.id)}
+    {#each visible as i (i.id)}
       {@const rl = reviewLabel(i)}
       <li>
         <a class="row" href={`#/title/${encodeURIComponent(i.id)}`}>

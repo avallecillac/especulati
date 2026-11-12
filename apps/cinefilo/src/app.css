@@ -1,7 +1,7 @@
 /* Structure and layout only: every colour, font and radius is a token from theme/<id>.css. */
 :root {
   --gutter: 16px;
-  --tap: 48px;
+  --tap: 40px;
   font-family: var(--font-text);
   font-size: 17px;
   line-height: 1.4;
@@ -10,8 +10,8 @@
 body { margin: 0; background: var(--bg); color: var(--ink); -webkit-text-size-adjust: 100%; }
 main { max-width: 640px; margin: 0 auto; padding: calc(var(--gutter) + env(safe-area-inset-top)) var(--gutter) calc(96px + env(safe-area-inset-bottom)); }
 main.center, main.welcome { display: flex; flex-direction: column; gap: 12px; }
-h1 { font-family: var(--font-title); font-size: 1.9rem; margin: 0; font-weight: 600; }
-h2 { font-family: var(--font-title); font-size: 1.25rem; margin: 20px 0 8px; font-weight: 600; }
+h1 { font-family: var(--font-title); font-size: 1.5rem; margin: 0; font-weight: 600; }
+h2 { font-family: var(--font-title); font-size: 1.25rem; margin: 14px 0 6px; font-weight: 600; }
 h3 { font-size: 1rem; margin: 0 0 8px; }
 a { color: var(--accent); }
 .muted { color: var(--ink-soft); }
@@ -22,7 +22,7 @@ a { color: var(--accent); }
 
 button, .button, input, select, textarea {
   font: inherit; font-family: var(--font-label); color: var(--ink); background: var(--surface-2); border: var(--rule-width) solid var(--control-border);
-  border-radius: var(--radius); min-height: var(--tap); padding: 8px 14px;
+  border-radius: var(--radius); min-height: var(--tap); padding: 6px 12px; font-size: 0.95rem;
 }
 button, .button { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
 input, select, textarea { width: 100%; background: var(--surface); }
@@ -37,8 +37,7 @@ button[aria-pressed='true'], .choice button[role='radio'][aria-checked='true'] {
 button:disabled { opacity: 0.45; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; }
+.bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .chip { white-space: nowrap; border-radius: var(--radius-pill); }
 .empty { color: var(--ink-soft); padding: 32px 0; text-align: center; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -79,12 +78,13 @@ code { word-break: break-all; }
 .date-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
 .date-row input { width: auto; }
 .stepper { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
-.stepper button { width: var(--tap); }
+
 /* Both members side by side at every width: the partner's review must be visible right under the header (cinefilo-feedback-1). */
 .columns { display: grid; gap: 8px; align-items: start; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .col { background: var(--surface); border-radius: var(--radius); padding: 12px; }
-.verdicts-big { display: grid; gap: 8px; }
-.verdict { min-height: 56px; font-size: 1.05rem; }
+.verdicts-big { display: flex; flex-wrap: wrap; gap: 6px; }
+.verdicts-big .verdict { gap: 4px; }
+.verdict { flex: 1 1 auto; min-height: 36px; padding: 4px 8px; font-size: 0.85rem; }
 .review { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-text); }
 
 .scan-view { position: relative; width: 100%; aspect-ratio: 4 / 3; background: var(--surface-2); border-radius: var(--radius); overflow: hidden; }
@@ -106,7 +106,8 @@ code { word-break: break-all; }
 
 .covers-h { margin-top: 16px; }
 
-.list-switch { margin-bottom: 12px; }
+.list-switch { margin-bottom: 8px; flex-wrap: nowrap; gap: 6px; }
+.list-switch button { min-height: 32px; padding: 0 12px; font-size: 0.85rem; border-radius: var(--radius-pill); }
 .bar h1 + .whose { margin: 2px 0 0; }
 .rec { background: var(--surface); border-radius: var(--radius); padding-bottom: 8px; }
 .rec .row { background: none; }
@@ -117,14 +118,32 @@ code { word-break: break-all; }
 .lists-block .who-row { background: var(--surface); border-radius: var(--radius); padding: 4px 12px 12px; margin-bottom: 12px; }
 .lists-block .who-row h3 { margin: 8px 0; }
 .lists-block .who-row .seg { gap: 6px; }
-.lists-block .who-row .seg button { flex: 1 1 auto; padding: 8px 8px; }
+.lists-block .who-row .seg button { flex: 1 1 auto; min-height: 36px; padding: 4px 8px; }
+.date-row button, .date-row input { min-height: 36px; }
+.stepper button { width: 36px; min-height: 36px; }
 
 /* cinefilo-feedback-1 D5: layout toggle, watched order, grid tiles, review mark. Tokens only. */
 .bar-actions { display: flex; align-items: center; gap: 8px; }
 .layout-toggle { flex-wrap: nowrap; gap: 4px; }
-.layout-toggle button { flex: none; width: var(--tap); padding: 0; display: grid; place-items: center; }
+.layout-toggle button { flex: none; width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; }
 .layout-toggle svg, .reviewed svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: miter; }
-.order-toggle { margin-bottom: 8px; }
+.order-toggle { flex: none; flex-wrap: nowrap; gap: 4px; }
+.order-toggle button { flex: none; width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; }
+.order-toggle svg, .add-btn svg, .filter-btn svg, .search-icon, .clear svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: miter; }
+
+/* cinefilo-compact-lists D1-D3: the tools row (search, watch order, Filter), the active-filter chip and the Filter sheet. */
+.tools { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.search { position: relative; flex: 1 1 0; min-width: 0; }
+.search input { padding-left: 34px; padding-right: 34px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); pointer-events: none; }
+.search input[type='search']::-webkit-search-cancel-button, .search input[type='search']::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+.clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 32px; min-height: 32px; height: 32px; padding: 0; background: none; border: 0; }
+.filter-btn { flex: none; position: relative; padding: 6px 10px; }
+.filter-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.active-filters { display: flex; margin-bottom: 8px; }
+.chip { min-height: 32px; padding: 0 12px; }
+.filter-options { display: flex; flex-direction: column; gap: 6px; }
+.filter-options button { justify-content: flex-start; min-height: 44px; }
 .name .num { font-family: var(--font-label); font-weight: 600; color: var(--accent); }
 .reviewed { display: inline-flex; align-items: center; color: var(--ink); }
 .reviewed svg { width: 16px; height: 16px; }
@@ -141,3 +160,6 @@ code { word-break: break-all; }
 /* New-version bar (lib/pwa.svelte.ts): pinned on top, tokens only. */
 .update-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--surface-2); color: var(--ink); border-bottom: var(--rule-width) solid var(--rule); }
 .update-bar button { min-height: 44px; }
+
+/* Settings radios keep a 44px target while the shared control height is 40px. */
+.seg.tall button { min-height: 44px; }

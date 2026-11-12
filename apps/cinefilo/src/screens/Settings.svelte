@@ -178,7 +178,7 @@
 <section class="card" aria-labelledby="appearance-h">
   <h2 id="appearance-h">Appearance</h2>
   <p class="muted small">Saved on this device only. Automatic follows the device: Béton in light mode, Willis in dark.</p>
-  <div class="seg choice" role="radiogroup" aria-label="Appearance">
+  <div class="seg choice tall" role="radiogroup" aria-label="Appearance">
     {#each appearanceChoices as c, i (c.id)}
       {@const on = appearance.value === c.id}
       <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => setAppearance(c.id)}
@@ -186,7 +186,7 @@
     {/each}
   </div>
   <h3 class="covers-h" id="covers-h">Covers</h3>
-  <div class="seg choice" role="radiogroup" aria-labelledby="covers-h">
+  <div class="seg choice tall" role="radiogroup" aria-labelledby="covers-h">
     {#each coverChoices as c, i (c.id)}
       {@const on = covers.mode === c.id}
       <button type="button" role="radio" aria-checked={on} tabindex={on ? 0 : -1} data-choice={c.id} onclick={() => setCovers(c.id)}
