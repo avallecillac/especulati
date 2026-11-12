@@ -38,7 +38,6 @@ button:disabled { opacity: 0.45; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.chip { white-space: nowrap; border-radius: var(--radius-pill); }
 .empty { color: var(--ink-soft); padding: 32px 0; text-align: center; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .row { display: flex; align-items: center; gap: 12px; padding: 10px; min-height: 64px; background: var(--surface); border-radius: var(--radius); color: var(--ink); text-decoration: none; }
@@ -48,10 +47,6 @@ button:disabled { opacity: 0.45; }
 .verdicts { display: flex; align-items: center; gap: 10px; }
 .meta .verdicts { margin-top: 6px; flex-wrap: wrap; }
 .pair { display: inline-flex; align-items: center; gap: 4px; }
-.verdict-read { display: flex; align-items: center; gap: 8px; }
-.verdict-read.like { color: var(--like); }
-.verdict-read.meh { color: var(--meh); }
-.verdict-read.dislike { color: var(--dislike); }
 
 .tabbar { z-index: 10; position: fixed; inset: auto 0 0 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--bar); border-top: var(--rule-width) solid var(--rule); padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(12px); }
 .tabbar a { display: grid; place-items: center; min-height: 56px; color: var(--ink-soft); text-decoration: none; font-size: 0.85rem; font-family: var(--font-label); }
@@ -79,12 +74,9 @@ code { word-break: break-all; }
 .date-row input { width: auto; }
 .stepper { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
 
-/* Both members side by side at every width: the partner's review must be visible right under the header (cinefilo-feedback-1). */
-.columns { display: grid; gap: 8px; align-items: start; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Both members stacked, full width: the partner's review stays in view right under the header (cinefilo-stars D6). */
+.stack { display: flex; flex-direction: column; gap: 8px; }
 .col { background: var(--surface); border-radius: var(--radius); padding: 12px; }
-.verdicts-big { display: flex; flex-wrap: wrap; gap: 6px; }
-.verdicts-big .verdict { gap: 4px; }
-.verdict { flex: 1 1 auto; min-height: 36px; padding: 4px 8px; font-size: 0.85rem; }
 .review { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-text); }
 
 .scan-view { position: relative; width: 100%; aspect-ratio: 4 / 3; background: var(--surface-2); border-radius: var(--radius); overflow: hidden; }
@@ -129,21 +121,15 @@ code { word-break: break-all; }
 .layout-toggle svg, .reviewed svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: miter; }
 .order-toggle { flex: none; flex-wrap: nowrap; gap: 4px; }
 .order-toggle button { flex: none; width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; }
-.order-toggle svg, .add-btn svg, .filter-btn svg, .search-icon, .clear svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: miter; }
+.order-toggle svg, .add-btn svg, .search-icon, .clear svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: miter; }
 
-/* cinefilo-compact-lists D1-D3: the tools row (search, watch order, Filter), the active-filter chip and the Filter sheet. */
+/* cinefilo-compact-lists D1-D3: the tools row (search, watch order). */
 .tools { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .search { position: relative; flex: 1 1 0; min-width: 0; }
 .search input { padding-left: 34px; padding-right: 34px; }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); pointer-events: none; }
 .search input[type='search']::-webkit-search-cancel-button, .search input[type='search']::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
 .clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 32px; min-height: 32px; height: 32px; padding: 0; background: none; border: 0; }
-.filter-btn { flex: none; position: relative; padding: 6px 10px; }
-.filter-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.active-filters { display: flex; margin-bottom: 8px; }
-.chip { min-height: 32px; padding: 0 12px; }
-.filter-options { display: flex; flex-direction: column; gap: 6px; }
-.filter-options button { justify-content: flex-start; min-height: 44px; }
 .name .num { font-family: var(--font-label); font-weight: 600; color: var(--accent); }
 .reviewed { display: inline-flex; align-items: center; color: var(--ink); }
 .reviewed svg { width: 16px; height: 16px; }
@@ -163,3 +149,14 @@ code { word-break: break-all; }
 
 /* Settings radios keep a 44px target while the shared control height is 40px. */
 .seg.tall button { min-height: 44px; }
+
+/* cinefilo-stars D6: the star row. Editable 32 px stars on one hit area (touch-action none only here, so the page still scrolls); read-only 16 px. */
+.rate { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.rate.read { gap: 8px; }
+.rate-num { font-family: var(--font-label); color: var(--ink-soft); }
+.stars { display: inline-flex; flex: none; }
+.stars[role='slider'] { touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.star { width: 32px; height: 32px; display: block; }
+.star.small { width: 16px; height: 16px; }
+.star .edge { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; stroke-linejoin: round; }
+.col .link { min-height: 32px; padding: 0 4px; }

@@ -6,11 +6,12 @@
   import { failureText, type TmdbResult } from '../catalog/tmdb.ts';
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
   import { todayLocal, yesterdayLocal } from '../lib/clock.ts';
-  import { KIND_LABEL, STATUS_LABEL, memberStatusesFor, statusesFor } from '../lib/labels.ts';
+  import { KIND_LABEL, STATUS_LABEL, memberStatusesFor, ratingLabel, statusesFor } from '../lib/labels.ts';
   import { listView } from '../lib/listView.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
+  import Stars from './Stars.svelte';
 
   let { id }: { id: string } = $props();
 
@@ -69,10 +70,7 @@
 
   const stepSeason = (to: number) => run({ kind: 'SetCurrentSeason', titleId: id, season: to });
 
-  // Placeholder until the star control (cinefilo-stars 2.1): five whole-star buttons that write half stars.
-  function setStars(n: number | null) {
-    void run({ kind: 'SetStars', titleId: id, stars: n });
-  }
+  const setStars = (n: number | null) => run({ kind: 'SetStars', titleId: id, stars: n });
 
   async function saveReview() {
     const text = draft;
@@ -165,15 +163,11 @@
 
   <section aria-labelledby="ratings-h">
     <h2 id="ratings-h">Ratings</h2>
-    <div class="columns">
+    <div class="stack">
       {#if mine}
         <div class="col" data-testid="rating-mine">
           <h3>{mine.name} <span class="muted small">(you)</span></h3>
-          <div class="stars-tmp" role="group" aria-label="Your rating">
-            {#each [2, 4, 6, 8, 10] as n (n)}
-              <button type="button" aria-pressed={mine.stars === n} onclick={() => setStars(mine.stars === n ? null : n)}>{n / 2}</button>
-            {/each}
-          </div>
+          <Stars editable value={mine.stars} onchange={setStars} />
           <label for="my-review">Your review</label>
           <textarea
             id="my-review"
@@ -189,12 +183,8 @@
       {#each others as o (o.memberId)}
         <div class="col" data-testid="rating-partner">
           <h3>{o.name}</h3>
-          {#if o.stars || o.review}
-            {#if o.stars}<p class="verdict-read" role="img" aria-label={`${o.name}: ${o.stars / 2} stars`}>★ {o.stars / 2}</p>{/if}
-            {#if o.review}<p class="review">{o.review}</p>{/if}
-          {:else}
-            <p class="muted">Not rated yet</p>
-          {/if}
+          <Stars value={o.stars} label={ratingLabel(o.name, o.stars)} />
+          {#if o.review}<p class="review">{o.review}</p>{/if}
         </div>
       {/each}
     </div>

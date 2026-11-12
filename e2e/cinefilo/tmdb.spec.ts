@@ -1,4 +1,4 @@
-import { addByHand, expect, openApp, startList, tab, test } from './fixtures.ts';
+import { addByHand, expect, openApp, startList, tab, tapStars, test } from './fixtures.ts';
 import { installTmdb, KEY, saveKey } from './tmdb.ts';
 
 const openAdd = async (page: import('@playwright/test').Page) => {
@@ -116,12 +116,12 @@ test('Link to TMDB fills details and keeps status, date and both ratings', async
 
   await tab(b.page, 'Watched').click();
   await b.page.getByRole('link', { name: /Severance/ }).click();
-  await b.page.getByTestId('rating-mine').getByRole('button', { name: "Didn't like" }).click();
+  await tapStars(b.page.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' }), 3);
   await b.page.getByLabel('Your review').fill('Too slow.');
   await b.page.getByRole('button', { name: 'Save review' }).click();
   await tab(a, 'Watched').click();
   await a.getByRole('link', { name: /Severance/ }).click();
-  await a.getByTestId('rating-mine').getByRole('button', { name: 'Like', exact: true }).click();
+  await tapStars(a.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' }), 9);
   await sync(b.page);
   await sync(a);
   await tab(a, 'Watched').click();
@@ -139,7 +139,7 @@ test('Link to TMDB fills details and keeps status, date and both ratings', async
   await expect(a.getByRole('button', { name: 'Link to TMDB' })).toHaveCount(0);
   await expect(a.getByTestId('poster-img')).toHaveAttribute('src', /^blob:/, { timeout: 10_000 });
   await expect(a.locator('time')).toHaveAttribute('datetime', watchedOn!);
-  await expect(a.getByTestId('rating-mine').getByRole('button', { name: 'Like', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(a.getByTestId('rating-partner')).toContainText("Didn't like");
+  await expect(a.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' })).toHaveAttribute('aria-valuetext', '4.5 stars');
+  await expect(a.getByTestId('rating-partner').getByRole('img', { name: 'Luz: 1.5 stars' })).toBeVisible();
   await expect(a.getByTestId('rating-partner')).toContainText('Too slow.');
 });

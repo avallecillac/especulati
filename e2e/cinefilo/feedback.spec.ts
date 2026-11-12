@@ -47,7 +47,9 @@ test('Watched shows each title\'s number, newest first, and "From #1" is remembe
   await tab(page, 'Watch later').click();
   await expect(page.locator('ul.rows .num')).toHaveCount(0);
   await page.getByRole('link', { name: /Inception/ }).click();
-  await page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Watched' }).click();
+  const watched = page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Watched' });
+  await watched.click();
+  await expect(watched).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('link', { name: 'Back' }).click();
   await expect(order(page).getByRole('radio', { name: 'From #1' })).toHaveAttribute('aria-checked', 'true');
   expect((await names(page)).map((n) => n.slice(0, 2))).toEqual(['#1', '#2', '#3', '#4']);
@@ -55,7 +57,9 @@ test('Watched shows each title\'s number, newest first, and "From #1" is remembe
 
   // Leaving Watched renumbers the rest.
   await page.getByRole('link', { name: /The Godfather/ }).click();
-  await page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Watch later' }).click();
+  const later = page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Watch later' });
+  await later.click();
+  await expect(later).toHaveAttribute('aria-pressed', 'true'); // Back follows the saved status
   await page.getByRole('link', { name: 'Back' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Watch later' })).toBeVisible();
   await tab(page, 'Watched').click();

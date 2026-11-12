@@ -7,27 +7,28 @@ import { expect, tab } from './fixtures.ts';
 const uuid = (n: number, p: string) => `${p}-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const NOW = '2026-02-01T12:00:00.000Z';
 
-type V = 'like' | 'meh' | 'dislike' | null;
+/** Half stars: 1 = 0.5 stars ... 10 = 5 stars; null = not rated. */
+type V = number | null;
 interface Seed {
   title: string; kind: 'movie' | 'series'; year: number; status: 'later' | 'watching' | 'watched';
   watchedOn?: string; season?: number; seasons?: number; runtime?: number;
   mine: V; partner: V; mineReview?: string; partnerReview?: string;
 }
 
-/** The screenshot catalogue: four films and four series, two members, varied verdicts, short original reviews. */
+/** The screenshot catalogue: four films and four series, two members, varied stars, short original reviews. */
 export const SEEDS: readonly Seed[] = [
-  { title: 'The Brutalist', kind: 'movie', year: 2024, status: 'watched', watchedOn: '2026-01-20', runtime: 215, mine: 'like', partner: 'meh',
+  { title: 'The Brutalist', kind: 'movie', year: 2024, status: 'watched', watchedOn: '2026-01-20', runtime: 215, mine: 9, partner: 5,
     mineReview: 'Long and quiet, and the intermission earned its place.', partnerReview: 'Gorgeous rooms, but I kept checking the clock.' },
-  { title: 'The Godfather', kind: 'movie', year: 1972, status: 'watched', watchedOn: '2026-01-14', runtime: 175, mine: 'like', partner: 'like',
+  { title: 'The Godfather', kind: 'movie', year: 1972, status: 'watched', watchedOn: '2026-01-14', runtime: 175, mine: 10, partner: 9,
     mineReview: 'Rewatched on a rainy Sunday and it held up better than I remembered.', partnerReview: 'Slow in the best way, and nobody wastes a line.' },
-  { title: 'Back to the Future', kind: 'movie', year: 1985, status: 'watched', watchedOn: '2026-01-03', runtime: 116, mine: 'meh', partner: 'like',
+  { title: 'Back to the Future', kind: 'movie', year: 1985, status: 'watched', watchedOn: '2026-01-03', runtime: 116, mine: 6, partner: 8,
     partnerReview: 'Pure fun, and the plot clicks together like a watch.' },
   { title: 'Inception', kind: 'movie', year: 2010, status: 'later', runtime: 148, mine: null, partner: null },
-  { title: 'Peaky Blinders', kind: 'series', year: 2013, status: 'later', seasons: 6, mine: null, partner: 'like' },
-  { title: 'The Bear', kind: 'series', year: 2022, status: 'watching', season: 3, seasons: 4, mine: 'like', partner: 'like' },
-  { title: 'Better Call Saul', kind: 'series', year: 2015, status: 'watching', season: 6, seasons: 6, mine: 'like', partner: 'dislike',
+  { title: 'Peaky Blinders', kind: 'series', year: 2013, status: 'later', seasons: 6, mine: null, partner: 7 },
+  { title: 'The Bear', kind: 'series', year: 2022, status: 'watching', season: 3, seasons: 4, mine: 9, partner: 9 },
+  { title: 'Better Call Saul', kind: 'series', year: 2015, status: 'watching', season: 6, seasons: 6, mine: 8, partner: 3,
     partnerReview: 'Started strong, then I lost the thread.' },
-  { title: 'The Simpsons', kind: 'series', year: 1989, status: 'watching', season: 8, seasons: 36, mine: 'meh', partner: null },
+  { title: 'The Simpsons', kind: 'series', year: 1989, status: 'watching', season: 8, seasons: 36, mine: 5, partner: null },
 ];
 
 /** Import the catalogue as a `cinefilo/v1` file around the member this device already is; Luz is the partner. */
@@ -49,7 +50,7 @@ export async function importCatalogue(page: Page, opts: { numbered?: boolean } =
     ([[me, s.mine, s.mineReview], [luz, s.partner, s.partnerReview]] as const)
       .filter(([, v, r]) => v !== null || r)
       .map(([m, v, r], k) => ({
-        id: uuid(i * 2 + k + 1, 'c0000000'), titleId: titles[i]!.id, memberId: m, verdict: v, review: r ?? null, updatedAt: NOW, deletedAt: null,
+        id: uuid(i * 2 + k + 1, 'c0000000'), titleId: titles[i]!.id, memberId: m, verdict: null, stars: v, review: r ?? null, updatedAt: NOW, deletedAt: null,
       })),
   );
   const file = { format: 'cinefilo/v1', exportedAt: NOW, titles, members: [{ id: luz, name: 'Luz', createdAt: '2030-01-01T00:00:00.000Z', deletedAt: null }], ratings };
@@ -57,7 +58,8 @@ export async function importCatalogue(page: Page, opts: { numbered?: boolean } =
   await expect(page.getByText(`Imported ${titles.length + 1 + ratings.length} items.`)).toBeVisible();
 }
 
-export type PlainSeed = { name: string; mine: string | null; partner: string | null };
+/** `mine` / `partner` are half stars (1..10) or null. */
+export type PlainSeed = { name: string; mine: number | null; partner: number | null };
 
 const SEED_NOW = '2025-01-01T00:00:00.000Z';
 
@@ -76,7 +78,7 @@ export async function importSeed(page: Page, seeds: PlainSeed[]): Promise<void> 
   const ratings = seeds.flatMap((s, i) =>
     ([[me, s.mine], [luz, s.partner]] as const)
       .filter(([, v]) => v !== null)
-      .map(([m, v]) => ({ id: randomUUID(), titleId: titles[i]!.id, memberId: m, verdict: v, review: null, updatedAt: SEED_NOW, deletedAt: null })),
+      .map(([m, v]) => ({ id: randomUUID(), titleId: titles[i]!.id, memberId: m, verdict: null, stars: v, review: null, updatedAt: SEED_NOW, deletedAt: null })),
   );
   const file = {
     format: 'cinefilo/v1', exportedAt: SEED_NOW, titles,

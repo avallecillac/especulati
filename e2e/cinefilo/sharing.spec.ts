@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
-import { addByHand, expect, expectQrVisible, openApp, startList, tab, test } from './fixtures.ts';
+import { addByHand, expect, expectQrVisible, openApp, startList, tab, tapStars, test } from './fixtures.ts';
 
 async function join(page: Page, code: string, me: { new: string } | { existing: string }) {
   await openApp(page);
@@ -52,8 +52,8 @@ test('partner joins, sees the catalog; both rate offline and converge', async ({
   await b.page.getByRole('link', { name: /Heat/ }).click();
   await a.context().setOffline(true);
   await b.context.setOffline(true);
-  await a.getByTestId('rating-mine').getByRole('button', { name: 'Like', exact: true }).click();
-  await b.page.getByTestId('rating-mine').getByRole('button', { name: "Didn't like" }).click();
+  await tapStars(a.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' }), 9);
+  await tapStars(b.page.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' }), 4);
   await a.context().setOffline(false);
   await b.context.setOffline(false);
 
@@ -63,8 +63,8 @@ test('partner joins, sees the catalog; both rate offline and converge', async ({
   for (const p of [a, b.page]) {
     await tab(p, 'Watched').click();
     await p.getByRole('link', { name: /Heat/ }).click();
-    await expect(p.getByTestId('rating-mine').getByRole('button', { name: p === a ? 'Like' : "Didn't like", exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(p.getByTestId('rating-partner')).toContainText(p === a ? "Didn't like" : 'Like');
+    await expect(p.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' })).toHaveAttribute('aria-valuetext', p === a ? '4.5 stars' : '2 stars');
+    await expect(p.getByTestId('rating-partner').getByRole('img', { name: p === a ? 'Luz: 2 stars' : 'Ana: 4.5 stars' })).toBeVisible();
   }
 });
 
@@ -122,7 +122,7 @@ test('export, then import into a fresh device gives the same catalog; importing 
   await addByHand(a, { title: 'Alien', year: '1979' });
   await tab(a, 'Watched').click();
   await a.getByRole('link', { name: /Heat/ }).click();
-  await a.getByTestId('rating-mine').getByRole('button', { name: 'Like', exact: true }).click();
+  await tapStars(a.getByTestId('rating-mine').getByRole('slider', { name: 'Your rating' }), 9);
   await tab(a, 'Settings').click();
   const [download] = await Promise.all([a.waitForEvent('download'), a.getByRole('button', { name: 'Export' }).click()]);
   expect(download.suggestedFilename()).toMatch(/^cinefilo-\d{4}-\d{2}-\d{2}\.json$/);
@@ -139,7 +139,7 @@ test('export, then import into a fresh device gives the same catalog; importing 
   await tab(b.page, 'Watched').click();
   await b.page.getByRole('link', { name: /Heat/ }).click();
   await expect(b.page.getByTestId('rating-partner')).toContainText('Ana');
-  await expect(b.page.getByTestId('rating-partner')).toContainText('Like');
+  await expect(b.page.getByTestId('rating-partner').getByRole('img', { name: 'Ana: 4.5 stars' })).toBeVisible();
 
   await tab(b.page, 'Settings').click();
   await b.page.locator('#import-file').setInputFiles(path);

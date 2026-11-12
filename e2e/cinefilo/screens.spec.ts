@@ -40,7 +40,7 @@ for (const [id, label] of [['beton', 'Béton'], ['willis', 'Willis']] as const) 
 
     await tab(page, 'Watched').click();
     await expect(page.getByRole('link', { name: /The Godfather/ })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'You both loved it' })).toHaveCount(1);
+    await expect(page.getByRole('img', { name: 'You: 5 stars' })).toHaveCount(1);
     await shoot(page, id, '04-watched');
 
     await page.getByRole('link', { name: /The Godfather/ }).click();

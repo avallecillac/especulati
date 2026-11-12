@@ -9,6 +9,6 @@ Checks = `pnpm typecheck`, eslint, depcruise (the `lint` script's paths), `pnpm 
 
 ## 2. UI
 
-- [ ] 2.1 `Stars.svelte` (D6) and the stacked Ratings block; the worker protocol and `lib/commands.ts` use `SetStars`. Playwright: tap halves (3.5), drag to 5, keyboard arrows/Home/End/Delete, Clear, offline, partner read-only label, partner review in view at 390×844, both themes.
-- [ ] 2.2 Lists (D7): row stars with labels, both-loved mark gone; Filter button, sheet, chip and `listView.filter` removed, with `filters.spec.ts` deleted and `compact-lists.spec.ts` / `seed.ts` updated (seeds rate with stars). Header height ≤ 200 px.
-- [ ] 2.3 Screenshots (both themes): title screen with stars, Watched list, to `e2e/cinefilo/__screens__/stars-*.png`.
+- [x] 2.1 `Stars.svelte` (D6) and the stacked Ratings block; the worker protocol and `lib/commands.ts` use `SetStars`. Playwright: tap halves (3.5), drag to 5, keyboard arrows/Home/End/Delete, Clear, offline, partner read-only label, partner review in view at 390×844, both themes.
+- [x] 2.2 Lists (D7): row stars with labels, both-loved mark gone; Filter button, sheet, chip and `listView.filter` removed, with `filters.spec.ts` deleted and `compact-lists.spec.ts` / `seed.ts` updated (seeds rate with stars). Header height ≤ 200 px.
+- [x] 2.3 Screenshots (both themes): title screen with stars, Watched list, to `e2e/cinefilo/__screens__/stars-*.png`.

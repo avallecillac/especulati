@@ -4,7 +4,7 @@
   import { list, pendingRecommendations } from '../lib/dbClient.ts';
   import { display, setLayout, setWatchedOrder } from '../lib/layout.svelte.ts';
   import { listView } from '../lib/listView.svelte.ts';
-  import { KIND_LABEL } from '../lib/labels.ts';
+  import { KIND_LABEL, ratingLabel } from '../lib/labels.ts';
   import { matchesQuery } from '../lib/search.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
@@ -255,8 +255,8 @@
             {/if}
             <!-- Under the title, not beside it, so long titles get the row's full width. -->
             <span class="verdicts">
-              <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><span role="img" aria-label={`You: ${i.mine ? i.mine / 2 + ' stars' : 'not rated'}`}>★ {i.mine ? i.mine / 2 : '–'}</span></span>
-              <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><span role="img" aria-label={`${partner}: ${i.partner ? i.partner / 2 + ' stars' : 'not rated'}`}>★ {i.partner ? i.partner / 2 : '–'}</span></span>
+              <span class="pair"><span class="who" aria-hidden="true">{myInitial}</span><span role="img" aria-label={ratingLabel('You', i.mine)}>★ {i.mine ? i.mine / 2 : '–'}</span></span>
+              <span class="pair"><span class="who" aria-hidden="true">{partnerInitial}</span><span role="img" aria-label={ratingLabel(partner, i.partner)}>★ {i.partner ? i.partner / 2 : '–'}</span></span>
               {#if rl}{@render reviewMark(rl, i.reviewedByMe && i.reviewedByPartner)}{/if}
             </span>
           </span>

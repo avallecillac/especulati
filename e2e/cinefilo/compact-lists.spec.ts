@@ -9,7 +9,6 @@ const DIR = fileURLToPath(new URL('./__screens__/', import.meta.url));
 test.use({ viewport: { width: 390, height: 844 } });
 
 const search = (page: Page) => page.getByRole('searchbox', { name: 'Search titles' });
-const filterButton = (page: Page) => page.getByRole('button', { name: 'Filter', exact: true });
 const rows = (page: Page) => page.locator('ul.rows a.row');
 const tiles = (page: Page) => page.locator('ul.grid a.tile');
 
@@ -23,8 +22,8 @@ async function catalogue(page: Page): Promise<void> {
 test('search filters the list by title, ignoring case and accents, offline, with Clear', async ({ page, context }) => {
   await startList(page, 'Ana');
   await importSeed(page, [
-    { name: 'The Godfather', mine: 'like', partner: 'like' },
-    { name: 'Amélie', mine: 'like', partner: null },
+    { name: 'The Godfather', mine: 9, partner: 9 },
+    { name: 'Amélie', mine: 9, partner: null },
     { name: 'Alien', mine: null, partner: null },
   ]);
   await context.setOffline(true);
@@ -49,15 +48,12 @@ test('search filters the list by title, ignoring case and accents, offline, with
   await expect(rows(page)).toHaveCount(3);
   await expect(clear).toHaveCount(0);
 
-  // Search and a filter combine; the grid filters the same way.
-  await search(page).fill('a');
-  await filterButton(page).click();
-  await page.getByRole('dialog', { name: 'Filter' }).getByRole('radio', { name: 'Only me' }).click();
-  await expect(rows(page)).toHaveCount(1);
-  await expect(rows(page).first()).toContainText('Amélie');
+  // The grid searches the same way, and there is no Filter button any more.
+  await search(page).fill('am');
   await page.getByRole('radiogroup', { name: 'Layout' }).getByRole('radio', { name: 'Grid' }).click();
   await expect(tiles(page)).toHaveCount(1);
   await expect(tiles(page).first()).toHaveAttribute('aria-label', 'Amélie');
+  await expect(page.getByRole('button', { name: 'Filter', exact: true })).toHaveCount(0);
 });
 
 test('the header is compact, and the partner list still says view only', async ({ page }) => {
@@ -79,34 +75,32 @@ test('the header is compact, and the partner list still says view only', async (
   await tab(page, 'Watch later').click();
   await expect(page.getByRole('radiogroup', { name: 'Watched order' })).toHaveCount(0);
   await expect(search(page)).toBeVisible();
-  await expect(filterButton(page)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Filter', exact: true })).toHaveCount(0);
 });
 
-test('a filter shows as one chip, and the Filter button wears the pressed style', async ({ page }) => {
-  await catalogue(page);
-  await expect(filterButton(page)).not.toHaveClass(/active/);
-  await filterButton(page).click();
-  const sheet = page.getByRole('dialog', { name: 'Filter' });
-  await expect(sheet.getByRole('heading', { name: 'Filter by verdict' })).toBeVisible();
-  await sheet.getByRole('radio', { name: 'Both liked' }).click();
-  await expect(sheet).toBeHidden();
-  await expect(rows(page)).toHaveCount(1);
-  await expect(rows(page).first()).toContainText('The Godfather');
-  await expect(filterButton(page)).toHaveClass(/active/);
-  await expect(page.getByRole('button', { name: 'Remove filter Both liked' })).toContainText('Both liked');
+test('the list header has no filter, and rows show each member\'s stars', async ({ page }) => {
+  await startList(page, 'Ana');
+  await importSeed(page, [{ name: 'Heat', mine: 9, partner: 1 }, { name: 'Alien', mine: 2, partner: null }]);
+  await tab(page, 'Watched').click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Filter', exact: true })).toHaveCount(0);
+  const heat = page.getByRole('link', { name: /Heat/ });
+  await expect(heat.getByRole('img', { name: 'You: 4.5 stars' })).toHaveText('★ 4.5');
+  await expect(heat.getByRole('img', { name: 'Luz: 0.5 stars' })).toBeVisible();
+  const alien = page.getByRole('link', { name: /Alien/ });
+  await expect(alien.getByRole('img', { name: 'You: 1 star' })).toBeVisible();
+  await expect(alien.getByRole('img', { name: 'Luz: not rated' })).toHaveText('★ –');
 });
 
 for (const mode of ['list', 'grid'] as const) {
-  test(`going back from a title keeps the scroll position, filter and search (${mode})`, async ({ page }) => {
+  test(`going back from a title keeps the scroll position and search (${mode})`, async ({ page }) => {
     await startList(page, 'Ana');
-    await importSeed(page, Array.from({ length: 45 }, (_, i) => ({ name: `Film ${String(i + 1).padStart(2, '0')}`, mine: 'like', partner: 'like' })));
+    await importSeed(page, Array.from({ length: 45 }, (_, i) => ({ name: `Film ${String(i + 1).padStart(2, '0')}`, mine: 9, partner: 9 })));
     await tab(page, 'Watched').click();
     if (mode === 'grid') await page.getByRole('radiogroup', { name: 'Layout' }).getByRole('radio', { name: 'Grid' }).click();
     const items = mode === 'grid' ? tiles(page) : rows(page);
     await expect(items).toHaveCount(45);
 
-    await filterButton(page).click();
-    await page.getByRole('dialog', { name: 'Filter' }).getByRole('radio', { name: 'Both liked' }).click();
     await search(page).fill('film');
     await expect(items).toHaveCount(45);
 
@@ -124,7 +118,6 @@ for (const mode of ['list', 'grid'] as const) {
     await expect(items).toHaveCount(45);
     await expect.poll(async () => Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThanOrEqual(2);
     await expect(search(page)).toHaveValue('film');
-    await expect(page.getByRole('button', { name: 'Remove filter Both liked' })).toBeVisible();
     // It stays put: no later re-restore fights the member.
     await page.waitForTimeout(300);
     expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThanOrEqual(2);
@@ -147,31 +140,20 @@ for (const [id, label] of [['beton', 'Béton'], ['willis', 'Willis']] as const) 
     const add = (await page.getByRole('button', { name: 'Add', exact: true }).boundingBox())!;
     expect(add.height).toBeGreaterThanOrEqual(32);
     expect(add.height).toBeLessThanOrEqual(40);
-    const f = (await filterButton(page).boundingBox())!;
-    expect(f.height).toBeGreaterThanOrEqual(32);
-    expect(f.height).toBeLessThanOrEqual(40);
+    // Header: the first row starts within the top 200 px, and the tools row has no Filter.
+    expect((await rows(page).first().boundingBox())!.y).toBeLessThanOrEqual(200);
+    await expect(page.getByRole('button', { name: 'Filter', exact: true })).toHaveCount(0);
     await shoot('watched');
-
-    await filterButton(page).click();
-    await expect(page.getByRole('dialog', { name: 'Filter' })).toBeVisible();
-    await shoot('filter');
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: 'Filter' })).toBeHidden();
 
     await page.getByRole('link', { name: /The Brutalist/ }).click();
     const mine = page.getByTestId('rating-mine');
     await expect(mine).toBeVisible();
-    // Three compact verdicts (a wrapping row: two columns at 390 px leave room for two or three per line), each
-    // between 32 and 44 px tall; the review box starts at two lines.
-    const group = mine.getByRole('group', { name: 'Your verdict' });
-    const verdicts = group.getByRole('button');
-    await expect(verdicts).toHaveCount(3);
-    expect((await group.boundingBox())!.height).toBeLessThanOrEqual(90);
-    const boxes = await Promise.all([0, 1, 2].map((i) => verdicts.nth(i).boundingBox()));
-    for (const b of boxes) {
-      expect(b!.height).toBeGreaterThanOrEqual(32);
-      expect(b!.height).toBeLessThanOrEqual(44);
-    }
+    // One slider of five 32 px stars; the review box starts at two lines.
+    const slider = mine.getByRole('slider', { name: 'Your rating' });
+    await expect(slider).toHaveAttribute('aria-valuetext', '4.5 stars');
+    const sb = (await slider.boundingBox())!;
+    expect(Math.round(sb.width)).toBe(160);
+    expect(Math.round(sb.height)).toBe(32);
     await expect(mine.getByLabel('Your review')).toHaveAttribute('rows', '2');
     await expect(page.getByTestId('rating-partner')).toContainText('Gorgeous rooms');
     await expect(page.getByTestId('rating-partner')).toBeInViewport({ ratio: 1 });

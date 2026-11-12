@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page, Route } from '@playwright/test';
+import type { Browser, BrowserContext, Locator, Page, Route } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
 import { handle } from '../../apps/relay/src/handler.ts';
 import { sqliteStore, type TestStore } from '../../apps/relay/test/sqliteStore.ts';
@@ -124,3 +124,6 @@ export async function addByHand(page: Page, o: { title: string; kind?: 'Movie' |
 }
 
 export const tab = (page: Page, name: string) => page.getByRole('navigation', { name: 'Sections' }).getByRole('link', { name });
+
+/** Tap the middle of the half star `halves` (1 = 0.5 stars ... 10 = 5 stars) on an editable star row (160 px wide). */
+export const tapStars = (slider: Locator, halves: number) => slider.click({ position: { x: (halves - 0.5) * 16, y: 16 } });

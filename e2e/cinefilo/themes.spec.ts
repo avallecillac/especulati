@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { addByHand, expect, startList, tab, test } from './fixtures.ts';
+import { addByHand, expect, startList, tab, tapStars, test } from './fixtures.ts';
 import { installTmdb, saveKey } from './tmdb.ts';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -86,7 +86,7 @@ test('posters by default in their own colours; Generated on request; a title wit
 });
 
 for (const name of themes) {
-  test(`${name}: welcome art, numbered tabs, verdict names and the both-loved mark`, async ({ page }) => {
+  test(`${name}: welcome art, numbered tabs, star rating and its list label`, async ({ page }) => {
     await page.addInitScript((n) => localStorage.setItem('cinefilo.appearance', n === 'Willis' ? 'willis' : 'beton'), name);
     await page.goto('/#/');
     await expect(page.getByTestId('ready')).toBeAttached();
@@ -115,11 +115,19 @@ for (const name of themes) {
 
     await page.getByRole('link', { name: /Stalker/ }).click();
     const mine = page.getByTestId('rating-mine');
-    for (const label of ['Like', 'Meh', "Didn't like"]) await expect(mine.getByRole('button', { name: label, exact: true })).toBeVisible();
-    await mine.getByRole('button', { name: 'Like', exact: true }).click();
-    await expect(mine.getByRole('button', { name: 'Like', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const slider = mine.getByRole('slider', { name: 'Your rating' });
+    await expect(slider).toBeVisible();
+    await tapStars(slider, 7);
+    await expect(slider).toHaveAttribute('aria-valuetext', '3.5 stars');
+    // Filled stars use the theme's ink (Béton) or accent (Willis); the empty outline is --ink-soft.
+    const want = await page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n === 'Willis' ? '--accent' : '--ink').trim().toLowerCase(), name);
+    const onFill = await slider.locator('path.on').first().evaluate((el) => getComputedStyle(el).fill);
+    const probe = await page.evaluate((c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v; }, want);
+    expect(onFill).toBe(probe);
+    // Three full stars and one half star are drawn.
+    await expect(slider.locator('path.on')).toHaveCount(4);
     await page.getByRole('link', { name: 'Back' }).click();
-    await expect(page.getByRole('img', { name: 'You: Like' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'You: 3.5 stars' })).toBeVisible();
   });
 }
 
@@ -151,7 +159,7 @@ for (const [id, fill] of [['beton', 'rgb(22, 22, 21)'], ['willis', 'rgb(212, 162
     );
     expect(fits).toEqual([true, true, true, true]);
 
-    // Whose mark: the initials, aria-hidden, before the two verdict marks.
+    // Whose mark: the initials, aria-hidden, before the two stars.
     const row = page.getByRole('link', { name: /Stalker/ });
     await expect(row.locator('.who')).toHaveText(['A', 'P']);
     await expect(row.getByRole('img', { name: /^You: / })).toBeVisible();
@@ -168,16 +176,9 @@ for (const [id, fill] of [['beton', 'rgb(22, 22, 21)'], ['willis', 'rgb(212, 162
     const watched = page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Watched' });
     await expect(watched).toHaveAttribute('aria-pressed', 'true');
     expect(await watched.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(fill);
-    const like = page.getByTestId('rating-mine').getByRole('button', { name: 'Like', exact: true });
-    await like.click();
-    await expect(like).toHaveAttribute('aria-pressed', 'true');
-    expect(await like.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(fill);
-    const meh = page.getByTestId('rating-mine').getByRole('button', { name: 'Meh', exact: true });
-    expect(await meh.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(fill);
-    // Verdicts use no green, yellow or red tokens: --like, --meh and --dislike stay in the theme's own palette.
-    const tokens = await page.evaluate(() => ['--like', '--meh', '--dislike'].map((t) => getComputedStyle(document.documentElement).getPropertyValue(t).trim().toLowerCase()));
-    const allowed = id === 'beton' ? ['#161615'] : ['#d4a253', '#a39478'];
-    expect(tokens.every((t) => allowed.includes(t))).toBe(true);
+    // The other, unselected Status button is not filled.
+    const later = page.getByRole('group', { name: 'Status' }).getByRole('button', { name: 'Watch later' });
+    expect(await later.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(fill);
     const today = page.getByRole('button', { name: 'Today' });
     await today.click();
     await expect(today).toHaveAttribute('aria-pressed', 'true');
