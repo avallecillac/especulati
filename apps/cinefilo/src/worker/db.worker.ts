@@ -232,8 +232,11 @@ function runQuery(d: CinefiloDb, q: Query): unknown {
       return d.title(q.id);
     case 'members':
       return d.members();
+    case 'memberActivity':
+      return d.memberActivity();
     case 'me':
-      return { memberId: d.memberId, deviceId: d.getMeta('device_id') ?? '' };
+      // Null for a removed member (cinefilo-member-cleanup D3): the app asks "Who are you?" again.
+      return { memberId: d.me(), deviceId: d.getMeta('device_id') ?? '' };
     case 'findByTmdb':
       return d.findByTmdb(q.tmdbId, q.kind);
     case 'needsDetails':

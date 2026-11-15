@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { eraseAll, exportCatalog, importCatalog, importTitlesList, type TitlesImportPreview, syncReset, syncShowCode, syncTurnOn, type CodeView } from '../lib/dbClient.ts';
+  import { eraseAll, exportCatalog, memberActivity, importCatalog, importTitlesList, type TitlesImportPreview, syncReset, syncShowCode, syncTurnOn, type CodeView } from '../lib/dbClient.ts';
   import { TITLES_FORMAT } from '@especulati/cinefilo-core';
   import { qrSvg } from '../lib/qr.ts';
   import { app, refresh, runSync, showToast, write } from '../lib/state.svelte.ts';
   import { setMe } from '../lib/dbClient.ts';
+  import type { MemberActivity } from '@especulati/cinefilo-db';
+  import { activityLine, activityParts } from '../lib/memberText.ts';
   import { GENERIC_FAILURE, syncErrorText } from '../lib/syncText.ts';
   import { localDate } from '../lib/clock.ts';
   import { saveTmdbKey, tmdb } from '../lib/tmdb.svelte.ts';
@@ -16,11 +18,43 @@
   let error = $state<string | null>(null);
   let confirming = $state<'leave' | 'reset' | null>(null);
   let names = $state<Record<string, string>>({});
+  let activity = $state<MemberActivity[]>([]);
+  /** The member about to be removed (a copy of plain values, never a proxy of app.members). */
+  let removing = $state<{ id: string; name: string; counts: string[] } | null>(null);
   let busy = $state(false);
   let keyDraft = $state('');
   let listPreview = $state<{ text: string; counts: TitlesImportPreview } | null>(null);
 
   const status = $derived(app.sync);
+  const activityOf = (id: string) => activity.find((a) => a.id === id);
+
+  // Counts reload after every write, sync or removal.
+  $effect(() => {
+    void app.rev;
+    void memberActivity().then((r) => {
+      if (r.ok) activity = r.value;
+    });
+  });
+
+  function askRemove(id: string) {
+    const a = activityOf(id);
+    const name = app.members.find((m) => m.id === id)?.name ?? '';
+    confirming = null;
+    removing = { id, name, counts: a && a.total > 0 ? activityParts(a) : [] };
+  }
+
+  async function removeMember() {
+    const r0 = removing;
+    if (!r0 || busy) return;
+    const id = r0.id;
+    const name = r0.name;
+    removing = null;
+    const r = await write({ kind: 'RemoveMember', memberId: id });
+    if (!r.ok) return void (error = GENERIC_FAILURE);
+    error = null;
+    await refresh();
+    showToast(`Removed ${name}.`);
+  }
 
   const appearanceChoices: { id: Appearance; name: string }[] = [{ id: 'automatic', name: 'Automatic' }, ...THEMES.map((t) => ({ id: t.id, name: t.name }))];
   const coverChoices: { id: CoversMode; name: string }[] = [{ id: 'posters', name: 'TMDB posters' }, { id: 'generated', name: 'Generated' }];
@@ -201,8 +235,10 @@
   {#each app.members as m (m.id)}
     <div class="member">
       <button type="button" aria-pressed={m.me} onclick={() => void iAm(m.id)}>{m.me ? `${m.name} (this device)` : `I'm ${m.name}`}</button>
+      {#if activityOf(m.id)}<p class="muted small" data-testid={`activity-${m.id}`}>{activityLine(activityOf(m.id)!)}</p>{/if}
       <input aria-label={`New name for ${m.name}`} placeholder="Rename" bind:value={names[m.id]} />
       <button type="button" onclick={() => void rename(m.id)} disabled={!names[m.id]?.trim()}>Rename {m.name}</button>
+      {#if !m.me}<button type="button" class="danger" onclick={() => askRemove(m.id)}>Remove {m.name}</button>{/if}
     </div>
   {/each}
 </section>
@@ -307,6 +343,19 @@
         {c.new === 0 && c.ordersToSet > 0 ? `Set ${c.ordersToSet} ${c.ordersToSet === 1 ? 'order' : 'orders'}` : c.new === 1 ? 'Import 1 title' : `Import ${c.new} titles`}
       </button>
       <button type="button" onclick={() => (listPreview = null)}>Cancel</button>
+    </div>
+  </div>
+{/if}
+
+{#if removing}
+  <div class="backdrop" role="presentation" onclick={() => (removing = null)}></div>
+  <div class="sheet" role="alertdialog" aria-label={`Remove ${removing.name}?`}>
+    <h2>Remove {removing.name}?</h2>
+    <p>Their ratings, reviews and lists will be hidden on both phones.</p>
+    <p class="muted">{removing.counts.length > 0 ? `${removing.name} has ${removing.counts.join(', ')}.` : 'They have no activity.'}</p>
+    <div class="actions">
+      <button type="button" class="danger" onclick={() => void removeMember()}>Remove</button>
+      <button type="button" onclick={() => (removing = null)}>Cancel</button>
     </div>
   </div>
 {/if}

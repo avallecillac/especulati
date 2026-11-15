@@ -7,8 +7,8 @@ import { importTitles, type ImportEnv, type ImportTitlesResult } from './importT
 import { migrate } from './migrations.ts';
 import { getPoster, putPoster } from './posters.ts';
 import {
-  findByTmdb, list, members, needsDetails, pendingRecommendations, titleDetail,
-  type ListItem, type ListScope, type NeedsDetails, type ListTab, type MemberView, type PendingRecommendation, type TitleDetail,
+  findByTmdb, list, me, memberActivity, members, needsDetails, pendingRecommendations, titleDetail,
+  type ListItem, type ListScope, type NeedsDetails, type ListTab, type MemberActivity, type MemberView, type PendingRecommendation, type TitleDetail,
 } from './queries.ts';
 import { loadSnapshot } from './snapshot.ts';
 import type { DispatchEnv, DispatchOutcome } from './types.ts';
@@ -22,7 +22,7 @@ export { reconcileAll, type Hash } from './reconcile.ts';
 export { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
 export { exportData, exportText, importText, type ImportResult } from './io.ts';
 export type {
-  ListItem, ListScope, ListTab, NeedsDetails, MemberView, MemberStatusView, PendingRecommendation, RatingView, RecommendationState, RecommendationView, TitleDetail,
+  ListItem, ListScope, ListTab, NeedsDetails, MemberActivity, MemberView, MemberStatusView, PendingRecommendation, RatingView, RecommendationState, RecommendationView, TitleDetail,
 } from './queries.ts';
 export { loadSnapshot, loadReconcileSnapshot } from './snapshot.ts';
 
@@ -78,6 +78,16 @@ export class CinefiloDb {
 
   members(): MemberView[] {
     return members(this.raw);
+  }
+
+  /** Counts per live member, to tell duplicates apart (cinefilo-member-cleanup D1). */
+  memberActivity(): MemberActivity[] {
+    return memberActivity(this.raw);
+  }
+
+  /** The member this device acts as; null before "who am I" or when that member was removed (D3). `memberId` stays as stored. */
+  me(): string | null {
+    return me(this.raw);
   }
 
   /** `scope` defaults to Together; `me` and `partner` are the personal lists (the partner's is read-only for the UI). */

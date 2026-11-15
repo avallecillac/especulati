@@ -3,9 +3,10 @@
   import { formatSyncCode, parseQrPayload } from '@especulati/sync';
   import { createMember, setMe, startSpace, syncJoin, type CodeView } from '../lib/dbClient.ts';
   import { qrSvg } from '../lib/qr.ts';
-  import { app, refresh } from '../lib/state.svelte.ts';
+  import { app, refresh, runSync } from '../lib/state.svelte.ts';
   import { GENERIC_FAILURE, syncErrorText } from '../lib/syncText.ts';
   import { navigate } from '../lib/router.svelte.ts';
+  import { normalise } from '../lib/search.ts';
   import Scan from './Scan.svelte';
   import BetonElevation from '../art/BetonElevation.svelte';
   import WillisRoom from '../art/WillisRoom.svelte';
@@ -20,6 +21,22 @@
   let error = $state<string | null>(null);
   let busy = $state(false);
   let shown = $state<{ code: string; svg: string } | null>(null);
+  /** Just joined and the first sync has not brought the members yet (cinefilo-member-cleanup D4). */
+  let waiting = $state(false);
+  /** "I'm new" with a name a live member already has: ask before creating a duplicate. */
+  let sameName = $state<{ id: string; name: string } | null>(null);
+
+  const WAIT_MS = 15_000;
+  const RETRY_MS = 2_000;
+
+  /** Join already ran one sync; if it did not complete, retry for up to 15 s before offering "I'm new". */
+  async function waitForFirstSync() {
+    const until = Date.now() + WAIT_MS;
+    while (!app.sync?.lastOkAt && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, RETRY_MS));
+      await runSync('manual');
+    }
+  }
 
   async function reveal(c: CodeView) {
     shown = { code: c.code, svg: await qrSvg(c.qr) };
@@ -79,6 +96,11 @@
     await refresh();
     app.onboarding = true;
     step = 'who';
+    if (!app.sync?.lastOkAt) {
+      waiting = true;
+      await waitForFirstSync();
+      waiting = false;
+    }
   }
 
   async function pick(id: string) {
@@ -87,8 +109,15 @@
     await finish();
   }
 
-  async function imNew() {
+  async function imNew(confirmed = false) {
     error = null;
+    sameName = null;
+    const wanted = normalise(name);
+    const twin = wanted === '' ? undefined : app.members.find((m) => normalise(m.name) === wanted);
+    if (twin && !confirmed) {
+      sameName = { id: twin.id, name: twin.name };
+      return;
+    }
     const r = await createMember(name);
     if (!r.ok) return void (error = 'Please enter your name.');
     await finish();
@@ -134,14 +163,23 @@
     <Scan onscanned={(t) => void onScanned(t)} oncancel={() => (step = 'join')} />
   {:else}
     <h2>Who are you?</h2>
-    {#each app.members as m (m.id)}
-      <button type="button" onclick={() => void pick(m.id)}>I'm {m.name}</button>
-    {/each}
-    <form onsubmit={(e) => { e.preventDefault(); void imNew(); }}>
-      <label for="new-name">I'm new</label>
-      <input id="new-name" placeholder="Your name" autocomplete="off" bind:value={name} />
-      <button class="primary" type="submit">Create me</button>
-    </form>
+    {#if waiting}
+      <p class="muted" role="status">Getting the members…</p>
+    {:else if sameName}
+      {@const twin = sameName}
+      <p>There is already a {twin.name}. Is that you?</p>
+      <button class="primary" type="button" onclick={() => void pick(twin.id)}>Yes, I'm {twin.name}</button>
+      <button type="button" onclick={() => void imNew(true)}>No, create a new one</button>
+    {:else}
+      {#each app.members as m (m.id)}
+        <button type="button" onclick={() => void pick(m.id)}>I'm {m.name}</button>
+      {/each}
+      <form onsubmit={(e) => { e.preventDefault(); void imNew(); }}>
+        <label for="new-name">I'm new</label>
+        <input id="new-name" placeholder="Your name" autocomplete="off" bind:value={name} />
+        <button class="primary" type="submit">Create me</button>
+      </form>
+    {/if}
   {/if}
 
   <p role="alert" class="error">{error ?? ''}</p>

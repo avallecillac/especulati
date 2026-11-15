@@ -9,6 +9,8 @@ export type Query =
   | { name: 'pendingRecommendations' }
   | { name: 'title'; id: string }
   | { name: 'members' }
+  /** Per live member: ratings, reviews, personal-list titles, recommendations, titles added (cinefilo-member-cleanup D1). */
+  | { name: 'memberActivity' }
   | { name: 'me' }
   | { name: 'findByTmdb'; tmdbId: number; kind: Kind }
   | { name: 'needsDetails'; limit: number };

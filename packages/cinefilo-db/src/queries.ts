@@ -128,12 +128,55 @@ export function currentMemberId(db: Database): string | null {
   return readMeta(db, 'member_id');
 }
 
+/**
+ * The member this device acts as: `meta.member_id`, or null before "who am I" and when that member was removed
+ * (cinefilo-member-cleanup D3). `meta.member_id` itself is left as stored.
+ */
+export function me(db: Database): string | null {
+  const id = currentMemberId(db);
+  if (id === null) return null;
+  return db.selectValue('SELECT 1 FROM members WHERE id = ? AND deleted_at IS NOT NULL', [id]) === undefined ? id : null;
+}
+
 /** Live members, the device's own first, then by creation. */
 export function members(db: Database): MemberView[] {
   const me = currentMemberId(db);
   const rows: MemberRow[] = db.selectObjects('SELECT * FROM members WHERE deleted_at IS NULL ORDER BY created_at, id').map(rowToMember);
   const own = rows.filter((m) => m.id === me);
   return [...own, ...rows.filter((m) => m.id !== me)].map((m) => ({ id: m.id, name: m.name, me: m.id === me }));
+}
+
+/** A live member with what they hold (cinefilo-member-cleanup D1); `total` is the sum of the five counts. */
+export interface MemberActivity extends MemberView {
+  readonly ratings: number;
+  readonly reviews: number;
+  readonly personal: number;
+  readonly recommendations: number;
+  readonly titlesAdded: number;
+  readonly total: number;
+}
+
+/** Per live member (the device's own first): counts over live rows on live, unmerged titles. */
+export function memberActivity(db: Database): MemberActivity[] {
+  const counts = (sql: string): Map<string, number> =>
+    new Map(db.selectArrays(sql).map((r) => [text(r[0], 'member'), Number(r[1])]));
+  const onLiveTitle = 'JOIN titles t ON t.id = x.title_id AND t.deleted_at IS NULL AND t.merged_into IS NULL WHERE x.deleted_at IS NULL';
+  const ratings = counts(`SELECT x.member_id, COUNT(*) FROM ratings x ${onLiveTitle} AND (x.stars IS NOT NULL OR x.verdict IS NOT NULL) GROUP BY x.member_id`); // old verdicts count too: they tell duplicates apart
+  const reviews = counts(`SELECT x.member_id, COUNT(*) FROM ratings x ${onLiveTitle} AND x.review IS NOT NULL AND trim(x.review) <> '' GROUP BY x.member_id`);
+  const personal = counts(`SELECT x.member_id, COUNT(*) FROM member_status x ${onLiveTitle} AND x.status IS NOT NULL GROUP BY x.member_id`);
+  const sent = counts(`SELECT x.from_member, COUNT(*) FROM recommendations x ${onLiveTitle} GROUP BY x.from_member`);
+  const received = counts(`SELECT x.to_member, COUNT(*) FROM recommendations x ${onLiveTitle} GROUP BY x.to_member`);
+  const added = counts(`SELECT added_by, COUNT(*) FROM titles WHERE ${LIVE} GROUP BY added_by`);
+  return members(db).map((m) => {
+    const c = {
+      ratings: ratings.get(m.id) ?? 0,
+      reviews: reviews.get(m.id) ?? 0,
+      personal: personal.get(m.id) ?? 0,
+      recommendations: (sent.get(m.id) ?? 0) + (received.get(m.id) ?? 0),
+      titlesAdded: added.get(m.id) ?? 0,
+    };
+    return { ...m, ...c, total: c.ratings + c.reviews + c.personal + c.recommendations + c.titlesAdded };
+  });
 }
 
 /** The partner: the earliest-created live member that is not this device's. */
