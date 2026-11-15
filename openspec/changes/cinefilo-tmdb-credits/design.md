@@ -40,3 +40,4 @@ Title screen, under "Movie · 2024": one muted line, wrapping, separated by " ·
 - `tierOf` checks `c` before `p`.
 - Reconcile carries the four fields from loser to survivor, like the other details.
 - The convergence suite draws credits randomness from its own generator, so existing seeded scenarios are unchanged. A shifted stream exposed a pre-existing reconcile ping-pong between an old-version peer and full peers on rows that lag (tier `p`); it is not caused by this change and is tracked separately.
+- Search matches a country code only by equality ("it" → Italy), and names by substring, so short queries don't pull in whole countries.

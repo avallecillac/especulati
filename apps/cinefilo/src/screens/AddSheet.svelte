@@ -85,6 +85,9 @@
       ...(info && info.genres.length > 0 ? { genres: info.genres } : {}),
       ...(info?.runtimeMin ? { runtimeMin: info.runtimeMin } : {}),
       ...(info?.seasonCount ? { seasonCount: info.seasonCount } : {}),
+      ...(info ? { countries: info.countries, directors: [...info.directors] } : {}),
+      ...(info?.leadActor ? { leadActor: info.leadActor } : {}),
+      ...(info?.leadActress ? { leadActress: info.leadActress } : {}),
     });
     addingId = null;
     if (r.ok) {

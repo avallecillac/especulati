@@ -43,6 +43,7 @@ export async function installTmdb(context: BrowserContext): Promise<Tmdb> {
     if (path === 'search/multi') return json(/ebenezer/i.test(url.searchParams.get('query') ?? '') ? read('search-ebenezer') : /severance/i.test(url.searchParams.get('query') ?? '') ? read('search-severance') : read('search-empty'));
     if (path === 'tv/95396') return json(read('tv-95396'));
     if (path === 'movie/843') return json(read('movie-843'));
+    if (path === 'movie/238') return json(read('movie-238'));
     api.unmatched.push(req.url());
     return route.abort();
   });

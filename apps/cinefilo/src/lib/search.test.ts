@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesQuery } from './search.ts';
+import { matchesQuery, matchesItem } from './search.ts';
 
 describe('matchesQuery', () => {
   it('matches a substring, ignoring case', () => {
@@ -25,5 +25,31 @@ describe('matchesQuery', () => {
     expect(matchesQuery('Inception', '')).toBe(true);
     expect(matchesQuery('Inception', '   ')).toBe(true);
     expect(matchesQuery('', '')).toBe(true);
+  });
+});
+
+describe('matchesItem (cinefilo-tmdb-credits D7)', () => {
+  const godfather = {
+    title: 'The Godfather', directors: ['Francis Ford Coppola'], leadActor: 'Marlon Brando', leadActress: 'Diane Keaton',
+    genres: ['Drama', 'Crime'], countries: ['US', 'IT'],
+  };
+  it('matches the title, a director, the actor, the actress and a genre', () => {
+    for (const q of ['godf', 'coppola', 'FORD', 'brando', 'keaton', 'crime']) expect(matchesItem(godfather, q), q).toBe(true);
+    expect(matchesItem(godfather, 'spielberg')).toBe(false);
+  });
+  it('matches a country by English name or code, ignoring accents', () => {
+    expect(matchesItem(godfather, 'italy')).toBe(true);
+    expect(matchesItem(godfather, 'united states')).toBe(true);
+    expect(matchesItem(godfather, 'it')).toBe(true);
+    expect(matchesItem(godfather, 'france')).toBe(false);
+  });
+  it('copes with a title that has nothing fetched yet, and an empty query', () => {
+    const bare = { title: 'Heat', directors: [], leadActor: null, leadActress: null, genres: [], countries: [] };
+    expect(matchesItem(bare, 'heat')).toBe(true);
+    expect(matchesItem(bare, 'mann')).toBe(false);
+    expect(matchesItem(bare, '  ')).toBe(true);
+  });
+  it('matches accented names without accents', () => {
+    expect(matchesItem({ ...godfather, directors: ['Alejandro González Iñárritu'] }, 'gonzalez inarritu')).toBe(true);
   });
 });

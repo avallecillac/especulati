@@ -1,5 +1,5 @@
 import { posterObjectUrl } from './posters.ts';
-import { needsDetails } from './dbClient.ts';
+import { needsCredits, needsDetails } from './dbClient.ts';
 import { covers } from './covers.svelte.ts';
 import { details, tmdb } from './tmdb.svelte.ts';
 import { write } from './state.svelte.ts';
@@ -22,6 +22,32 @@ async function pace(): Promise<void> {
 }
 
 /**
+ * The second queue (cinefilo-tmdb-credits D5): linked titles whose credits were never fetched. Does one title and
+ * returns true while there may be more; false to stop (nothing left, or TMDB refused / is busy).
+ */
+async function fillCredits(): Promise<boolean> {
+  const todo = await needsCredits(50);
+  if (!todo.ok) return false;
+  const next = todo.value.find((x) => !attempted.has(x.id));
+  if (!next) return false;
+  attempted.add(next.id);
+  await pace();
+  const d = await details(next.kind, next.tmdbId);
+  if (d.kind === 'unauthorized' || d.kind === 'rate-limited' || d.kind === 'no-key') return false;
+  if (d.kind !== 'ok') return true;
+  const info = d.value;
+  await write({
+    kind: 'FillTmdbCredits',
+    titleId: next.id,
+    countries: info.countries,
+    directors: [...info.directors],
+    leadActor: info.leadActor,
+    leadActress: info.leadActress,
+  });
+  return true;
+}
+
+/**
  * Fill the details (and cache the poster) of imported titles that have a TMDB id and nothing else, one by one.
  * Uses the same `LinkToTmdb` and poster paths as linking by hand. Only with a key and a connection; resumable
  * because what is left to do is read from the database each time; never awaited by the UI.
@@ -34,7 +60,10 @@ export async function runBackfill(): Promise<void> {
       const todo = await needsDetails(50);
       if (!todo.ok) return;
       const next = todo.value.find((x) => !attempted.has(x.id));
-      if (!next) return;
+      if (!next) {
+        if (!(await fillCredits())) return;
+        continue;
+      }
       attempted.add(next.id);
       await pace();
       const d = await details(next.kind, next.tmdbId);
@@ -52,6 +81,10 @@ export async function runBackfill(): Promise<void> {
           ...(info.genres.length > 0 ? { genres: info.genres } : {}),
           ...(info.runtimeMin ? { runtimeMin: info.runtimeMin } : {}),
           ...(info.seasonCount ? { seasonCount: info.seasonCount } : {}),
+          countries: info.countries,
+          directors: [...info.directors],
+          ...(info.leadActor ? { leadActor: info.leadActor } : {}),
+          ...(info.leadActress ? { leadActress: info.leadActress } : {}),
         },
       });
       if (r.ok && info.posterPath && covers.mode === 'posters') {

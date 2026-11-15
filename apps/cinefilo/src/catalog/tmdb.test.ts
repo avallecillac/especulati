@@ -9,6 +9,7 @@ const routes = {
   'search/multi': { body: fixture('search-severance') },
   'tv/95396': { body: fixture('tv-95396') },
   'movie/843': { body: fixture('movie-843') },
+  'movie/238': { body: fixture('movie-238') },
 };
 
 describe('key shape', () => {
@@ -85,10 +86,42 @@ describe('tmdbDetails', () => {
     const tv = await tmdbDetails('series', 95396, V3, { fetch: fakeFetch(routes).fetch });
     expect(tv).toEqual({
       kind: 'ok',
-      value: { tmdbId: 95396, mediaKind: 'series', title: 'Severance', originalTitle: null, year: 2022, posterPath: '/lFf6LLrQjYldcZItzOkGmMMigP7.jpg', genres: ['Drama', 'Mystery', 'Sci-Fi & Fantasy'], runtimeMin: null, seasonCount: 2 },
+      value: { tmdbId: 95396, mediaKind: 'series', title: 'Severance', originalTitle: null, year: 2022, posterPath: '/lFf6LLrQjYldcZItzOkGmMMigP7.jpg', genres: ['Drama', 'Mystery', 'Sci-Fi & Fantasy'], runtimeMin: null, seasonCount: 2,
+        countries: ['US'], directors: ['Dan Erickson'], leadActor: 'Adam Scott', leadActress: null,
+      },
     });
     const mv = await tmdbDetails('movie', 843, V4, { fetch: fakeFetch(routes).fetch });
     expect(mv.kind === 'ok' && mv.value).toMatchObject({ title: 'In the Mood for Love', originalTitle: '花樣年華', year: 2000, runtimeMin: 99, seasonCount: null, genres: ['Drama', 'Romance'] });
+  });
+
+  it('asks for credits in the same single request', async () => {
+    const f = fakeFetch(routes);
+    await tmdbDetails('movie', 843, V3, { fetch: f.fetch });
+    expect(f.calls).toHaveLength(1);
+    expect(new URL(f.calls[0]!.url).searchParams.get('append_to_response')).toBe('credits');
+  });
+
+  it('maps movie credits: valid country codes only, unique directors, first actor and actress by order', async () => {
+    const mv = await tmdbDetails('movie', 843, V3, { fetch: fakeFetch(routes).fetch });
+    expect(mv.kind === 'ok' && mv.value).toMatchObject({ countries: ['HK', 'FR'], directors: ['Wong Kar-wai'], leadActor: 'Tony Leung Chiu-wai', leadActress: 'Maggie Cheung' });
+  });
+
+  it('gives empty lists and null leads when TMDB has no credits, and caps directors at 5 and countries at 20', async () => {
+    const bare = await tmdbDetails('movie', 843, V3, { fetch: fakeFetch({ 'movie/843': { body: '{"id":843,"title":"X","genres":[]}' } }).fetch });
+    expect(bare.kind === 'ok' && bare.value).toMatchObject({ countries: [], directors: [], leadActor: null, leadActress: null });
+    const many = {
+      id: 1, title: 'X', production_countries: Array.from({ length: 26 }, (_, i) => ({ iso_3166_1: `A${String.fromCharCode(65 + i)}` })),
+      credits: { cast: [], crew: Array.from({ length: 8 }, (_, i) => ({ name: `D${i}`, job: 'Director' })) },
+    };
+    const r = await tmdbDetails('movie', 1, V3, { fetch: fakeFetch({ 'movie/1': { body: JSON.stringify(many) } }).fetch });
+    expect(r.kind === 'ok' && r.value.directors).toEqual(['D0', 'D1', 'D2', 'D3', 'D4']);
+    expect(r.kind === 'ok' && r.value.countries).toHaveLength(20);
+  });
+
+  it('maps series: origin_country and created_by (at most 5)', async () => {
+    const body = JSON.stringify({ id: 2, name: 'S', origin_country: ['gb', 'GB', 'GBR'], created_by: Array.from({ length: 7 }, (_, i) => ({ name: `C${i}` })), credits: { cast: [{ name: 'Her', gender: 1, order: 4 }, { name: 'Him', gender: 2, order: 2 }] } });
+    const r = await tmdbDetails('series', 2, V3, { fetch: fakeFetch({ 'tv/2': { body } }).fetch });
+    expect(r.kind === 'ok' && r.value).toMatchObject({ countries: ['GB'], directors: ['C0', 'C1', 'C2', 'C3', 'C4'], leadActor: 'Him', leadActress: 'Her' });
   });
 
   it('reports not-found and failures', async () => {

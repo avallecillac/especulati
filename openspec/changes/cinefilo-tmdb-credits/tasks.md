@@ -9,5 +9,5 @@ Checks = `pnpm typecheck`, eslint, depcruise (the `lint` script's paths), `pnpm 
 
 ## 2. App
 
-- [ ] 2.1 TMDB client with credits (D4) and unit tests; Add and Link pass the new details; backfill second queue (D5).
-- [ ] 2.2 Title screen details line (D6); search by people, genres and countries (D7) with the `matchesQuery` unit tests extended. Playwright with the TMDB fixtures: add shows the details; an already-linked title is backfilled; search "coppola" and a country; a title with no actress shows only the actor; both themes.
+- [x] 2.1 TMDB client with credits (D4) and unit tests; Add and Link pass the new details; backfill second queue (D5).
+- [x] 2.2 Title screen details line (D6); search by people, genres and countries (D7) with the `matchesQuery` unit tests extended. Playwright with the TMDB fixtures: add shows the details; an already-linked title is backfilled; search "coppola" and a country; a title with no actress shows only the actor; both themes.

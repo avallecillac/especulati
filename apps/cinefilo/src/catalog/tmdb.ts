@@ -58,15 +58,40 @@ export async function searchTmdb(query: string, key: string | null, deps: Deps, 
   return { kind: 'ok', value: kind ? mapped.filter((x) => x.mediaKind === kind) : mapped };
 }
 
-/** `movie/{id}` or `tv/{id}`: adds genres, runtime (movies) and season count (series). */
+const MAX_DIRECTORS = 5;
+const MAX_COUNTRIES = 20;
+
+const unique = (xs: string[]): string[] => [...new Set(xs)];
+const namesOf = (list: unknown, pick: (x: Record<string, unknown>) => unknown): string[] =>
+  Array.isArray(list) ? list.flatMap((x) => { const n = str(pick(obj(x) ?? {})); return n ? [n] : []; }) : [];
+
+/** The first cast member (by `order`) with this TMDB gender code (1 = female, 2 = male). */
+function leadOf(cast: unknown, gender: 1 | 2): string | null {
+  if (!Array.isArray(cast)) return null;
+  const found = cast
+    .map((c) => obj(c))
+    .filter((c): c is Record<string, unknown> => c !== null && c['gender'] === gender && str(c['name']) !== null)
+    .sort((a, b) => (typeof a['order'] === 'number' ? a['order'] : Infinity) - (typeof b['order'] === 'number' ? b['order'] : Infinity))[0];
+  return found ? str(found['name']) : null;
+}
+
+/** Country codes that are exactly two capital letters; anything else is dropped. */
+const validCodes = (codes: string[]): string[] => unique(codes.filter((c) => /^[A-Z]{2}$/.test(c))).slice(0, MAX_COUNTRIES);
+
+/** `movie/{id}` or `tv/{id}` with credits appended (one request): adds genres, runtime (movies), season count (series), countries, directors and leads. */
 export async function tmdbDetails(kind: TmdbKind, tmdbId: number, key: string | null, deps: Deps): Promise<TmdbOutcome<TmdbDetails>> {
   if (!key) return { kind: 'no-key' };
-  const r = await tmdbGet(`${kind === 'movie' ? 'movie' : 'tv'}/${tmdbId}`, { language: 'en-US' }, key, deps);
+  const r = await tmdbGet(`${kind === 'movie' ? 'movie' : 'tv'}/${tmdbId}`, { language: 'en-US', append_to_response: 'credits' }, key, deps);
   if (r.kind !== 'ok') return r;
   const o = obj(r.json);
   const base = o ? mapResult({ ...o, id: o['id'] ?? tmdbId }, kind) : null;
   if (!o || !base) return { kind: 'bad-response' };
   const genres = Array.isArray(o['genres']) ? o['genres'].map((g) => str(obj(g)?.['name'])).filter((g): g is string => g !== null) : [];
+  const credits = obj(o['credits']);
+  const countries = validCodes(kind === 'movie' ? namesOf(o['production_countries'], (c) => c['iso_3166_1']) : Array.isArray(o['origin_country']) ? o['origin_country'].filter((c): c is string => typeof c === 'string') : []);
+  const directors = unique(
+    kind === 'movie' ? namesOf(credits?.['crew'], (c) => (c['job'] === 'Director' ? c['name'] : null)) : namesOf(o['created_by'], (c) => c['name']),
+  ).slice(0, MAX_DIRECTORS);
   return {
     kind: 'ok',
     value: {
@@ -79,6 +104,10 @@ export async function tmdbDetails(kind: TmdbKind, tmdbId: number, key: string | 
       genres,
       runtimeMin: kind === 'movie' ? posInt(o['runtime']) : null,
       seasonCount: kind === 'series' ? posInt(o['number_of_seasons']) : null,
+      countries,
+      directors,
+      leadActor: leadOf(credits?.['cast'], 2),
+      leadActress: leadOf(credits?.['cast'], 1),
     },
   };
 }

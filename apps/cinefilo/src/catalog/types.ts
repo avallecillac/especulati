@@ -24,6 +24,13 @@ export interface TmdbDetails {
   genres: string[];
   runtimeMin: number | null;
   seasonCount: number | null;
+  /** ISO 3166-1 alpha-2 codes (a series: its origin countries); `[]` when TMDB lists none. */
+  countries: string[];
+  /** Directors (a series: its creators), at most 5; `[]` when none. */
+  directors: string[];
+  /** The first male / female cast member by billing order, or null. */
+  leadActor: string | null;
+  leadActress: string | null;
 }
 
 /** Why a request failed. Carries no URL, header or key. */

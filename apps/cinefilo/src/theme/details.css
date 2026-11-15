@@ -50,3 +50,7 @@ img.poster.hero { width: calc(100% + 2 * var(--gutter)); height: 200px; margin: 
 /* List heading: 1.5rem in both themes so it shares one row with the layout toggle and Add (cinefilo-compact-lists D1). */
 :root[data-theme] .bar h1 { font-size: 1.5rem; }
 :root[data-theme='willis'] .bar h1 { letter-spacing: 0.08em; }
+
+/* The TMDB facts under a title's year: countries and genres, director, leads (cinefilo-tmdb-credits D6). */
+.hero .facts { margin-top: 4px; }
+.hero .facts p { margin: 0; overflow-wrap: anywhere; }

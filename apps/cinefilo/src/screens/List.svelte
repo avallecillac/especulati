@@ -5,7 +5,7 @@
   import { display, setLayout, setWatchedOrder } from '../lib/layout.svelte.ts';
   import { listView } from '../lib/listView.svelte.ts';
   import { KIND_LABEL, ratingLabel } from '../lib/labels.ts';
-  import { matchesQuery } from '../lib/search.ts';
+  import { matchesItem, matchesQuery } from '../lib/search.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
   import Poster from './Poster.svelte';
   import SeasonProgress from './SeasonProgress.svelte';
@@ -117,7 +117,7 @@
     return [...items.filter((i) => i.watchOrder !== null).reverse(), ...items.filter((i) => i.watchOrder === null)];
   });
   /** What is on screen: the ordered list narrowed by the search (D2). */
-  const visible = $derived(shown === null ? null : shown.filter((i) => matchesQuery(i.title, query)));
+  const visible = $derived(shown === null ? null : shown.filter((i) => matchesItem(i, query)));
   const visibleRecs = $derived(recs.filter((r) => matchesQuery(r.title, query)));
   const grid = $derived(display.layout === 'grid');
 
@@ -179,7 +179,7 @@
 <div class="tools">
   <div class="search">
     <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="6" /><path d="M15 15l5 5" /></svg>
-    <input type="search" aria-label="Search titles" placeholder="Search titles" autocomplete="off" bind:value={listView.query} />
+    <input type="search" aria-label="Search titles" placeholder="Search titles, people, genres" autocomplete="off" bind:value={listView.query} />
     {#if query !== ''}
       <button type="button" class="clear" aria-label="Clear search" onclick={() => (listView.query = '')}>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" /></svg>

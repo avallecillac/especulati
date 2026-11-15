@@ -7,6 +7,7 @@
   import { details, search, tmdb } from '../lib/tmdb.svelte.ts';
   import { todayLocal, yesterdayLocal } from '../lib/clock.ts';
   import { KIND_LABEL, STATUS_LABEL, memberStatusesFor, ratingLabel, statusesFor } from '../lib/labels.ts';
+  import { detailLines } from '../lib/facts.ts';
   import { listView } from '../lib/listView.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
   import { app, showToast, write } from '../lib/state.svelte.ts';
@@ -114,6 +115,9 @@
         ...(info && info.genres.length > 0 ? { genres: info.genres } : {}),
         ...(info?.runtimeMin ? { runtimeMin: info.runtimeMin } : {}),
         ...(info?.seasonCount ? { seasonCount: info.seasonCount } : {}),
+        ...(info ? { countries: info.countries, directors: [...info.directors] } : {}),
+        ...(info?.leadActor ? { leadActor: info.leadActor } : {}),
+        ...(info?.leadActress ? { leadActress: info.leadActress } : {}),
       },
     });
     if (!r.ok) {
@@ -154,11 +158,17 @@
   <p class="empty">This title is not on the list any more.</p>
 {:else}
   {@const t = detail.title}
+  {@const facts = detailLines(t)}
   {@render back(`#/${backTab(t.status)}`)}
   <header class="hero">
     <Poster titleId={t.id} path={t.posterUrl} hero />
     <h1>{t.title}</h1>
     <p class="muted">{KIND_LABEL[t.kind]}{t.year ? ` · ${t.year}` : ''}</p>
+    {#if facts.length > 0}
+      <div class="facts muted small" data-testid="title-facts">
+        {#each facts as line (line)}<p>{line}</p>{/each}
+      </div>
+    {/if}
   </header>
 
   <section aria-labelledby="ratings-h">
