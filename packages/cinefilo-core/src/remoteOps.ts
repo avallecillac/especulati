@@ -1,9 +1,11 @@
 import {
   parseRemoteOpWith, err, type FieldValue, type OpWire, type ParseError, type RemoteOp as SyncRemoteOp, type Result, type SyncSchema,
 } from '@especulati/sync-core';
-import type { Table } from './commands.ts';
-import { genresFromDb } from './rows.ts';
-import { ANSWERS, isUuid, KINDS, MEMBER_STATUSES, REVIEW_MAX, STARS_MAX, STARS_MIN, STATUSES, VERDICTS } from './types.ts';
+import type { Change, Table } from './commands.ts';
+import { countriesFromDb, directorsFromDb, genresFromDb } from './rows.ts';
+import {
+  ANSWERS, isUuid, KINDS, MEMBER_STATUSES, parseCountryCodes, parseDirectorNames, parsePersonName, REVIEW_MAX, STARS_MAX, STARS_MIN, STATUSES, VERDICTS,
+} from './types.ts';
 
 /**
  * Columns a Change (local or remote) may set, per table. Guards against building SQL from untrusted
@@ -12,7 +14,7 @@ import { ANSWERS, isUuid, KINDS, MEMBER_STATUSES, REVIEW_MAX, STARS_MAX, STARS_M
  */
 export const WRITABLE_FIELDS: Readonly<Record<Table, ReadonlySet<string>>> = {
   titles: new Set([
-    'kind', 'title', 'original_title', 'year', 'tmdb_id', 'poster_url', 'genres', 'runtime_min', 'season_count', 'status',
+    'kind', 'title', 'original_title', 'year', 'tmdb_id', 'poster_url', 'genres', 'countries', 'directors', 'lead_actor', 'lead_actress', 'runtime_min', 'season_count', 'status',
     'watched_on', 'current_season', 'watch_order', 'merged_into', 'added_by', 'created_at', 'deleted_at',
   ]),
   members: new Set(['name', 'created_at', 'deleted_at']),
@@ -30,14 +32,42 @@ export const INSERT_FIELDS: Readonly<Record<Table, readonly string[]>> = {
   recommendations: ['title_id', 'from_member', 'to_member', 'created_at'],
 };
 
+/** The `titles` columns of tier `c` (cinefilo-tmdb-credits D1): an older allow-list refuses them. */
+export const CREDITS_FIELDS: readonly string[] = ['countries', 'directors', 'lead_actor', 'lead_actress'];
+
+/**
+ * cinefilo-tmdb-credits D3: a `titles` change that carries both tier-`c` fields and any other field becomes two changes on
+ * the same row, the other fields first (so an insert still carries its required fields) and the `c` fields second, so a
+ * pushed batch never mixes tiers and an older device still gets the base fields. Other changes pass through unchanged.
+ */
+export function splitMixedTiers(changes: readonly Change[]): Change[] {
+  const out: Change[] = [];
+  for (const c of changes) {
+    const keys = Object.keys(c.fields);
+    const credits = keys.filter((k) => CREDITS_FIELDS.includes(k));
+    if (c.tbl !== 'titles' || credits.length === 0 || credits.length === keys.length) {
+      out.push(c);
+      continue;
+    }
+    const rest: Record<string, FieldValue> = {};
+    const cr: Record<string, FieldValue> = {};
+    for (const k of keys) (CREDITS_FIELDS.includes(k) ? cr : rest)[k] = c.fields[k]!;
+    out.push({ ...c, fields: rest }, { ...c, fields: cr });
+  }
+  return out;
+}
+
 /**
  * Batch tier (personal-lists D4): a pushed batch never mixes tiers, so a device on an older version skips only the
  * batches it cannot read. `p` is the personal-lists tier: `member_status`, `recommendations`, and any `titles` op that
  * writes `status: null` (a title that is not on Together; the old schema refuses NULL). The key must be present with
  * a null value, so an insert without a Together status names `status` explicitly. `r` is the cinefilo-stars tier: a
- * `ratings` op that carries the `stars` key (an older allow-list refuses it). Everything else is `base`.
+ * `ratings` op that carries the `stars` key (an older allow-list refuses it). `c` is the cinefilo-tmdb-credits tier: a
+ * `titles` op that carries any of {@link CREDITS_FIELDS}. Decisions never mix `c` with other fields of the same row
+ * (see {@link splitMixedTiers}). Everything else is `base`.
  */
-export function tierOf(tbl: Table, fields: Readonly<Record<string, FieldValue>>): 'base' | 'p' | 'r' {
+export function tierOf(tbl: Table, fields: Readonly<Record<string, FieldValue>>): 'base' | 'p' | 'r' | 'c' {
+  if (tbl === 'titles' && CREDITS_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(fields, f))) return 'c';
   if (tbl === 'member_status' || tbl === 'recommendations') return 'p';
   if (tbl === 'titles' && Object.prototype.hasOwnProperty.call(fields, 'status') && fields['status'] === null) return 'p';
   // cinefilo-feedback-1 D3: an older version's allow-list refuses `watch_order`, so any op that writes it is tier `p` too.
@@ -81,6 +111,20 @@ function checkValues(tbl: Table, f: Readonly<Record<string, FieldValue>>): Parse
     if (wo !== undefined && wo !== null && !(typeof wo === 'number' && Number.isInteger(wo) && wo >= 1)) return { field: 'watch_order', reason: 'not a positive whole number' };
     const g = f['genres'];
     if (g !== undefined && g !== null && (typeof g !== 'string' || genresFromDb(g) === null)) return { field: 'genres', reason: 'not a JSON array of strings' };
+    const co = f['countries'];
+    if (co !== undefined && co !== null) {
+      const list = typeof co === 'string' ? countriesFromDb(co) : null;
+      if (list === null || !parseCountryCodes(list).ok) return { field: 'countries', reason: 'not a JSON array of at most 20 country codes' };
+    }
+    const di = f['directors'];
+    if (di !== undefined && di !== null) {
+      const list = typeof di === 'string' ? directorsFromDb(di) : null;
+      if (list === null || !parseDirectorNames(list).ok) return { field: 'directors', reason: 'not a JSON array of at most 5 names' };
+    }
+    for (const k of ['lead_actor', 'lead_actress'] as const) {
+      const v = f[k];
+      if (v !== undefined && v !== null && !parsePersonName(k, v).ok) return { field: k, reason: 'not a name of 1 to 200 characters' };
+    }
   }
   if (tbl === 'ratings') {
     const v = f['verdict'];

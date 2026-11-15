@@ -12,6 +12,13 @@ export interface TitleRow {
   readonly tmdbId: number | null;
   readonly posterUrl: string | null;
   readonly genres: readonly string[] | null;
+  /** ISO 3166-1 alpha-2 codes (cinefilo-tmdb-credits D1). NULL = credits never fetched; `[]` = fetched, none. */
+  readonly countries: readonly string[] | null;
+  /** Directors (a series: its creators), at most 5. */
+  readonly directors: readonly string[] | null;
+  /** The top-billed actor / actress by TMDB gender; null when unknown. */
+  readonly leadActor: string | null;
+  readonly leadActress: string | null;
   readonly runtimeMin: number | null;
   readonly seasonCount: number | null;
   /** NULL = in the catalog but not on Together (a title only on someone's personal list). */
@@ -84,3 +91,9 @@ export function genresFromDb(s: string | null): readonly string[] | null {
     return null;
   }
 }
+
+/** `countries` and `directors` are JSON arrays of strings in the DB, like `genres`. */
+export const countriesToDb = genresToDb;
+export const countriesFromDb = genresFromDb;
+export const directorsToDb = genresToDb;
+export const directorsFromDb = genresFromDb;

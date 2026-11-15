@@ -13,6 +13,11 @@ export interface TitleDetails {
   readonly year?: number | null;
   readonly posterUrl?: string | null;
   readonly genres?: readonly string[] | null;
+  /** cinefilo-tmdb-credits D1/D2: filled only while empty (`[]` = fetched, none). */
+  readonly countries?: readonly string[] | null;
+  readonly directors?: readonly string[] | null;
+  readonly leadActor?: string | null;
+  readonly leadActress?: string | null;
   readonly runtimeMin?: number | null;
   readonly seasonCount?: number | null;
 }
@@ -41,6 +46,18 @@ export type Command =
     } & TitleDetails)
   | ({ readonly kind: 'EditTitleDetails'; readonly titleId: string; readonly title?: string } & TitleDetails)
   | { readonly kind: 'LinkToTmdb'; readonly titleId: string; readonly tmdbId: number; readonly details: TitleDetails & { readonly title?: string } }
+  /**
+   * cinefilo-tmdb-credits D2: the background fill for a linked title whose credits were never fetched (`countries` NULL).
+   * `countries` and `directors` are always written (as `[]` for none); the leads only when known and still empty.
+   */
+  | {
+      readonly kind: 'FillTmdbCredits';
+      readonly titleId: string;
+      readonly countries: readonly string[];
+      readonly directors: readonly string[];
+      readonly leadActor: string | null;
+      readonly leadActress: string | null;
+    }
   | { readonly kind: 'RemoveTitle'; readonly titleId: string }
   | { readonly kind: 'RestoreTitle'; readonly titleId: string }
   /** `watchedOn` is required for dropped, optional for watched, and ignored (cleared) for later and watching. */

@@ -35,6 +35,9 @@ export const REVIEW_MAX = 1000;
 export const SEASON_MAX = 1000;
 export const STARS_MIN = 1;
 export const STARS_MAX = 10;
+export const COUNTRIES_MAX = 20;
+export const DIRECTORS_MAX = 5;
+export const PERSON_MAX = 200;
 
 const UUID_RE = new RegExp(`^${UUID_PATTERN}$`);
 const LOCAL_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -95,6 +98,34 @@ export function parseSeason(n: number): Result<Season, ParseError> {
 /** "Whole number of half stars, 1–10" */
 export function parseStars(n: unknown): Result<Stars, ParseError> {
   return typeof n === 'number' && Number.isInteger(n) && n >= STARS_MIN && n <= STARS_MAX ? ok(n as Stars) : fail('stars', `must be a whole number from ${STARS_MIN} to ${STARS_MAX}`);
+}
+
+const COUNTRY_RE = /^[A-Z]{2}$/;
+
+/** cinefilo-tmdb-credits D1: at most 20 ISO 3166-1 alpha-2 codes. */
+export function parseCountryCodes(v: unknown): Result<readonly string[], ParseError> {
+  if (!Array.isArray(v) || v.length > COUNTRIES_MAX) return fail('countries', `must be a list of at most ${COUNTRIES_MAX} codes`);
+  for (const c of v) if (typeof c !== 'string' || !COUNTRY_RE.test(c)) return fail('countries', 'codes must be two capital letters');
+  return ok(v as string[]);
+}
+
+/** A person's name: trimmed, 1–200 characters. */
+export function parsePersonName(field: string, v: unknown): Result<string, ParseError> {
+  const t = typeof v === 'string' ? v.trim() : '';
+  if (t === '' || codePoints(t) > PERSON_MAX) return fail(field, `names must be 1 to ${PERSON_MAX} characters`);
+  return ok(t);
+}
+
+/** At most 5 names, each trimmed and 1–200 characters. */
+export function parseDirectorNames(v: unknown): Result<readonly string[], ParseError> {
+  if (!Array.isArray(v) || v.length > DIRECTORS_MAX) return fail('directors', `must be a list of at most ${DIRECTORS_MAX} names`);
+  const out: string[] = [];
+  for (const n of v) {
+    const r = parsePersonName('directors', n);
+    if (!r.ok) return r;
+    out.push(r.value);
+  }
+  return ok(out);
 }
 
 const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;

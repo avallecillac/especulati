@@ -3,7 +3,8 @@
 // status, season and rating edits, remove versus rate, and link plus reconcile; since personal lists also "Just me"
 // adds, personal statuses and seasons, and recommendations with withdrawals and answers; delivery in random order with
 // duplicates, partly through the relay and partly directly. Every database must end identical. A second suite adds a
-// peer on the previous version (it skips tier-`p` and tier-`r` batches), then upgrades it (D4, cinefilo-stars D3).
+// peer on the previous version (it skips tier-`p`, `r` and `c` batches), then upgrades it (D4, cinefilo-stars D3,
+// cinefilo-tmdb-credits D3).
 import { describe, expect, it } from 'vitest';
 import { applyRemoteOps } from '@especulati/db-kit';
 import { cinefiloSchema, manualTitleLabel, memberStatusLabel, parseRemoteOp, ratingLabel, recommendationLabel, tmdbTitleLabel, type Kind, type OpWire } from '@especulati/cinefilo-core';
@@ -24,6 +25,17 @@ const YEARS = [null, 1972, 2001] as const;
 const TMDB = [11, 12, 13] as const;
 const DATES = ['2026-01-05', '2026-02-10', '2026-03-15'] as const;
 const STATUSES = ['later', 'watching', 'watched', 'dropped'] as const;
+const COUNTRY_SETS = [['US'], ['IT', 'FR'], []] as const;
+const DIRECTORS = [['Ana Dir'], ['A', 'B'], []] as const;
+const ACTORS = ['Al', 'Bo', null] as const;
+
+/**
+ * Credits draw from their own generator, so the main stream (and with it every pre-existing seeded scenario) is unchanged.
+ * Reset at the start of each run.
+ */
+let creditRng: () => number = prng(1);
+/** Random TMDB credits, as the shell passes them to AddTitle / LinkToTmdb / FillTmdbCredits. */
+const credits = (rng: () => number) => ({ countries: pick(rng, COUNTRY_SETS), directors: pick(rng, DIRECTORS), leadActor: pick(rng, ACTORS), leadActress: pick(rng, ACTORS) });
 
 const liveTitles = (p: Peer): { id: string; kind: Kind; tmdb: number | null }[] =>
   p.raw.selectObjects('SELECT id, kind, tmdb_id FROM titles WHERE deleted_at IS NULL AND merged_into IS NULL ORDER BY id').map((r) => ({ id: r['id'] as string, kind: r['kind'] as Kind, tmdb: r['tmdb_id'] as number | null }));
@@ -73,8 +85,17 @@ async function personalWrite(rng: () => number, p: Peer, member: string): Promis
   }
 }
 
-/** One random local write on a peer. Rejections are fine: they change nothing. `personal` off = what a previous-version device can do. */
+/** One random local write on a peer, then sometimes the background credits fill (cinefilo-tmdb-credits D5, one tier-c op). */
 async function localWrite(rng: () => number, p: Peer, member: string, personal = true): Promise<void> {
+  await localWriteBase(rng, p, member, personal);
+  if (!personal || creditRng() >= 0.15) return;
+  const linked = liveTitles(p).filter((x) => x.tmdb !== null);
+  const t = pick(creditRng, linked);
+  if (t) p.db.dispatch({ kind: 'FillTmdbCredits', titleId: t.id, ...credits(creditRng) }, p.env);
+}
+
+/** One random local write on a peer. Rejections are fine: they change nothing. `personal` off = what a previous-version device can do. */
+async function localWriteBase(rng: () => number, p: Peer, member: string, personal = true): Promise<void> {
   p.tick(int(rng, 1, 5000));
   if (personal && rng() < 0.3) return personalWrite(rng, p, member);
   const live = liveTitles(p);
@@ -86,7 +107,8 @@ async function localWrite(rng: () => number, p: Peer, member: string, personal =
     const watchedOn = status === 'watched' ? { watchedOn: pick(rng, DATES) } : {};
     if (rng() < 0.4) {
       const tmdbId = pick(rng, TMDB);
-      dispatch({ kind: 'AddTitle', titleId: hashId(tmdbTitleLabel(kind, tmdbId)), mediaKind: kind, title: `TMDB ${tmdbId}`, tmdbId, status, ...watchedOn, addedBy: member });
+      // A previous-version device (`personal` off) cannot write credits (tier c).
+      dispatch({ kind: 'AddTitle', titleId: hashId(tmdbTitleLabel(kind, tmdbId)), mediaKind: kind, title: `TMDB ${tmdbId}`, tmdbId, status, ...watchedOn, addedBy: member, ...(personal && creditRng() < 0.6 ? credits(creditRng) : {}) });
     } else {
       const title = pick(rng, NAMES);
       const year = pick(rng, YEARS);
@@ -96,7 +118,7 @@ async function localWrite(rng: () => number, p: Peer, member: string, personal =
   } else if (k < 0.3) {
     const t = pick(rng, live.filter((x) => x.tmdb === null));
     if (t) {
-      dispatch({ kind: 'LinkToTmdb', titleId: t.id, tmdbId: pick(rng, TMDB), details: { runtimeMin: int(rng, 80, 180) } });
+      dispatch({ kind: 'LinkToTmdb', titleId: t.id, tmdbId: pick(rng, TMDB), details: { runtimeMin: int(rng, 80, 180), ...(personal && creditRng() < 0.5 ? credits(creditRng) : {}) } });
       await p.reconcile();
     }
   } else if (k < 0.37) {
@@ -150,6 +172,7 @@ function directDelivery(rng: () => number, from: Peer, to: Peer): void {
 const stats = { ops: 0, titles: 0, merged: 0, removed: 0, ratings: 0, personal: 0, recs: 0, answered: 0, offTogether: 0, numbered: 0 };
 
 async function oneRun(seed: number): Promise<void> {
+  creditRng = prng(seed + 5_000_000);
   const rng = prng(seed);
   const relay = fakeRelay();
   const members = [ANA, ANA, BEN];
@@ -273,7 +296,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
         last = b.seq;
         const opened = await open(b, keys.encKey, keys.spaceId, cinefiloSyncApp.aadPrefix);
         if (!opened.ok) { skipped++; continue; }
-        const unreadable = opened.value.ops.some((w) => !OLD_TABLES.has(w.tbl) || (w.tbl === 'titles' && (('status' in w.fields && w.fields['status'] === null) || 'watch_order' in w.fields)) || (w.tbl === 'ratings' && 'stars' in w.fields));
+        const unreadable = opened.value.ops.some((w) => !OLD_TABLES.has(w.tbl) || (w.tbl === 'titles' && (('status' in w.fields && w.fields['status'] === null) || 'watch_order' in w.fields || ['countries', 'directors', 'lead_actor', 'lead_actress'].some((f) => f in w.fields))) || (w.tbl === 'ratings' && 'stars' in w.fields));
         if (unreadable) { skipped++; continue; }
         for (const w of opened.value.ops) {
           const r = parseRemoteOp(w, opened.value.device);
@@ -315,9 +338,10 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
     if (calm < 2) throw new Error('did not go quiet in 16 rounds');
   }
 
-  const totals = { personalOps: 0, starsOps: 0, skippedBatches: 0, oldWrites: 0 };
+  const totals = { personalOps: 0, starsOps: 0, creditsOps: 0, skippedBatches: 0, oldWrites: 0 };
 
   async function oneOldRun(seed: number): Promise<void> {
+    creditRng = prng(seed + 9_000_000);
     const rng = prng(seed + 7_000_000);
     const relay = fakeRelay();
     const members = [ANA, BEN, ANA];
@@ -363,7 +387,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
           .selectObjects("SELECT row_id, fields_json FROM change_log WHERE tbl = 'titles'")
           .filter((r) => {
             const f = JSON.parse(r['fields_json'] as string) as Record<string, unknown>;
-            return f['status'] === null || 'watch_order' in f;
+            return f['status'] === null || 'watch_order' in f || 'countries' in f || 'directors' in f || 'lead_actor' in f || 'lead_actress' in f;
           })
           .map((r) => r['row_id'] as string),
       );
@@ -387,6 +411,14 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
       const starsOps = Number(a.raw.selectValue("SELECT COUNT(*) FROM change_log WHERE tbl = 'ratings' AND fields_json LIKE '%\"stars\"%'"));
       totals.starsOps += starsOps;
       if (v.raw.selectValue('SELECT COUNT(*) FROM ratings WHERE stars IS NOT NULL') !== 0) throw new Error('old peer applied a stars value');
+      // Tier c: the old peer never applies a credits field, and no batch mixes tier-c fields with others (D3).
+      totals.creditsOps += Number(a.raw.selectValue("SELECT COUNT(*) FROM change_log WHERE tbl = 'titles' AND fields_json LIKE '%\"countries\"%'"));
+      if (v.raw.selectValue('SELECT COUNT(*) FROM titles WHERE countries IS NOT NULL OR directors IS NOT NULL OR lead_actor IS NOT NULL OR lead_actress IS NOT NULL') !== 0) throw new Error('old peer applied a credits value');
+      for (const r of a.raw.selectObjects("SELECT fields_json FROM change_log WHERE tbl = 'titles'")) {
+        const keys = Object.keys(JSON.parse(r['fields_json'] as string) as object);
+        const n = keys.filter((k) => ['countries', 'directors', 'lead_actor', 'lead_actress'].includes(k)).length;
+        if (n > 0 && n !== keys.length) throw new Error('a titles op mixes credits fields with others');
+      }
       const skipped = v.db.syncStore.syncMeta().status?.undecryptable ?? 0;
       totals.skippedBatches += skipped;
       if (personalOps > 0 && skipped === 0) throw new Error('the old peer should have skipped the personal batches');
@@ -418,6 +450,7 @@ describe('forward compatibility: a previous-version peer (D4)', () => {
     console.log(`previous-version peer: ${OLD_RUNS} runs in ${((performance.now() - t0) / 1000).toFixed(1)} s (${JSON.stringify(totals)})`);
     expect(totals.personalOps).toBeGreaterThan(0);
     expect(totals.starsOps).toBeGreaterThan(0);
+    expect(totals.creditsOps).toBeGreaterThan(0);
     expect(totals.skippedBatches).toBeGreaterThan(0);
     expect(totals.oldWrites).toBeGreaterThan(0);
   });

@@ -30,7 +30,7 @@ export function send(req: WithoutId<Request>): Promise<Response> {
 
 // Typed calls the screens use (group 5+). Every one goes through the worker; the UI never touches SQLite.
 import type { Rejection, Kind } from '@especulati/cinefilo-core';
-import type { ListItem, ListScope, ListTab, MemberActivity, MemberView, NeedsDetails, PendingRecommendation, TitleDetail } from '@especulati/cinefilo-db';
+import type { ListItem, ListScope, ListTab, MemberActivity, MemberView, NeedsCredits, NeedsDetails, PendingRecommendation, TitleDetail } from '@especulati/cinefilo-db';
 import type { SyncRunResult, SyncStatusView } from '@especulati/sync';
 import type { UiCommand } from './commands.ts';
 import type { ClientError, IdentityOp, Query, SyncOp } from './protocol.ts';
@@ -57,6 +57,7 @@ export const me = () => query<{ memberId: string | null; deviceId: string }>({ n
 export const findByTmdb = (tmdbId: number, kind: Kind) => query<string | null>({ name: 'findByTmdb', tmdbId, kind });
 
 export const needsDetails = (limit: number) => query<NeedsDetails[]>({ name: 'needsDetails', limit });
+export const needsCredits = (limit: number) => query<NeedsCredits[]>({ name: 'needsCredits', limit });
 
 export type CodeView = { code: string; qr: string };
 type SyncResult<T> = { ok: true; value: T } | { ok: false; error: { kind: string; status?: number } };

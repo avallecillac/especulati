@@ -4,8 +4,8 @@ Checks = `pnpm typecheck`, eslint, depcruise (the `lint` script's paths), `pnpm 
 
 ## 1. Core and db
 
-- [ ] 1.1 Tests first (core, no mocks): D1 validation; `AddTitle`/`LinkToTmdb` fill the new fields only when empty; `FillTmdbCredits` (writes, `[]` for none, no-op when already fetched / no tmdb_id / deleted); `tierOf` `'c'` and the split of mixed `c`/`p` title ops (D3); allow-list; export round-trip and files without the keys. Then implement.
-- [ ] 1.2 Tests first (db): migration 4 (columns, cursor reset; v3 → v4), `needsCredits`, `ListItem` and title detail carry the decoded fields, io; convergence with an old-version peer that skips tier `c` (`pnpm test:convergence`). Then implement.
+- [x] 1.1 Tests first (core, no mocks): D1 validation; `AddTitle`/`LinkToTmdb` fill the new fields only when empty; `FillTmdbCredits` (writes, `[]` for none, no-op when already fetched / no tmdb_id / deleted); `tierOf` `'c'` and the split of mixed `c`/`p` title ops (D3); allow-list; export round-trip and files without the keys. Then implement.
+- [x] 1.2 Tests first (db): migration 4 (columns, cursor reset; v3 → v4), `needsCredits`, `ListItem` and title detail carry the decoded fields, io; convergence with an old-version peer that skips tier `c` (`pnpm test:convergence`). Then implement.
 
 ## 2. App
 

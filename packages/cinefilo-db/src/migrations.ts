@@ -129,7 +129,22 @@ const MIGRATION_3 = `
   UPDATE meta SET value = json_set(value, '$.undecryptable', 0) WHERE key = 'sync_status' AND json_valid(value);
 `;
 
-export const MIGRATIONS: readonly string[] = [SYNC_BOOKKEEPING_DDL + MIGRATION_1, MIGRATION_2, MIGRATION_3];
+/**
+ * Schema v4 (cinefilo-tmdb-credits D1): `titles.countries`, `directors` (JSON text like `genres`), `lead_actor` and
+ * `lead_actress`, all nullable (`countries` NULL = credits never fetched). The same one-time cursor reset as v2 and v3,
+ * so a device that skipped tier-`c` batches on the previous version re-reads the space.
+ */
+const MIGRATION_4 = `
+  ALTER TABLE titles ADD COLUMN countries TEXT;
+  ALTER TABLE titles ADD COLUMN directors TEXT;
+  ALTER TABLE titles ADD COLUMN lead_actor TEXT;
+  ALTER TABLE titles ADD COLUMN lead_actress TEXT;
+
+  UPDATE meta SET value = '0' WHERE key = 'sync_cursor';
+  UPDATE meta SET value = json_set(value, '$.undecryptable', 0) WHERE key = 'sync_status' AND json_valid(value);
+`;
+
+export const MIGRATIONS: readonly string[] = [SYNC_BOOKKEEPING_DDL + MIGRATION_1, MIGRATION_2, MIGRATION_3, MIGRATION_4];
 export const SCHEMA_VERSION = MIGRATIONS.length;
 
 /** `to` stops early (test hook for building an older-version fixture). */

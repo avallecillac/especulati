@@ -7,8 +7,8 @@ import { importTitles, type ImportEnv, type ImportTitlesResult } from './importT
 import { migrate } from './migrations.ts';
 import { getPoster, putPoster } from './posters.ts';
 import {
-  findByTmdb, list, me, memberActivity, members, needsDetails, pendingRecommendations, titleDetail,
-  type ListItem, type ListScope, type NeedsDetails, type ListTab, type MemberActivity, type MemberView, type PendingRecommendation, type TitleDetail,
+  findByTmdb, list, me, memberActivity, members, needsCredits, needsDetails, pendingRecommendations, titleDetail,
+  type ListItem, type ListScope, type NeedsCredits, type NeedsDetails, type ListTab, type MemberActivity, type MemberView, type PendingRecommendation, type TitleDetail,
 } from './queries.ts';
 import { loadSnapshot } from './snapshot.ts';
 import type { DispatchEnv, DispatchOutcome } from './types.ts';
@@ -22,7 +22,7 @@ export { reconcileAll, type Hash } from './reconcile.ts';
 export { importTitles, type ImportEnv, type ImportTitlesResult } from './importTitles.ts';
 export { exportData, exportText, importText, type ImportResult } from './io.ts';
 export type {
-  ListItem, ListScope, ListTab, NeedsDetails, MemberActivity, MemberView, MemberStatusView, PendingRecommendation, RatingView, RecommendationState, RecommendationView, TitleDetail,
+  ListItem, ListScope, ListTab, NeedsCredits, NeedsDetails, MemberActivity, MemberView, MemberStatusView, PendingRecommendation, RatingView, RecommendationState, RecommendationView, TitleDetail,
 } from './queries.ts';
 export { loadSnapshot, loadReconcileSnapshot } from './snapshot.ts';
 
@@ -106,6 +106,11 @@ export class CinefiloDb {
 
   needsDetails(limit = 20): NeedsDetails[] {
     return needsDetails(this.raw, limit);
+  }
+
+  /** Linked titles whose credits were never fetched, newest first (cinefilo-tmdb-credits D5). */
+  needsCredits(limit = 20): NeedsCredits[] {
+    return needsCredits(this.raw, limit);
   }
 
   findByTmdb(tmdbId: number, kind: Kind): string | null {

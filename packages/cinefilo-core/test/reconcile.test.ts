@@ -78,6 +78,13 @@ describe('ReconcileTitles fields by greater HLC', () => {
     const survivor = T({ id: B, genres: null }, { genres: hlc(1) });
     expect(survivorIsB(loser, survivor)[0]!.fields).toEqual({ genres: '["Drama"]' });
   });
+  it('credits fields copy as JSON, in their own tier-c change after the base fields (cinefilo-tmdb-credits D3)', () => {
+    const loser = T({ id: A, year: 1999, countries: ['US'], directors: ['A'], leadActor: 'X' }, { year: hlc(9), countries: hlc(9), directors: hlc(9), lead_actor: hlc(9) });
+    const survivor = T({ id: B, year: 2000 }, { year: hlc(1) });
+    const changes = survivorIsB(loser, survivor);
+    expect(changes[0]).toEqual({ tbl: 'titles', rowId: B, fields: { year: 1999 } });
+    expect(changes[1]).toEqual({ tbl: 'titles', rowId: B, fields: { countries: '["US"]', directors: '["A"]', lead_actor: 'X' } });
+  });
   it('removal is a field too: a newer tombstone on the loser carries over', () => {
     const loser = T({ id: A, deletedAt: NOW }, { deleted_at: hlc(9) });
     const survivor = T({ id: B }, { deleted_at: hlc(1) });

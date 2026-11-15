@@ -241,6 +241,8 @@ function runQuery(d: CinefiloDb, q: Query): unknown {
       return d.findByTmdb(q.tmdbId, q.kind);
     case 'needsDetails':
       return d.needsDetails(q.limit);
+    case 'needsCredits':
+      return d.needsCredits(q.limit);
   }
 }
 

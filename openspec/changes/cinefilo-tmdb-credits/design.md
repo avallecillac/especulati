@@ -34,3 +34,9 @@ Title screen, under "Movie · 2024": one muted line, wrapping, separated by " ·
 ## Risks
 - **Old phone:** until it updates, it skips tier-`c` batches and shows no new details; everything else syncs.
 - **TMDB gender data is incomplete** (gender 0 = unknown): the lead actor/actress may be missing or not the most famous name. Acceptable; shown only when known.
+
+## Implementation notes (reviewed, group 1)
+- D3 split is broader than written: any `titles` change mixing a credits field with any other field is split (other fields first, then the credits), in `decide()` and in import, so an old device never loses base fields such as the insert or `tmdb_id`. A credits-only op that arrives before its insert is parked until the insert lands.
+- `tierOf` checks `c` before `p`.
+- Reconcile carries the four fields from loser to survivor, like the other details.
+- The convergence suite draws credits randomness from its own generator, so existing seeded scenarios are unchanged. A shifted stream exposed a pre-existing reconcile ping-pong between an old-version peer and full peers on rows that lag (tier `p`); it is not caused by this change and is tracked separately.

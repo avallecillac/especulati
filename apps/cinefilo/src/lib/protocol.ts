@@ -13,7 +13,9 @@ export type Query =
   | { name: 'memberActivity' }
   | { name: 'me' }
   | { name: 'findByTmdb'; tmdbId: number; kind: Kind }
-  | { name: 'needsDetails'; limit: number };
+  | { name: 'needsDetails'; limit: number }
+  /** Linked titles whose TMDB credits were never fetched (cinefilo-tmdb-credits D5). */
+  | { name: 'needsCredits'; limit: number };
 
 export type SyncOp =
   | { action: 'run'; reason: SyncReason }

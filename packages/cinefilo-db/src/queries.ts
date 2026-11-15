@@ -45,6 +45,12 @@ export interface ListItem {
   readonly reviewedByPartner: boolean;
   /** The partner's rating in half stars (null = not rated). */
   readonly partner: Stars | null;
+  /** Decoded TMDB details the list search matches (cinefilo-tmdb-credits D7); empty / null before they are fetched. */
+  readonly genres: readonly string[];
+  readonly countries: readonly string[];
+  readonly directors: readonly string[];
+  readonly leadActor: string | null;
+  readonly leadActress: string | null;
 }
 
 export interface MemberView {
@@ -248,6 +254,7 @@ export function list(db: Database, tab: ListTab, scope: ListScope = 'together'):
     reviewedByMe: me !== null && reviewed.has(`${t.id}|${me}`),
     reviewedByPartner: partner !== null && reviewed.has(`${t.id}|${partner}`),
     partner: partner ? (starsBy.get(`${t.id}|${partner}`) ?? null) : null,
+    genres: t.genres ?? [], countries: t.countries ?? [], directors: t.directors ?? [], leadActor: t.leadActor, leadActress: t.leadActress,
   }));
   return items;
 }
@@ -330,6 +337,22 @@ export function needsDetails(db: Database, limit: number): NeedsDetails[] {
   return db
     .selectObjects(
       `SELECT id, kind, tmdb_id FROM titles WHERE tmdb_id IS NOT NULL AND poster_url IS NULL AND genres IS NULL AND ${LIVE} ORDER BY created_at DESC, id LIMIT ?`,
+      [limit],
+    )
+    .map((r) => ({ id: text(r['id'], 'id'), kind: text(r['kind'], 'kind') as Kind, tmdbId: Number(r['tmdb_id']) }));
+}
+
+/** A title linked to TMDB whose credits were never fetched (`countries` NULL): the shell fills it in the background. */
+export interface NeedsCredits {
+  readonly id: string;
+  readonly kind: Kind;
+  readonly tmdbId: number;
+}
+
+export function needsCredits(db: Database, limit: number): NeedsCredits[] {
+  return db
+    .selectObjects(
+      `SELECT id, kind, tmdb_id FROM titles WHERE tmdb_id IS NOT NULL AND countries IS NULL AND ${LIVE} ORDER BY created_at DESC, id LIMIT ?`,
       [limit],
     )
     .map((r) => ({ id: text(r['id'], 'id'), kind: text(r['kind'], 'kind') as Kind, tmdbId: Number(r['tmdb_id']) }));

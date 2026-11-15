@@ -36,8 +36,8 @@ describe('migration 2', () => {
   it('upgrades a v1 database: every row kept as it was, new tables and indexes added', () => {
     const { raw } = v1Fixture();
     const before = dumpAll(raw);
-    migrate(raw);
-    expect(SCHEMA_VERSION).toBe(3);
+    migrate(raw, { to: 3 });
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
     expect(raw.selectValue('PRAGMA user_version')).toBe(3);
     expect(dumpAll(raw)).toEqual(before);
     expect(names(raw, 'table')).toEqual(['change_log', 'field_clock', 'member_status', 'members', 'meta', 'posters', 'ratings', 'recommendations', 'sync_inbox', 'titles']);

@@ -23,8 +23,8 @@ describe('migration 3 (cinefilo-stars D1)', () => {
   it('upgrades v2 to v3: ratings.stars added as NULL, every other value kept', () => {
     const { raw } = v2Fixture();
     const before = raw.selectArrays('SELECT id, title_id, member_id, verdict, review, updated_at, deleted_at FROM ratings ORDER BY id');
-    migrate(raw);
-    expect(SCHEMA_VERSION).toBe(3);
+    migrate(raw, { to: 3 });
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
     expect(raw.selectValue('PRAGMA user_version')).toBe(3);
     expect(cols(raw, 'ratings')).toContain('stars');
     expect(raw.selectArrays('SELECT id, title_id, member_id, verdict, review, updated_at, deleted_at FROM ratings ORDER BY id')).toEqual(before);

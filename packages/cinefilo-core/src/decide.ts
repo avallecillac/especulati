@@ -1,10 +1,11 @@
 import { err, ok, type ParseError, type Result } from '@especulati/sync-core';
 import type { Change, Command, Decision, FieldValue, Rejection, Snapshot, TitleDetails } from './commands.ts';
 import { reconcileTitles } from './reconcile.ts';
-import { genresToDb, type TitleRow } from './rows.ts';
+import { countriesToDb, directorsToDb, genresToDb, type TitleRow } from './rows.ts';
+import { splitMixedTiers } from './remoteOps.ts';
 import {
   fail, parseAnswer, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseMemberStatus, parseMemberStatusId, parseRatingId, parseRecommendationId, parseReview, parseSeason,
-  parseStatus, parseTitle, parseTitleId, parseStars, REVIEW_MAX, type Instant, type Kind, type Status,
+  parseStatus, parseTitle, parseTitleId, parseStars, parseCountryCodes, parseDirectorNames, REVIEW_MAX, type Instant, type Kind, type Status,
 } from './types.ts';
 
 type Decided = Result<Decision, Rejection>;
@@ -44,6 +45,17 @@ function parseGenres(g: readonly string[] | null): Result<string | null, ParseEr
   return ok(genresToDb(names));
 }
 
+function parseCountries(c: readonly string[] | null): Result<string | null, ParseError> {
+  if (c === null) return ok(null);
+  const r = parseCountryCodes(c);
+  return r.ok ? ok(countriesToDb(r.value)) : r;
+}
+function parseDirectors(d: readonly string[] | null): Result<string | null, ParseError> {
+  if (d === null) return ok(null);
+  const r = parseDirectorNames(d);
+  return r.ok ? ok(directorsToDb(r.value)) : r;
+}
+
 /** Parse every detail present in `d` into DB-column fields. Absent (undefined) details are skipped. */
 function detailFields(d: TitleDetails): Result<Record<string, FieldValue>, Rejection> {
   const out: Record<string, FieldValue> = {};
@@ -60,6 +72,10 @@ function detailFields(d: TitleDetails): Result<Record<string, FieldValue>, Rejec
     opt(d.year, 'year', parseYear) ??
     opt(d.posterUrl, 'poster_url', (v) => parseText('posterUrl', v, 300)) ??
     opt(d.genres, 'genres', parseGenres) ??
+    opt(d.countries, 'countries', parseCountries) ??
+    opt(d.directors, 'directors', parseDirectors) ??
+    opt(d.leadActor, 'lead_actor', (v) => parseText('leadActor', v, 200)) ??
+    opt(d.leadActress, 'lead_actress', (v) => parseText('leadActress', v, 200)) ??
     opt(d.runtimeMin, 'runtime_min', parseRuntime) ??
     opt(d.seasonCount, 'season_count', parseSeasonCount);
   return rejection ? err(rejection) : ok(out);
@@ -208,11 +224,28 @@ function linkToTmdb(snap: Snapshot, cmd: Extract<Command, { kind: 'LinkToTmdb' }
   const empty: Record<string, boolean> = {
     original_title: t.originalTitle === null, year: t.year === null, poster_url: t.posterUrl === null, genres: t.genres === null,
     runtime_min: t.runtimeMin === null, season_count: t.seasonCount === null,
+    countries: t.countries === null, directors: t.directors === null, lead_actor: t.leadActor === null, lead_actress: t.leadActress === null,
   };
   const fields: Record<string, FieldValue> = {};
   if (t.tmdbId === null) fields['tmdb_id'] = tid.value;
   for (const [k, v] of Object.entries(d.value)) if (empty[k] && v !== null) fields[k] = v;
   return decided(Object.keys(fields).length === 0 ? [] : [{ tbl: 'titles', rowId: t.id, fields }]);
+}
+
+/** cinefilo-tmdb-credits D2: fill the credits of a linked title that was never fetched; anything else changes nothing. */
+function fillTmdbCredits(snap: Snapshot, cmd: Extract<Command, { kind: 'FillTmdbCredits' }>): Decided {
+  const id = need(parseTitleId(cmd.titleId));
+  if (!id.ok) return id;
+  const t = snap.title ?? null;
+  if (!t) return err({ kind: 'NotFound' });
+  const d = detailFields({ countries: cmd.countries, directors: cmd.directors, leadActor: cmd.leadActor, leadActress: cmd.leadActress });
+  if (!d.ok) return d;
+  if (liveTitle(t) === null || t.tmdbId === null || t.countries !== null) return decided([]);
+  const fields: Record<string, FieldValue> = { countries: d.value['countries']! };
+  if (t.directors === null) fields['directors'] = d.value['directors']!;
+  if (t.leadActor === null && d.value['lead_actor'] != null) fields['lead_actor'] = d.value['lead_actor'];
+  if (t.leadActress === null && d.value['lead_actress'] != null) fields['lead_actress'] = d.value['lead_actress'];
+  return decided([{ tbl: 'titles', rowId: t.id, fields }]);
 }
 
 function setRemoved(snap: Snapshot, cmd: { titleId: string }, deletedAt: Instant | null): Decided {
@@ -413,8 +446,13 @@ function removeMember(snap: Snapshot, cmd: Extract<Command, { kind: 'RemoveMembe
   return decided([{ tbl: 'members', rowId: id.value, fields: { deleted_at: now } }]);
 }
 
-/** The single write path (constitution IV): pure, deterministic, no I/O. */
+/** The single write path (constitution IV): pure, deterministic, no I/O. Changes never mix batch tiers (D3). */
 export function decide(snapshot: Snapshot, cmd: Command, now: Instant): Decided {
+  const r = decideOne(snapshot, cmd, now);
+  return r.ok ? ok({ changes: splitMixedTiers(r.value.changes) }) : r;
+}
+
+function decideOne(snapshot: Snapshot, cmd: Command, now: Instant): Decided {
   switch (cmd.kind) {
     case 'AddTitle':
       return addTitle(snapshot, cmd, now);
@@ -422,6 +460,8 @@ export function decide(snapshot: Snapshot, cmd: Command, now: Instant): Decided 
       return editDetails(snapshot, cmd);
     case 'LinkToTmdb':
       return linkToTmdb(snapshot, cmd);
+    case 'FillTmdbCredits':
+      return fillTmdbCredits(snapshot, cmd);
     case 'RemoveTitle':
       return setRemoved(snapshot, cmd, now);
     case 'RestoreTitle':

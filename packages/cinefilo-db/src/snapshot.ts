@@ -1,6 +1,6 @@
 import type { Database, SqlValue } from '@sqlite.org/sqlite-wasm';
 import {
-  genresFromDb,
+  countriesFromDb, directorsFromDb, genresFromDb,
   type Answer, type ClockedMemberStatus, type ClockedRating, type ClockedRecommendation, type ClockedTitle, type Command, type FieldClocks, type Hlc, type Instant,
   type Kind, type LocalDate, type MemberId, type MemberName, type MemberRow, type MemberStatus, type MemberStatusId, type MemberStatusRow, type NonEmptyTitle,
   type RatingId, type RatingRow, type ReconcileSnapshot, type RecommendationId, type RecommendationRow, type Review, type Snapshot, type Status, type TitleId,
@@ -31,6 +31,10 @@ export function rowToTitle(r: Record<string, SqlValue>): TitleRow {
     tmdbId: intOrNull(r['tmdb_id'], 'tmdb_id'),
     posterUrl: textOrNull(r['poster_url'], 'poster_url'),
     genres: genresFromDb(textOrNull(r['genres'], 'genres')),
+    countries: countriesFromDb(textOrNull(r['countries'], 'countries')),
+    directors: directorsFromDb(textOrNull(r['directors'], 'directors')),
+    leadActor: textOrNull(r['lead_actor'], 'lead_actor'),
+    leadActress: textOrNull(r['lead_actress'], 'lead_actress'),
     runtimeMin: intOrNull(r['runtime_min'], 'runtime_min'),
     seasonCount: intOrNull(r['season_count'], 'season_count'),
     status: textOrNull(r['status'], 'status') as Status | null,
@@ -148,6 +152,7 @@ export function loadSnapshot(db: Database, cmd: Command, deviceMemberId: string 
       return { title: titleRow(db, cmd.titleId), maxWatchOrder: maxWatchOrder(db) };
     case 'EditTitleDetails':
     case 'LinkToTmdb':
+    case 'FillTmdbCredits':
     case 'RemoveTitle':
     case 'RestoreTitle':
     case 'SetCurrentSeason':

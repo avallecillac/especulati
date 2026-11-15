@@ -3,7 +3,7 @@ import { EXPORT_FORMAT } from './frozen.ts';
 import type { MemberRow, MemberStatusRow, RatingRow, RecommendationRow, TitleRow } from './rows.ts';
 import {
   fail, parseAnswer, parseInstant, parseKind, parseLocalDate, parseMemberId, parseMemberName, parseMemberStatus, parseMemberStatusId, parseRatingId,
-  parseRecommendationId, parseReview, parseStatus, parseTitle, parseStars, parseTitleId, parseVerdict, type Instant,
+  parseCountryCodes, parseDirectorNames, parsePersonName, parseRecommendationId, parseReview, parseStatus, parseTitle, parseStars, parseTitleId, parseVerdict, type Instant,
 } from './types.ts';
 
 /**
@@ -30,7 +30,7 @@ export function serializeExport(e: CinefiloExport): string {
     exportedAt: e.exportedAt,
     titles: byId(e.titles).map((t) => ({
       id: t.id, kind: t.kind, title: t.title, originalTitle: t.originalTitle, year: t.year, tmdbId: t.tmdbId, posterUrl: t.posterUrl,
-      genres: t.genres, runtimeMin: t.runtimeMin, seasonCount: t.seasonCount, status: t.status, watchedOn: t.watchedOn,
+      genres: t.genres, countries: t.countries, directors: t.directors, leadActor: t.leadActor, leadActress: t.leadActress, runtimeMin: t.runtimeMin, seasonCount: t.seasonCount, status: t.status, watchedOn: t.watchedOn,
       currentSeason: t.currentSeason, watchOrder: t.watchOrder, mergedInto: t.mergedInto, addedBy: t.addedBy, createdAt: t.createdAt, deletedAt: t.deletedAt,
     })),
     members: byId(e.members).map((m) => ({ id: m.id, name: m.name, createdAt: m.createdAt, deletedAt: m.deletedAt })),
@@ -89,6 +89,11 @@ const parseTitleRow = (o: unknown): Result<TitleRow, ParseError> => {
       tmdbId: take(intOrNull('tmdbId', o['tmdbId'])),
       posterUrl: take(nullable('posterUrl', o['posterUrl'], plainText('posterUrl'))),
       genres: genres as readonly string[] | null,
+      // Files written before cinefilo-tmdb-credits have none of these keys: read as never fetched.
+      countries: o['countries'] === undefined || o['countries'] === null ? null : take(parseCountryCodes(o['countries'])),
+      directors: o['directors'] === undefined || o['directors'] === null ? null : take(parseDirectorNames(o['directors'])),
+      leadActor: o['leadActor'] === undefined || o['leadActor'] === null ? null : take(parsePersonName('leadActor', o['leadActor'])),
+      leadActress: o['leadActress'] === undefined || o['leadActress'] === null ? null : take(parsePersonName('leadActress', o['leadActress'])),
       runtimeMin: take(intOrNull('runtimeMin', o['runtimeMin'])),
       seasonCount: take(intOrNull('seasonCount', o['seasonCount'])),
       status: take(nullable('status', o['status'], parseStatus)),

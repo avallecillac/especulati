@@ -1,6 +1,6 @@
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import {
-  cinefiloSchema, genresToDb, parseExport, serializeExport, EXPORT_FORMAT,
+  cinefiloSchema, countriesToDb, directorsToDb, genresToDb, parseExport, splitMixedTiers, serializeExport, EXPORT_FORMAT,
   type Change, type CinefiloExport, type Instant, type ParseError, type Result, err, ok,
 } from '@especulati/cinefilo-core';
 import { applyChanges, rollbackQuietly } from '@especulati/db-kit';
@@ -50,7 +50,10 @@ export function importText(
       fields: {
         kind: t.kind, title: t.title, original_title: t.originalTitle, year: t.year, tmdb_id: t.tmdbId, poster_url: t.posterUrl,
         genres: genresToDb(t.genres), runtime_min: t.runtimeMin, season_count: t.seasonCount, status: t.status, watched_on: t.watchedOn,
-        current_season: t.currentSeason, ...(t.watchOrder !== null ? { watch_order: t.watchOrder } : {}), merged_into: t.mergedInto, added_by: t.addedBy,
+        current_season: t.currentSeason, ...(t.watchOrder !== null ? { watch_order: t.watchOrder } : {}),
+        // Tier c (cinefilo-tmdb-credits D3): written only when present; `applyChanges` gets them as their own op (split below).
+        ...(t.countries !== null ? { countries: countriesToDb(t.countries) } : {}), ...(t.directors !== null ? { directors: directorsToDb(t.directors) } : {}),
+        ...(t.leadActor !== null ? { lead_actor: t.leadActor } : {}), ...(t.leadActress !== null ? { lead_actress: t.leadActress } : {}), merged_into: t.mergedInto, added_by: t.addedBy,
         created_at: t.createdAt, deleted_at: t.deletedAt,
       },
     });
@@ -85,7 +88,7 @@ export function importText(
   }
   db.exec('BEGIN IMMEDIATE');
   try {
-    applyChanges(db, cinefiloSchema, changes, deviceId, wallMs, newOpId);
+    applyChanges(db, cinefiloSchema, splitMixedTiers(changes), deviceId, wallMs, newOpId);
     db.exec('COMMIT');
   } catch (e) {
     rollbackQuietly(db, 'ROLLBACK');

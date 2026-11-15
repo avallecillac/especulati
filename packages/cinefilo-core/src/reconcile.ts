@@ -1,6 +1,6 @@
 import { compareHlc, err, ok, type Result } from '@especulati/sync-core';
 import type { Change, ClockedRating, ClockedRecommendation, ClockedTitle, Command, Decision, FieldClocks, FieldValue, ReconcileSnapshot, Rejection } from './commands.ts';
-import { genresToDb, type TitleRow } from './rows.ts';
+import { countriesToDb, directorsToDb, genresToDb, type TitleRow } from './rows.ts';
 import { parseMemberId, parseTitleId } from './types.ts';
 
 type Decided = Result<Decision, Rejection>;
@@ -10,7 +10,8 @@ const bad = (field: string, reason: string): Rejection => ({ kind: 'InvalidInput
 const TITLE_FIELDS: readonly (readonly [string, (t: TitleRow) => FieldValue])[] = [
   ['title', (t) => t.title], ['original_title', (t) => t.originalTitle], ['year', (t) => t.year], ['tmdb_id', (t) => t.tmdbId],
   ['poster_url', (t) => t.posterUrl], ['genres', (t) => genresToDb(t.genres)], ['runtime_min', (t) => t.runtimeMin],
-  ['season_count', (t) => t.seasonCount], ['status', (t) => t.status], ['watched_on', (t) => t.watchedOn],
+  ['countries', (t) => countriesToDb(t.countries)], ['directors', (t) => directorsToDb(t.directors)],
+  ['lead_actor', (t) => t.leadActor], ['lead_actress', (t) => t.leadActress], ['season_count', (t) => t.seasonCount], ['status', (t) => t.status], ['watched_on', (t) => t.watchedOn],
   ['current_season', (t) => t.currentSeason], ['deleted_at', (t) => t.deletedAt],
 ];
 
