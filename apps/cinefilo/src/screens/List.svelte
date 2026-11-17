@@ -149,7 +149,7 @@
 <div class="list-frame" data-scope={scope}>
 <header class="bar">
   <div>
-    <h1>{HEADING[tab]}</h1>
+    <h1>Cinéfilo</h1>
     <!-- Always in the DOM so screen readers hear whose list it is; shown only for the partner's. -->
     <p class="whose" class:visually-hidden={scope !== 'partner'} data-testid="whose">{whose}</p>
   </div>
@@ -241,7 +241,7 @@
     {/each}
   </ul>
 {:else}
-  <ul class="rows">
+  <ul class="rows" aria-label={HEADING[tab]}>
     {#each visible as i (i.id)}
       {@const rl = reviewLabel(i)}
       <li>

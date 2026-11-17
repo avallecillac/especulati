@@ -78,6 +78,15 @@ test('the header is compact, and the partner list still says view only', async (
   await expect(page.getByRole('button', { name: 'Filter', exact: true })).toHaveCount(0);
 });
 
+test('the list header reads Cinéfilo on every list tab, and the tab bar shows which list it is', async ({ page }) => {
+  await startList(page, 'Ana');
+  for (const name of ['Watch later', 'Watching', 'Watched']) {
+    await tab(page, name).click();
+    await expect(tab(page, name)).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Cinéfilo');
+  }
+});
+
 test('the list header has no filter, and rows show each member\'s stars', async ({ page }) => {
   await startList(page, 'Ana');
   await importSeed(page, [{ name: 'Heat', mine: 9, partner: 1 }, { name: 'Alien', mine: 2, partner: null }]);

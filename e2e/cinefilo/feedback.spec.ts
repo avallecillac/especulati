@@ -61,9 +61,9 @@ test('Watched shows each title\'s number, newest first, and "From #1" is remembe
   await later.click();
   await expect(later).toHaveAttribute('aria-pressed', 'true'); // Back follows the saved status
   await page.getByRole('link', { name: 'Back' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Watch later' })).toBeVisible();
+  await expect(tab(page, 'Watch later')).toHaveAttribute('aria-current', 'page');
   await tab(page, 'Watched').click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Watched' })).toBeVisible();
+  await expect(tab(page, 'Watched')).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('link', { name: /The Godfather/ })).toHaveCount(0);
   expect((await names(page)).map((n) => n.replace(/\s+/g, ' ').trim())).toEqual(['#1 Back to the Future', '#2 The Brutalist', '#3 Inception']);
 });
